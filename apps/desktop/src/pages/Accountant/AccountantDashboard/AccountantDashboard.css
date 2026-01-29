@@ -1,0 +1,55 @@
+/* MAIN LAYOUT */
+
+.accountant-layout {
+  display: flex;
+  width: 100vw;
+  height: 100vh;
+  background: #f8fafc;
+  overflow: hidden;
+}
+
+/* RIGHT SIDE */
+
+.accountant-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 20px 24px;
+  overflow-y: auto;
+}
+
+/* CONTENT AREA */
+
+.accountant-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* PLACEHOLDER UI (TEMPORARY) */
+
+.placeholder-card {
+  background: white;
+  border-radius: 14px;
+  padding: 20px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #475569;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+/* TWO COLUMN SECTION */
+
+.placeholder-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+/* RESPONSIVE */
+
+@media (max-width: 1024px) {
+  .placeholder-grid {
+    grid-template-columns: 1fr;
+  }
+}
