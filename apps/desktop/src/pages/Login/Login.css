@@ -1,158 +1,290 @@
-* {
-  box-sizing: border-box;
-  font-family: "Inter", sans-serif;
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap");
+
+*{
+  box-sizing:border-box;
+  font-family:Poppins,sans-serif;
 }
 
-.login-container {
-  display: flex;
-  height: 100vh;
+html,body{
+  margin:0;
+  padding:0;
+}
+
+.login-wrapper{
+  height:100vh;
+  width:100vw;
+  display:flex;
 }
 
 /* LEFT */
-.login-left {
-  flex: 1;
-  background: linear-gradient(180deg, #2563eb, #1e40af);
-  color: white;
-  padding: 60px;
+
+.login-left{
+  width:52%;
+  padding:120px 70px;
+  background:linear-gradient(180deg,#2563eb,#1d4ed8);
+  color:white;
 }
 
-.brand {
-  display: flex;
-  gap: 12px;
-  align-items: center;
+.brand{
+  display:flex;
+  align-items:center;
+  gap:14px;
 }
 
-.logo {
-  background: rgba(255, 255, 255, 0.2);
-  padding: 12px;
-  border-radius: 12px;
+.logo-box{
+  width:46px;
+  height:46px;
+  background:rgba(255,255,255,.2);
+  border-radius:12px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
 }
 
-.login-left h1 {
-  margin-top: 60px;
-  font-size: 42px;
-  line-height: 1.2;
+.brand h3{
+  margin:0;
+  font-size:28px;
 }
 
-.subtitle {
-  margin-top: 20px;
-  max-width: 420px;
-  opacity: 0.9;
+.brand span{
+  font-size:20px;
+  opacity:.8;
 }
 
-.features {
-  margin-top: 50px;
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 20px;
+.login-left h1{
+  font-size:42px;
+  line-height:1.2;
 }
 
-.feature {
-  background: rgba(255, 255, 255, 0.15);
-  padding: 20px;
-  border-radius: 14px;
+.login-left p{
+  font-size:20px;
+  max-width:520px;
+  margin-top:20px;
+  opacity:.9;
 }
 
-.feature span {
-  font-size: 20px;
-  font-weight: bold;
+.features{
+  margin-top:50px;
+  display:grid;
+  grid-template-columns:repeat(2,250px);
+  gap:22px;
+}
+
+.feature-card{
+  background:rgba(255,255,255,.15);
+  padding:18px;
+  border-radius:12px;
+}
+
+.feature-card strong{
+  display:block;
+  margin-top:6px;
+  font-size:30px;
 }
 
 /* RIGHT */
-.login-right {
-  flex: 1;
-  background: white;
-  padding: 60px;
+
+.login-right{
+  width:48%;
+  display:flex;
+  justify-content:center;
+  align-items:center;
 }
 
-.login-right h2 {
-  font-size: 28px;
+.login-card{
+  width:420px;
 }
 
-.right-subtitle {
-  margin-bottom: 30px;
-  color: #64748b;
+.subtitle{
+  text-align:center;
+  color:#64748b;
 }
 
-.label {
-  font-size: 14px;
-  font-weight: 500;
-  margin-top: 20px;
-  display: block;
+label{
+  display:block;
+  margin:18px 0 6px;
 }
 
-.role-box {
-  display: flex;
-  gap: 16px;
-  margin-top: 10px;
+.role-box{
+  display:flex;
+  gap:14px;
 }
 
-.role-card {
-  flex: 1;
-  border: 1px solid #e5e7eb;
-  border-radius: 14px;
-  padding: 20px;
-  text-align: center;
-  cursor: pointer;
+.role{
+  flex:1;
+  border:1px solid #e5e7eb;
+  border-radius:14px;
+  padding:18px 0;
+  text-align:center;
+  cursor:pointer;
+  transition:.25s;
 }
 
-.role-card.active {
-  border-color: #6366f1;
-  background: #eef2ff;
+.role span{
+  display:block;
+  margin-top:4px;
+  color:#64748b;
 }
 
-.role-icon {
-  font-size: 24px;
-  margin-bottom: 8px;
+.role.active span{
+  color:black;
+  font-weight:500;
 }
 
-.input {
-  width: 100%;
-  padding: 14px;
-  border-radius: 10px;
-  border: 1px solid #e5e7eb;
-  margin-top: 8px;
+/* ICON SYSTEM */
+
+.icon-circle{
+  width:46px;
+  height:46px;
+  border-radius:50%;
+  background:#f1f5f9;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  margin:0 auto 6px;
 }
 
-.password-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+.icon-circle svg{
+  width:22px;
+  height:22px;
+  fill:none;
+  stroke:#64748b;
+  stroke-width:2;
+  stroke-linecap:round;
+  stroke-linejoin:round;
 }
 
-.forgot {
-  font-size: 13px;
-  color: #2563eb;
-  cursor: pointer;
+/* ACTIVE COLORS */
+
+.admin-active .icon-circle{background:#7c3aed;}
+.cashier-active .icon-circle{background:#16a34a;}
+.accountant-active .icon-circle{background:#f97316;}
+
+.admin-active svg,
+.cashier-active svg,
+.accountant-active svg{
+  stroke:white;
 }
 
-.password-box {
-  position: relative;
+/* INPUTS */
+
+input,select{
+  width:100%;
+  padding:12px;
+  border-radius:8px;
+  border:1px solid #e5e7eb;
 }
 
-.eye {
-  position: absolute;
-  right: 14px;
-  top: 50%;
-  transform: translateY(-50%);
-  cursor: pointer;
+.password-row{
+  display:flex;
+  justify-content:space-between;
 }
 
-.login-btn {
-  width: 100%;
-  margin-top: 30px;
-  padding: 16px;
-  background: #2563eb;
-  color: white;
-  border: none;
-  border-radius: 12px;
-  font-size: 16px;
-  cursor: pointer;
+button{
+  margin-top:26px;
+  width:100%;
+  padding:14px;
+  border-radius:10px;
+  border:none;
+  background:#2563eb;
+  color:white;
+  display:flex;
+  gap:8px;
+  justify-content:center;
+  cursor:pointer;
+}
+/* ===== RIGHT PANEL EXACT SIZING ===== */
+
+.login-card{
+  width:460px;
 }
 
-.demo {
-  margin-top: 16px;
-  font-size: 13px;
-  color: #64748b;
-  text-align: center;
+.login-card h2{
+  font-size:30px;
+  font-weight:600;
+  margin: 0px;
+}
+
+.subtitle{
+  margin-top:6px;
+  margin-bottom:28px;
+  font-size:15px;
+}
+
+/* LOGIN AS */
+
+.role-box{
+  gap:18px;
+}
+
+.role{
+  height:120px;
+  border-radius:14px;
+  padding-top:18px;
+}
+
+/* ICON */
+
+.icon-circle{
+  width:52px;
+  height:52px;
+}
+
+.icon-circle svg{
+  width:24px;
+  height:24px;
+}
+
+/* LABELS */
+
+label{
+  font-size:14px;
+  margin-top:22px;
+}
+
+/* INPUTS */
+
+input,select{
+  height:44px;
+  font-size:14px;
+}
+
+/* BUTTON */
+
+button{
+  height:48px;
+  font-size:15px;
+  border-radius:10px;
+  margin-top:28px;
+}
+
+/* ACCOUNTANT SHADOW */
+
+.accountant-active{
+  box-shadow:0 6px 18px rgba(0,0,0,.08);
+}
+
+/* PERFECT CENTER FOR WELCOME BACK */
+
+.login-card{
+  display:flex;
+  flex-direction:column;
+}
+
+.login-card h2{
+  text-align:center;
+  width:100%;
+}
+
+.subtitle{
+  text-align:center;
+  width:100%;
+}
+
+
+/* MOBILE */
+
+@media(max-width:900px){
+  .login-left{display:none}
+  .login-right{width:100%}
 }
