@@ -1,4 +1,5 @@
-import "./AccountantSidebar.css";
+import "./AccountantSidebar.css"
+import { NavLink } from "react-router-dom";
 import {
   FaThLarge,
   FaChartLine,
@@ -26,45 +27,55 @@ export default function AccountantSidebar() {
 
       {/* MENU */}
       <nav className="sidebar-menu">
-        <div className="menu-item active">
+
+        {/* Dashboard */}
+        <NavLink to="/accountant" end className="menu-item">
           <FaThLarge />
           <span>Dashboard</span>
-        </div>
+        </NavLink>
 
-        <div className="menu-item">
+        {/* Sales Overview */}
+        <NavLink to="/accountant/sales" className="menu-item">
           <FaChartLine />
           <span>Sales Overview</span>
-        </div>
+        </NavLink>
 
-        <div className="menu-item">
+        {/* Purchases */}
+        <NavLink to="/accountant/purchases" className="menu-item">
           <FaShoppingCart />
           <span>Purchases</span>
-        </div>
+        </NavLink>
 
-        <div className="menu-item">
+        {/* Settlements */}
+        <NavLink to="/accountant/settlements" className="menu-item">
           <FaWallet />
           <span>Settlements</span>
-        </div>
+        </NavLink>
 
-        <div className="menu-item">
+        {/* Expenses */}
+        <NavLink to="/accountant/expenses" className="menu-item">
           <MdCurrencyRupee />
           <span>Expenses</span>
-        </div>
+        </NavLink>
 
-        <div className="menu-item">
+        {/* GST Dashboard */}
+        <NavLink to="/accountant/gst" className="menu-item">
           <FaFileInvoice />
           <span>GST Dashboard</span>
-        </div>
+        </NavLink>
 
-        <div className="menu-item">
+        {/* Ledgers */}
+        <NavLink to="/accountant/ledgers" className="menu-item">
           <FaBook />
           <span>Ledgers</span>
-        </div>
+        </NavLink>
 
-        <div className="menu-item">
+        {/* Reports */}
+        <NavLink to="/accountant/reports" className="menu-item">
           <FaChartBar />
           <span>Reports</span>
-        </div>
+        </NavLink>
+
       </nav>
 
       {/* FOOTER */}

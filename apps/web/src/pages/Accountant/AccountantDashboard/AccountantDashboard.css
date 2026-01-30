@@ -354,3 +354,34 @@ td {
   background: #fff7ed !important;
   color: #ea580c !important;
 }
+.accountant-layout {
+  display: flex;
+  min-height: 100vh; /* change this */
+  background: #f5f7fb;
+}
+.stats-grid {
+  margin-top: 12px;      /* FIX */
+  margin-bottom: 22px;
+}
+.stat-icon {
+  width: 42px;   
+  height: 42px;
+}
+/* ROOT LAYOUT */
+.accountant-layout {
+  display: flex;
+  min-height: 100vh;
+  background-color: #f5f7fb;
+}
+
+/* MAIN CONTENT */
+.accountant-main {
+  margin-left: 260px; /* sidebar width */
+  width: calc(100% - 260px);
+  padding: 20px;
+}
+
+/* CONTENT WRAPPER */
+.accountant-content {
+  max-width: 100%;
+}
