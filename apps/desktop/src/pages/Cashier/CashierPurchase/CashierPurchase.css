@@ -1,0 +1,96 @@
+.purchase-container {
+  padding: 24px;
+  background: #f9fafb;
+  min-height: 100vh;
+}
+
+/* TOP */
+.purchase-top {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 24px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+}
+
+/* BILL FROM */
+.bill-from {
+  padding: 16px;
+}
+
+.bill-from h4 {
+  margin-bottom: 12px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.add-party-box {
+  border: 2px dashed #3b82f6;
+  color: #3b82f6;
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+/* INVOICE DETAILS */
+.invoice-details {
+  padding: 16px;
+  border-left: 1px solid #e5e7eb;
+}
+
+.invoice-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.invoice-row label {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.invoice-row input {
+  width: 100%;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  margin-top: 4px;
+}
+
+.due-date-box {
+  margin-top: 16px;
+  border: 2px dashed #3b82f6;
+  color: #3b82f6;
+  padding: 10px;
+  text-align: center;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+/* ITEMS HEADER */
+.items-header {
+  margin-top: 20px;
+  display: grid;
+  grid-template-columns: 60px 2fr 1fr 1fr 1.2fr 1fr 1fr 1.2fr 60px;
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  padding: 12px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.add-item-btn {
+  height: 36px;
+  width: 36px;
+  border-radius: 50%;
+  border: none;
+  background: #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}

@@ -1,0 +1,110 @@
+.cashier-navbar {
+  height: 64px;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  border-bottom: 1px solid #e5e7eb;
+  font-family: "Inter", sans-serif;
+}
+
+/* LEFT */
+.cashier-navbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.back-icon {
+  cursor: pointer;
+}
+
+.nav-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #111827;
+}
+
+/* RIGHT */
+.cashier-navbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.nav-icon {
+  cursor: pointer;
+  color: #374151;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* SETTINGS */
+.settings-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 38px;
+  padding: 0 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: #ffffff;
+  cursor: pointer;
+  font-size: 14px;
+  color: #374151;
+}
+
+/* MOBILE UPLOAD */
+.mobile-upload-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 38px;
+  padding: 0 12px;
+  border: 1px dashed #f16363;
+  border-radius: 6px;
+  background: #eef2ff;
+  color: #e54646;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+/* SAVE & NEW */
+.save-new-btn {
+  height: 38px;
+  padding: 0 14px;
+  border-radius: 6px;
+  border: 1px solid #6366f1;
+  background: #ffffff;
+  color: #4f46e5;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+/* SAVE */
+.save-btn {
+  height: 38px;
+  padding: 0 20px;
+  border-radius: 6px;
+  border: none;
+  background: #4f46e5;
+  color: #ffffff;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+/* HOVER EFFECTS (subtle, clean) */
+.settings-btn:hover,
+.save-new-btn:hover,
+.mobile-upload-btn:hover {
+  background: #f9fafb;
+}
+
+.save-btn:hover {
+  background: #4338ca;
+}

@@ -181,14 +181,14 @@ input,select{
 }
 
 button{
-  margin-top:26px;
+  /* margin-top:26px; */
   width:100%;
   padding:14px;
   border-radius:10px;
   border:none;
   background:#2563eb;
   color:white;
-  display:flex;
+  /* display:flex; */
   gap:8px;
   justify-content:center;
   cursor:pointer;
@@ -255,7 +255,7 @@ button{
   height:48px;
   font-size:15px;
   border-radius:10px;
-  margin-top:28px;
+  /* margin-top:28px; */
 }
 
 /* ACCOUNTANT SHADOW */

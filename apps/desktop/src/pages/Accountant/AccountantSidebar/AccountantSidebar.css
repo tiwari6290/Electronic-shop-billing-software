@@ -23,7 +23,7 @@
 .brand-icon {
   width: 36px;
   height: 36px;
-  background: #f97316;
+  /* background: #f97316; */
   border-radius: 8px;
   display: flex;
   align-items: center;
