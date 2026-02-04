@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
-import Login from "@/components/ui/Login/Login";
+import Login from "@/components/Login/Login";
 
 function App() {
   return (

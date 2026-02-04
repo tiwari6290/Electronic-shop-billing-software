@@ -1,23 +1,32 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Shield, FileText, Calculator, Eye, EyeOff, Zap } from 'lucide-react';
+import { useLogin } from "../../hooks/useLogin";
 
-type UserRole = 'Admin' | 'Cashier' | 'Accountant';
 
 const Login: React.FC = () => {
-  const navigate = useNavigate();
-  
-  const [selectedRole, setSelectedRole] = useState<UserRole>('Admin');
   const [showPassword, setShowPassword] = useState(false);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [selectedStore, setSelectedStore] = useState('Main Store');
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log('Login attempt:', { selectedRole, email, password, selectedStore });
-    navigate('/dashboard');
-  };
+  const {
+  selectedRole,
+  setSelectedRole,
+  selectedStore,
+  setSelectedStore,
+  email,
+  setEmail,
+  password,
+  setPassword,
+  loading,
+  error,
+  handleLogin,
+} = useLogin();
+
+
+
+ const handleSubmit = (e: React.FormEvent) => {
+  e.preventDefault();
+  handleLogin();
+};
+
 
   return (
     <div className="min-h-screen bg-[#f8f9fa] flex items-center justify-center px-4 py-8">
@@ -196,6 +205,11 @@ const Login: React.FC = () => {
               style={{ fontFamily: 'system-ui, -apple-system, "Segoe UI", sans-serif' }}
             />
           </div>
+{error && (
+  <p className="text-red-500 text-sm font-medium">
+    {error}
+  </p>
+)}
 
           {/* Password */}
           <div>
@@ -235,12 +249,18 @@ const Login: React.FC = () => {
 
           {/* Submit Button */}
           <button
-            type="submit"
-            className="w-full h-[56px] bg-[#4169e1] hover:bg-[#2347d1] text-white font-semibold rounded-[12px] transition-all duration-200 flex items-center justify-center space-x-[10px] shadow-[0_4px_12px_rgba(65,105,225,0.35)] text-[16px] mt-[32px]"
-          >
-            <Zap className="w-[20px] h-[20px]" fill="white" strokeWidth={0} />
-            <span>Sign In as {selectedRole}</span>
-          </button>
+  type="submit"
+  disabled={loading}
+  className={`w-full h-[56px] bg-[#4169e1] hover:bg-[#2347d1] text-white 
+  font-semibold rounded-[12px] transition-all duration-200 
+  flex items-center justify-center space-x-[10px] 
+  shadow-[0_4px_12px_rgba(65,105,225,0.35)] text-[16px] mt-[32px]
+  ${loading ? "opacity-70 cursor-not-allowed" : ""}`}
+>
+  <Zap className="w-[20px] h-[20px]" fill="white" strokeWidth={0} />
+  <span>{loading ? "Signing in..." : `Sign In as ${selectedRole}`}</span>
+</button>
+
         </form>
       </div>
     </div>
