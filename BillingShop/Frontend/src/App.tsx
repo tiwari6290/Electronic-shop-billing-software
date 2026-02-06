@@ -1,8 +1,10 @@
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import Login from "@/components/Login/Login";
 import Sidebar from "./components/Cashier/Sidebar";
+import Navbar from "./components/Cashier/Navbar";
 import CashierDashboard from "./components/CashierDashboard/CashierDashboard";
-
+import Createparty from "./components/Cashier/Createparty";
+ 
 /* Dummy pages (replace later with real pages) */
 const Page = ({ title }: { title: string }) => (
   <div style={{ padding: 30, fontSize: 22, fontWeight: 600 }}>{title}</div>
@@ -36,8 +38,9 @@ function App() {
         <Route element={<DashboardLayout />}>
 
           <Route path="/dashboard" element={<CashierDashboard />} />
+         <Route path="/navbar" element={<Navbar title="Dashboard" />} />
 
-          <Route path="/create-party" element={<Page title="Create Party" />} />
+          <Route path="/create-party" element={<Createparty />} />
           <Route path="/create-item" element={<Page title="Create Item" />} />
 
           <Route path="/quotation" element={<Page title="Quotation" />} />
