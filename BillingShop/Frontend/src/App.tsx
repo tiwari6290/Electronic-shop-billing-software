@@ -1,25 +1,64 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import Login from "@/components/Login/Login";
+import Sidebar from "./components/Cashier/Sidebar";
 import CashierDashboard from "./components/CashierDashboard/CashierDashboard";
+
+/* Dummy pages (replace later with real pages) */
+const Page = ({ title }: { title: string }) => (
+  <div style={{ padding: 30, fontSize: 22, fontWeight: 600 }}>{title}</div>
+);
+
+/* Layout with Sidebar */
+const DashboardLayout = () => {
+  return (
+    <div style={{ display: "flex", height: "100vh" }}>
+      <Sidebar />
+
+      <div style={{ flex: 1, overflow: "auto", background: "#f5f7fb" }}>
+        <Outlet />
+      </div>
+    </div>
+  );
+};
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Default route → login */}
+
+        {/* Default */}
         <Route path="/" element={<Navigate to="/login" replace />} />
 
-        {/* Login page */}
+        {/* Login */}
         <Route path="/login" element={<Login />} />
 
-        {/* Cashier Dashboard */}
-        <Route
-          path="/dashboard"
-          element={<CashierDashboard />}
-        />
+        {/* Sidebar Layout */}
+        <Route element={<DashboardLayout />}>
 
-        {/* Catch all → login */}
+          <Route path="/dashboard" element={<CashierDashboard />} />
+
+          <Route path="/create-party" element={<Page title="Create Party" />} />
+          <Route path="/create-item" element={<Page title="Create Item" />} />
+
+          <Route path="/quotation" element={<Page title="Quotation" />} />
+          <Route path="/payment-in" element={<Page title="Payment In" />} />
+          <Route path="/sales-return" element={<Page title="Sales Return" />} />
+          <Route path="/credit-note" element={<Page title="Credit Note" />} />
+          <Route path="/delivery-challan" element={<Page title="Delivery Challan" />} />
+          <Route path="/proforma-invoice" element={<Page title="Proforma Invoice" />} />
+
+          <Route path="/purchase" element={<Page title="Purchase" />} />
+          <Route path="/payment-out" element={<Page title="Payment Out" />} />
+          <Route path="/purchase-return" element={<Page title="Purchase Return" />} />
+          <Route path="/debit-note" element={<Page title="Debit Note" />} />
+          <Route path="/purchase-orders" element={<Page title="Purchase Orders" />} />
+          <Route path="/create-expense" element={<Page title="Create Expense" />} />
+
+        </Route>
+
+        {/* Catch all */}
         <Route path="*" element={<Navigate to="/login" replace />} />
+
       </Routes>
     </BrowserRouter>
   );
