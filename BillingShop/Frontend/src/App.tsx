@@ -1,27 +1,24 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { Button } from "@/components/ui/button";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Login from "@/components/Login/Login";
+import CashierDashboard from "./components/CashierDashboard/CashierDashboard";
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Default route - redirect to login */}
+        {/* Default route → login */}
         <Route path="/" element={<Navigate to="/login" replace />} />
-        {/* Login route */}
+
+        {/* Login page */}
         <Route path="/login" element={<Login />} />
-        
-        {/* Dashboard route - your existing shadcn UI page */}
-        <Route 
-          path="/dashboard" 
-          element={
-            <div className="min-h-screen flex items-center justify-center bg-slate-900">
-              <Button variant="default">Shadcn UI Working 🚀</Button>
-            </div>
-          } 
+
+        {/* Cashier Dashboard */}
+        <Route
+          path="/dashboard"
+          element={<CashierDashboard />}
         />
-        
-        {/* Catch all - redirect to login */}
+
+        {/* Catch all → login */}
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </BrowserRouter>
