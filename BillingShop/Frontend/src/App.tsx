@@ -6,6 +6,8 @@ import CashierDashboard from "./components/CashierDashboard/CashierDashboard";
 import Createparty from "./components/Cashier/Createparty";
 import CreateQuotation from "./components/Cashier/CreateQuotation";
 import CreateItem from "./components/Cashier/CreateItem/CreateItem";
+import SalesReturn from "./components/Cashier/SalesReturn";
+import ProformaInvoice from "./components/Cashier/ProformaInvoice";
  
 /* Dummy pages (replace later with real pages) */
 const Page = ({ title }: { title: string }) => (
@@ -47,10 +49,10 @@ function App() {
 
           <Route path="/quotation" element={<CreateQuotation />} />
           <Route path="/payment-in" element={<Page title="Payment In" />} />
-          {/* <Route path="/sales-return" element={<SalesReturn />} /> */}
+           <Route path="/sales-return" element={<SalesReturn/>} /> 
           <Route path="/credit-note" element={<Page title="Credit Note" />} />
           <Route path="/delivery-challan" element={<Page title="Delivery Challan" />} />
-          {/* <Route path="/proforma-invoice" element={<ProformaInvoice />} /> */}
+          <Route path="/proforma-invoice" element={<ProformaInvoice />} />
 
           <Route path="/purchase" element={<Page title="Purchase" />} />
           <Route path="/payment-out" element={<Page title="Payment Out" />} />
