@@ -1,7 +1,10 @@
 import StockDetails from "../StockDetails/StockDetails";
+<<<<<<< Updated upstream
 import CustomFields from "../CustomFields/CustomFields";
 import partyWiseImg from "../../../assets/2.png";
 
+=======
+>>>>>>> Stashed changes
 import { useState } from "react";
 import {
   Package,
@@ -17,10 +20,16 @@ const CreateItem = () => {
   const [type, setType] = useState<"product" | "service">("product");
 
   /* SECTION STATE */
+<<<<<<< Updated upstream
  const [activeSection, setActiveSection] = useState<
   "basic" | "stock" | "pricing" | "party" | "other"
 >("basic");
 
+=======
+  const [activeSection, setActiveSection] = useState<
+    "basic" | "stock" | "pricing" | "other"
+  >("basic");
+>>>>>>> Stashed changes
 
   /* CATEGORY STATES */
   const [categoryOpen, setCategoryOpen] = useState(false);
@@ -72,12 +81,16 @@ const CreateItem = () => {
                 <span>Stock Details</span>
               </div>
 
+<<<<<<< Updated upstream
               <div
                 className={`ci-side-item ${
                   activeSection === "pricing" ? "ci-side-active" : ""
                 }`}
                 onClick={() => setActiveSection("pricing")}
               >
+=======
+              <div className="ci-side-item">
+>>>>>>> Stashed changes
                 <Receipt size={18} />
                 <span>Pricing Details</span>
               </div>
@@ -89,6 +102,7 @@ const CreateItem = () => {
             </div>
           )}
 
+<<<<<<< Updated upstream
           <div
             className={`ci-side-item ${
                 activeSection === "party" ? "ci-side-active" : ""
@@ -110,13 +124,31 @@ const CreateItem = () => {
             <span>Custom Fields</span>
             </div>
 
+=======
+          <div className="ci-side-item">
+            <Tags size={18} />
+            <span>Party Wise Prices</span>
+          </div>
+
+          <div className="ci-side-item">
+            <Layers size={18} />
+            <span>Custom Fields</span>
+          </div>
+>>>>>>> Stashed changes
         </aside>
 
         {/* RIGHT PANEL */}
         <section className="ci-content">
+<<<<<<< Updated upstream
           {/* ================= BASIC DETAILS ================= */}
           {activeSection === "basic" && (
             <>
+=======
+          {/* BASIC DETAILS */}
+          {activeSection === "basic" && (
+            <>
+              {/* ITEM TYPE + CATEGORY */}
+>>>>>>> Stashed changes
               <div className="ci-row">
                 <div>
                   <label>Item Type *</label>
@@ -179,6 +211,10 @@ const CreateItem = () => {
                 </div>
               </div>
 
+<<<<<<< Updated upstream
+=======
+              {/* NAME + ONLINE STORE */}
+>>>>>>> Stashed changes
               <div className="ci-row">
                 <div>
                   <label>
@@ -198,7 +234,11 @@ const CreateItem = () => {
                 <div className="ci-toggle">
                   <div className="ci-toggle-inner">
                     <span>Show Item in Online Store</span>
+<<<<<<< Updated upstream
                     <label className="ci-switch">
+=======
+                    <label className="ci-switch switchhh">
+>>>>>>> Stashed changes
                       <input type="checkbox" />
                       <span className="ci-slider"></span>
                     </label>
@@ -206,6 +246,10 @@ const CreateItem = () => {
                 </div>
               </div>
 
+<<<<<<< Updated upstream
+=======
+              {/* PRICE */}
+>>>>>>> Stashed changes
               <div className="ci-row">
                 <div>
                   <label>Sales Price</label>
@@ -226,6 +270,7 @@ const CreateItem = () => {
                   </select>
                 </div>
               </div>
+<<<<<<< Updated upstream
             </>
           )}
 
@@ -322,6 +367,52 @@ const CreateItem = () => {
 
         </section>
         
+=======
+
+              {/* UNIT */}
+              <div className="ci-row">
+                <div>
+                  <label>Measuring Unit</label>
+                  <select>
+                    <option>Pieces (PCS)</option>
+                    {/* your full unit list already here */}
+                  </select>
+                </div>
+
+                {type === "product" ? (
+                  <div>
+                    <label>Opening Stock</label>
+                    <input placeholder="ex: 150 PCS" />
+                  </div>
+                ) : (
+                  <div>
+                    <label>Service Code</label>
+                    <input placeholder="Enter Service Code" />
+                  </div>
+                )}
+              </div>
+
+              {/* SERIALISATION */}
+              {type === "product" && (
+                <div className="ci-serial">
+                  <div className="ci-serial-inner">
+                    <span>Enable Serialisation</span>
+                    <label className="ci-switch">
+                      <input type="checkbox" />
+                      <span className="ci-slider"></span>
+                    </label>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* STOCK DETAILS PAGE */}
+          {activeSection === "stock" && type === "product" && (
+            <StockDetails />
+          )}
+        </section>
+>>>>>>> Stashed changes
       </div>
 
       {/* FOOTER */}
@@ -336,7 +427,13 @@ const CreateItem = () => {
           <div className="ci-modal">
             <div className="ci-modal-header">
               <h3>Create New Category</h3>
+<<<<<<< Updated upstream
               <button onClick={() => setShowAddCategory(false)}>
+=======
+              <button
+                onClick={() => setShowAddCategory(false)}
+              >
+>>>>>>> Stashed changes
                 ×
               </button>
             </div>
@@ -353,7 +450,13 @@ const CreateItem = () => {
             </div>
 
             <div className="ci-modal-footer">
+<<<<<<< Updated upstream
               <button onClick={() => setShowAddCategory(false)}>
+=======
+              <button
+                onClick={() => setShowAddCategory(false)}
+              >
+>>>>>>> Stashed changes
                 Cancel
               </button>
               <button
