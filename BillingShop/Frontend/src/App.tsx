@@ -4,10 +4,7 @@ import Sidebar from "./components/Cashier/Sidebar";
 import Navbar from "./components/Cashier/Navbar";
 import CashierDashboard from "./components/CashierDashboard/CashierDashboard";
 import Createparty from "./components/Cashier/Createparty";
-<<<<<<< Updated upstream
 import CreateQuotation from "./components/Cashier/CreateQuotation";
-=======
->>>>>>> Stashed changes
 import CreateItem from "./components/Cashier/CreateItem/CreateItem";
  
 /* Dummy pages (replace later with real pages) */
