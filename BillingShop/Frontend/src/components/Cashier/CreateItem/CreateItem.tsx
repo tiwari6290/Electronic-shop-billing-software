@@ -17,10 +17,9 @@ const CreateItem = () => {
   const [type, setType] = useState<"product" | "service">("product");
 
   /* SECTION STATE */
- const [activeSection, setActiveSection] = useState<
-  "basic" | "stock" | "pricing" | "party" | "other"
->("basic");
-
+  const [activeSection, setActiveSection] = useState<
+    "basic" | "stock" | "pricing" | "party" | "other"
+  >("basic");
 
   /* CATEGORY STATES */
   const [categoryOpen, setCategoryOpen] = useState(false);
@@ -32,7 +31,6 @@ const CreateItem = () => {
 
   const handleAddCategory = () => {
     if (!newCategory.trim()) return;
-
     const value = newCategory.toUpperCase();
     setCategories((prev) => [...prev, value]);
     setSelectedCategory(value);
@@ -91,25 +89,23 @@ const CreateItem = () => {
 
           <div
             className={`ci-side-item ${
-                activeSection === "party" ? "ci-side-active" : ""
+              activeSection === "party" ? "ci-side-active" : ""
             }`}
             onClick={() => setActiveSection("party")}
-            >
+          >
             <Tags size={18} />
             <span>Party Wise Prices</span>
-            </div>
-
+          </div>
 
           <div
             className={`ci-side-item ${
-                activeSection === "other" ? "ci-side-active" : ""
+              activeSection === "other" ? "ci-side-active" : ""
             }`}
             onClick={() => setActiveSection("other")}
-            >
+          >
             <Layers size={18} />
             <span>Custom Fields</span>
-            </div>
-
+          </div>
         </aside>
 
         {/* RIGHT PANEL */}
@@ -117,6 +113,7 @@ const CreateItem = () => {
           {/* ================= BASIC DETAILS ================= */}
           {activeSection === "basic" && (
             <>
+              {/* Item Type + Category */}
               <div className="ci-row">
                 <div>
                   <label>Item Type *</label>
@@ -139,9 +136,7 @@ const CreateItem = () => {
                 <div className="ci-category-wrapper">
                   <div
                     className="ci-category-input"
-                    onClick={() =>
-                      setCategoryOpen((prev) => !prev)
-                    }
+                    onClick={() => setCategoryOpen(!categoryOpen)}
                   >
                     <span className="ci-category-icon">🔍</span>
                     <span className="ci-category-placeholder">
@@ -164,7 +159,6 @@ const CreateItem = () => {
                           {cat}
                         </div>
                       ))}
-
                       <div
                         className="ci-category-add"
                         onClick={() => {
@@ -179,6 +173,7 @@ const CreateItem = () => {
                 </div>
               </div>
 
+              {/* Item Name + Online Store */}
               <div className="ci-row">
                 <div>
                   <label>
@@ -206,6 +201,7 @@ const CreateItem = () => {
                 </div>
               </div>
 
+              {/* Sales Price + GST */}
               <div className="ci-row">
                 <div>
                   <label>Sales Price</label>
@@ -226,15 +222,52 @@ const CreateItem = () => {
                   </select>
                 </div>
               </div>
+
+              {/* Measuring Unit + Opening Stock */}
+              <div className="ci-row">
+                <div>
+                  <label>Measuring Unit</label>
+                  <select>
+                    <option>Pieces (PCS)</option>
+                    <option>Box (BOX)</option>
+                    <option>Kg (KGS)</option>
+                  </select>
+                </div>
+
+                {type === "product" ? (
+                  <div>
+                    <label>Opening Stock</label>
+                    <input placeholder="ex: 150 PCS" />
+                  </div>
+                ) : (
+                  <div>
+                    <label>Service Code</label>
+                    <input placeholder="Enter Service Code" />
+                  </div>
+                )}
+              </div>
+
+              {/* Enable Serialisation */}
+              {type === "product" && (
+                <div className="ci-serial">
+                  <div className="ci-serial-inner">
+                    <span>Enable Serialisation</span>
+                    <label className="ci-switch">
+                      <input type="checkbox" />
+                      <span className="ci-slider"></span>
+                    </label>
+                  </div>
+                </div>
+              )}
             </>
           )}
 
-          {/* ================= STOCK DETAILS ================= */}
+          {/* STOCK DETAILS */}
           {activeSection === "stock" && type === "product" && (
             <StockDetails />
           )}
 
-          {/* ================= PRICING DETAILS ================= */}
+          {/* PRICING DETAILS */}
           {activeSection === "pricing" && type === "product" && (
             <>
               <div className="ci-row">
@@ -277,51 +310,21 @@ const CreateItem = () => {
               </div>
             </>
           )}
-          {/* ================= PARTY WISE PRICES ================= */}
-        {activeSection === "party" && (
-        <div
-            style={{
-            height: "100%",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            }}
-        >
-            <div
-            style={{
-                background: "#f9fafb",
-                padding: "32px 40px",
-                borderRadius: "16px",
-                textAlign: "center",
-                maxWidth: "520px",
-            }}
-            >
-            <img
-                src={partyWiseImg}
-                alt="Party Wise Prices"
-                style={{
-                width: "140px",
-                marginBottom: "20px",
-                }}
-            />
 
-            <p
-                style={{
-                color: "#6b7280",
-                fontSize: "14px",
-                lineHeight: "1.6",
-                }}
-            >
-                To enable Party Wise Prices and set custom prices for parties,
-                please save the item first
-            </p>
+          {/* PARTY WISE */}
+          {activeSection === "party" && (
+            <div className="ci-empty">
+              <img src={partyWiseImg} />
+              <p>
+                To enable Party Wise Prices and set custom prices for
+                parties, please save the item first
+              </p>
             </div>
-        </div>
-        )}
-        {activeSection === "other" && <CustomFields />}
+          )}
 
+          {/* CUSTOM FIELDS */}
+          {activeSection === "other" && <CustomFields />}
         </section>
-        
       </div>
 
       {/* FOOTER */}
@@ -356,10 +359,7 @@ const CreateItem = () => {
               <button onClick={() => setShowAddCategory(false)}>
                 Cancel
               </button>
-              <button
-                className="ci-save"
-                onClick={handleAddCategory}
-              >
+              <button className="ci-save" onClick={handleAddCategory}>
                 Add
               </button>
             </div>

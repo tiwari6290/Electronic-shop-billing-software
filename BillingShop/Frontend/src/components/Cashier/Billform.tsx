@@ -1,5 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Trash2, X, Search, Calendar } from 'lucide-react';
+import AddItemsToBill from './AddItemsToBill/AddItemsToBill';
+
+interface BillFormProps {
+  mode?: "sale" | "purchase";
+}
 
 interface Item {
   id: string;
@@ -45,7 +50,9 @@ interface BankAccount {
   upiId: string;
 }
 
-const CreateQuotation: React.FC = () => {
+
+const BillForm: React.FC<BillFormProps> = ({ mode = "sale" }) => {
+  const isFromPurchase = mode === "purchase";
   const [formData, setFormData] = useState({
     partyName: '',
     invoicePrefix: 'ME/QO/26-27/',
@@ -73,12 +80,14 @@ const CreateQuotation: React.FC = () => {
   const [autoRoundOff, setAutoRoundOff] = useState(false);
   const [roundOffAmount, setRoundOffAmount] = useState(0);
   const [signature, setSignature] = useState<string | null>(null);
-
+  
   // Modal states
   const [showBankAccountModal, setShowBankAccountModal] = useState(false);
   const [showPartyModal, setShowPartyModal] = useState(false);
   const [showAddItemsModal, setShowAddItemsModal] = useState(false);
   const [showBankDetails, setShowBankDetails] = useState(false);
+  const [showAddItemsPage, setShowAddItemsPage] = useState(false);
+
 
   // Bank account form
   const [bankAccount, setBankAccount] = useState<BankAccount>({
@@ -153,61 +162,61 @@ const CreateQuotation: React.FC = () => {
 
   const totalAmount = totalBeforeRound + roundOffAmount;
 
-  const handleSave = () => {
-    const quotationData = {
-      ...formData,
-      items,
-      additionalCharges,
-      discount: discountAmount,
-      roundOff: roundOffAmount,
-      subtotal,
-      taxableAmount,
-      totalAmount,
-      signature
-    };
-    console.log('Saving quotation:', quotationData);
-    alert('Quotation saved successfully!');
-  };
+  // const handleSave = () => {
+  //   const quotationData = {
+  //     ...formData,
+  //     items,
+  //     additionalCharges,
+  //     discount: discountAmount,
+  //     roundOff: roundOffAmount,
+  //     subtotal,
+  //     taxableAmount,
+  //     totalAmount,
+  //     signature
+  //   };
+  //   console.log('Saving quotation:', quotationData);
+  //   alert('Quotation saved successfully!');
+  // };
 
-  const handleSaveAndNew = () => {
-    handleSave();
-    // Reset form
-    setItems([]);
-    setShowAddParty(true);
-    setAdditionalCharges([]);
-    setDiscountAmount(0);
-    setShowDiscount(false);
-    setShowAddCharges(false);
-    setShowNotes(false);
-    setSignature(null);
-    setFormData({
-      ...formData,
-      partyName: '',
-      invoiceNumber: (parseInt(formData.invoiceNumber) + 1).toString(),
-      notes: '',
-      dueDate: ''
-    });
-  };
+  // const handleSaveAndNew = () => {
+  //   handleSave();
+  //   // Reset form
+  //   setItems([]);
+  //   setShowAddParty(true);
+  //   setAdditionalCharges([]);
+  //   setDiscountAmount(0);
+  //   setShowDiscount(false);
+  //   setShowAddCharges(false);
+  //   setShowNotes(false);
+  //   setSignature(null);
+  //   setFormData({
+  //     ...formData,
+  //     partyName: '',
+  //     invoiceNumber: (parseInt(formData.invoiceNumber) + 1).toString(),
+  //     notes: '',
+  //     dueDate: ''
+  //   });
+  // };
 
   /* const handleSettingsClick = () => {
     console.log('Opening settings');
     alert('Settings menu would open here');
   };
  */
-  const addItem = () => {
-    const newItem: Item = {
-      id: Date.now().toString(),
-      name: '',
-      hsn: '',
-      qty: 1,
-      price: 0,
-      discount: 0,
-      tax: 0,
-      amount: 0
-    };
-    setItems([...items, newItem]);
-    setShowAddParty(false);
-  };
+  // const addItem = () => {
+  //   const newItem: Item = {
+  //     id: Date.now().toString(),
+  //     name: '',
+  //     hsn: '',
+  //     qty: 1,
+  //     price: 0,
+  //     discount: 0,
+  //     tax: 0,
+  //     amount: 0
+  //   };
+  //   setItems([...items, newItem]);
+  //   setShowAddParty(false);
+  // };
 
   const deleteItem = (id: string) => {
     setItems(items.filter(item => item.id !== id));
@@ -897,66 +906,210 @@ const CreateQuotation: React.FC = () => {
             {/* Right Sidebar - Invoice Details */}
             <div style={{ width: '320px' }}>
               <div style={{ backgroundColor: '#ffffff', borderRadius: '8px', padding: '20px' }}>
-                {/* Invoice Prefix */}
-                <div style={{ marginBottom: '16px' }}>
-                  <label style={{ display: 'block', fontSize: '12px', color: '#6b7280', marginBottom: '6px' }}>
-                    Invoice Prefix:
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.invoicePrefix}
-                    onChange={(e) => setFormData({ ...formData, invoicePrefix: e.target.value })}
-                    style={{
-                      width: '100%',
-                      padding: '8px 12px',
-                      border: '1px solid #d1d5db',
-                      borderRadius: '6px',
-                      fontSize: '14px',
-                      backgroundColor: '#f9fafb',
-                      boxSizing: 'border-box'
-                    }}
-                  />
-                </div>
+                {/* ================= PURCHASE REFERENCE FIELDS ================= */}
+{isFromPurchase && (
+  <div style={{ marginBottom: '16px' }}>
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr 1fr',
+        gap: '12px'
+      }}
+    >
+      {/* Purchase Invoice No */}
+      <div>
+        <label
+          style={{
+            display: 'block',
+            fontSize: '12px',
+            color: '#6b7280',
+            marginBottom: '6px'
+          }}
+        >
+          Purchase Inv No:
+        </label>
+        <input
+          type="text"
+          value="1"
+          readOnly
+          style={{
+            width: '100%',
+            padding: '8px 12px',
+            border: '1px solid #d1d5db',
+            borderRadius: '6px',
+            fontSize: '14px',
+            backgroundColor: '#f3f4f6'
+          }}
+        />
+      </div>
 
-                {/* Invoice Number and Date */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '12px', color: '#6b7280', marginBottom: '6px' }}>
-                      Invoice Number:
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.invoiceNumber}
-                      onChange={(e) => setFormData({ ...formData, invoiceNumber: e.target.value })}
-                      style={{
-                        width: '100%',
-                        padding: '8px 12px',
-                        border: '1px solid #d1d5db',
-                        borderRadius: '6px',
-                        fontSize: '14px',
-                        boxSizing: 'border-box'
-                      }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '12px', color: '#6b7280', marginBottom: '6px' }}>
-                      Quotation Date:
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.quotationDate}
-                      onChange={(e) => setFormData({ ...formData, quotationDate: e.target.value })}
-                      style={{
-                        width: '100%',
-                        padding: '8px 12px',
-                        border: '1px solid #d1d5db',
-                        borderRadius: '6px',
-                        fontSize: '14px',
-                        boxSizing: 'border-box'
-                      }}
-                    />
-                  </div>
-                </div>
+      {/* Purchase Invoice Date */}
+      <div>
+        <label
+          style={{
+            display: 'block',
+            fontSize: '12px',
+            color: '#6b7280',
+            marginBottom: '6px'
+          }}
+        >
+          Purchase Inv Date:
+        </label>
+        <div style={{ position: 'relative' }}>
+          <input
+            type="text"
+            value="08 Feb 2026"
+            readOnly
+            style={{
+              width: '100%',
+              padding: '8px 36px 8px 12px',
+              border: '1px solid #d1d5db',
+              borderRadius: '6px',
+              fontSize: '14px',
+              backgroundColor: '#f3f4f6'
+            }}
+          />
+          <Calendar
+            size={16}
+            style={{
+              position: 'absolute',
+              right: '10px',
+              top: '10px',
+              color: '#6b7280'
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Original Invoice No */}
+      <div>
+        <label
+          style={{
+            display: 'block',
+            fontSize: '12px',
+            color: '#6b7280',
+            marginBottom: '6px'
+          }}
+        >
+          Original Inv<br></br> No:
+        </label>
+        <input
+          type="text"
+          placeholder=""
+          style={{
+            width: '100%',
+            padding: '8px 12px',
+            border: '1px solid #d1d5db',
+            borderRadius: '6px',
+            fontSize: '14px',
+            backgroundColor: '#f3f4f6'
+          }}
+        />
+      </div>
+    </div>
+  </div>
+)}
+
+               {!isFromPurchase && (
+  <>
+    {/* Invoice Prefix */}
+    <div style={{ marginBottom: '16px' }}>
+      <label
+        style={{
+          display: 'block',
+          fontSize: '12px',
+          color: '#6b7280',
+          marginBottom: '6px',
+        }}
+      >
+        Invoice Prefix:
+      </label>
+      <input
+        type="text"
+        value={formData.invoicePrefix}
+        onChange={(e) =>
+          setFormData({ ...formData, invoicePrefix: e.target.value })
+        }
+        style={{
+          width: '100%',
+          padding: '8px 12px',
+          border: '1px solid #d1d5db',
+          borderRadius: '6px',
+          fontSize: '14px',
+          backgroundColor: '#f9fafb',
+          boxSizing: 'border-box',
+        }}
+      />
+    </div>
+
+    {/* Invoice Number and Date */}
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr',
+        gap: '12px',
+        marginBottom: '16px',
+      }}
+    >
+      <div>
+        <label
+          style={{
+            display: 'block',
+            fontSize: '12px',
+            color: '#6b7280',
+            marginBottom: '6px',
+          }}
+        >
+          Invoice Number:
+        </label>
+        <input
+          type="text"
+          value={formData.invoiceNumber}
+          onChange={(e) =>
+            setFormData({ ...formData, invoiceNumber: e.target.value })
+          }
+          style={{
+            width: '100%',
+            padding: '8px 12px',
+            border: '1px solid #d1d5db',
+            borderRadius: '6px',
+            fontSize: '14px',
+            boxSizing: 'border-box',
+          }}
+        />
+      </div>
+
+      <div>
+        <label
+          style={{
+            display: 'block',
+            fontSize: '12px',
+            color: '#6b7280',
+            marginBottom: '6px',
+          }}
+        >
+          Quotation Date:
+        </label>
+        <input
+          type="text"
+          value={formData.quotationDate}
+          onChange={(e) =>
+            setFormData({ ...formData, quotationDate: e.target.value })
+          }
+          style={{
+            width: '100%',
+            padding: '8px 12px',
+            border: '1px solid #d1d5db',
+            borderRadius: '6px',
+            fontSize: '14px',
+            boxSizing: 'border-box',
+          }}
+        />
+      </div>
+    </div>
+  </>
+)}
+
 
                 {/* Add Due Date */}
                 {!showDueDate ? (
@@ -1131,7 +1284,8 @@ const CreateQuotation: React.FC = () => {
                   textAlign: 'center',
                   cursor: 'pointer'
                 }}
-                onClick={() => alert('Barcode scanner would open here')}
+                onClick={() => setShowAddItemsPage(true)}
+
               >
                 <div style={{ fontSize: '40px', marginBottom: '8px', display: 'flex', justifyContent: 'center' }}>
                   <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1504,7 +1658,37 @@ const CreateQuotation: React.FC = () => {
           </div>
         </div>
       )}
+      {showAddItemsPage && (
+  <div
+    style={{
+      position: "fixed",
+      inset: 0,
+      backgroundColor: "rgba(0,0,0,0.45)", // dim background
+      zIndex: 1000,
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+    }}
+  >
+    <div
+      style={{
+        width: "90%",
+        maxWidth: "1100px",
+        maxHeight: "85vh",
+        backgroundColor: "#ffffff",
+        borderRadius: "8px",
+        overflow: "hidden",
+        boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      <AddItemsToBill />
+    </div>
+  </div>
+)}
+
     </div>
   );
 };
-export default CreateQuotation;
+export default BillForm;

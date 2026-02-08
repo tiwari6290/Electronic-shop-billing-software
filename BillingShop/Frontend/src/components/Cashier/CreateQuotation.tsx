@@ -1,7 +1,7 @@
 import Navbar from "./Navbar";
 import BillForm from "./Billform";
 
-export default function CreateQuotationPage() {
+export default function CreateQuotation() {
   return (
     <>
       <Navbar
@@ -19,7 +19,7 @@ export default function CreateQuotationPage() {
   }}
 />
 
-      <BillForm />
+      <BillForm mode="sale"  />
     </>
   );
 }

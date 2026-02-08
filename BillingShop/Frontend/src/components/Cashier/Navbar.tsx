@@ -8,12 +8,18 @@ interface NavbarProps {
   backPath?: string;
   showSettings?: boolean;
   onSettingsClick?: () => void;
-  primaryAction?: {
+
+  uploadAction?: {
     label: string;
     onClick: () => void;
-    variant?: 'primary' | 'secondary';
   };
+
   secondaryAction?: {
+    label: string;
+    onClick: () => void;
+  };
+
+  primaryAction?: {
     label: string;
     onClick: () => void;
   };
@@ -25,8 +31,9 @@ const Navbar: React.FC<NavbarProps> = ({
   backPath = '/dashboard',
   showSettings = false,
   onSettingsClick,
-  primaryAction,
-  secondaryAction
+  uploadAction,
+  secondaryAction,
+  primaryAction
 }) => {
   const navigate = useNavigate();
 
@@ -39,7 +46,7 @@ const Navbar: React.FC<NavbarProps> = ({
   };
 
   return (
-    <div 
+    <div
       style={{
         backgroundColor: '#ffffff',
         borderBottom: '1px solid #e5e7eb',
@@ -49,7 +56,7 @@ const Navbar: React.FC<NavbarProps> = ({
         justifyContent: 'space-between'
       }}
     >
-      {/* Left section - Back button and Title */}
+      {/* LEFT SECTION */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
         {showBackButton && (
           <button
@@ -67,8 +74,9 @@ const Navbar: React.FC<NavbarProps> = ({
             <ArrowLeft size={20} />
           </button>
         )}
-        <h1 
-          style={{ 
+
+        <h1
+          style={{
             fontSize: '20px',
             fontWeight: '600',
             color: '#111827',
@@ -79,9 +87,9 @@ const Navbar: React.FC<NavbarProps> = ({
         </h1>
       </div>
 
-      {/* Right section - Actions */}
+      {/* RIGHT SECTION */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        {/* Grid Icon Button */}
+        {/* Grid Icon */}
         <button
           style={{
             padding: '8px 12px',
@@ -97,6 +105,26 @@ const Navbar: React.FC<NavbarProps> = ({
           <Grid3x3 size={18} />
         </button>
 
+        {/* Upload using Phone */}
+        {uploadAction && (
+          <button
+            onClick={uploadAction.onClick}
+            style={{
+              padding: '8px 16px',
+              background: '#fff7ed',
+              border: '1px solid #fb923c',
+              borderRadius: '6px',
+              cursor: 'pointer',
+              color: '#ea580c',
+              fontSize: '14px',
+              fontWeight: '500'
+            }}
+          >
+            {uploadAction.label}
+          </button>
+        )}
+
+        {/* Party Settings */}
         {showSettings && (
           <button
             onClick={onSettingsClick}
@@ -110,15 +138,15 @@ const Navbar: React.FC<NavbarProps> = ({
               alignItems: 'center',
               gap: '8px',
               color: '#374151',
-              fontSize: '14px',
-              fontWeight: '400'
+              fontSize: '14px'
             }}
           >
             <span>Party Settings</span>
             <Settings size={16} />
           </button>
         )}
-        
+
+        {/* Save & New */}
         {secondaryAction && (
           <button
             onClick={secondaryAction.onClick}
@@ -136,7 +164,8 @@ const Navbar: React.FC<NavbarProps> = ({
             {secondaryAction.label}
           </button>
         )}
-        
+
+        {/* Save */}
         {primaryAction && (
           <button
             onClick={primaryAction.onClick}

@@ -39,7 +39,7 @@ export default function ProformaInvoice() {
     onClick: () => console.log("Save & New clicked"),
   }}
 />
-      <BillForm />
+      <BillForm mode="sale"/>
     </>
   );
 }

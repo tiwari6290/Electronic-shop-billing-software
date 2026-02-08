@@ -341,3 +341,26 @@ select {
   justify-content: flex-end;
   gap: 10px;
 }
+/* Party Wise empty state */
+.ci-empty {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;      /* horizontal center */
+  justify-content: center;  /* vertical center */
+  text-align: center;
+  gap: 16px;
+}
+
+.ci-empty img {
+  width: 140px;
+  display: block;
+  margin: 0 auto;           /* ensures perfect centering */
+}
+
+.ci-empty p {
+  color: #6b7280;
+  font-size: 14px;
+  line-height: 1.6;
+  max-width: 420px;
+}
