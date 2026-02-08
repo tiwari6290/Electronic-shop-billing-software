@@ -9,6 +9,9 @@ import CreateItem from "./components/Cashier/CreateItem/CreateItem";
 import SalesReturn from "./components/Cashier/SalesReturn";
 import ProformaInvoice from "./components/Cashier/ProformaInvoice";
 import Purchases from "./components/Cashier/Purchases/Purchases";
+import CreateDebitNote from "./components/Cashier/CreateDebitNote/CreateDebitNote";
+import CreatePurchaseReturn from "./components/Cashier/CreatePurchaseReturn/CreatePurchaseReturn";
+import PaymentOut from "./components/Cashier/PaymentOut/PaymentOut";
  
 /* Dummy pages (replace later with real pages) */
 const Page = ({ title }: { title: string }) => (
@@ -56,9 +59,9 @@ function App() {
           <Route path="/proforma-invoice" element={<ProformaInvoice />} />
 
           <Route path="/purchase" element={<Purchases />} />
-          <Route path="/payment-out" element={<Page title="Payment Out" />} />
-          <Route path="/purchase-return" element={<Page title="Purchase Return" />} />
-          <Route path="/debit-note" element={<Page title="Debit Note" />} />
+          <Route path="/payment-out" element={<PaymentOut />} />
+          <Route path="/purchase-return" element={<CreatePurchaseReturn/>} />
+          <Route path="/debit-note" element={<CreateDebitNote />} />
           <Route path="/purchase-orders" element={<Page title="Purchase Orders" />} />
           <Route path="/create-expense" element={<Page title="Create Expense" />} />
 
