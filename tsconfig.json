@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["./renderer/src/*"]
+    },
+    "target": "ES2020",
+    "module": "CommonJS",
+    "strict": true,
+    "jsx": "react-jsx",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "outDir": "dist"
+  },
+  "include": ["electron", "renderer", "postcss.config.ts", "vite.config.ts", "tailwind.config.ts"]
+}

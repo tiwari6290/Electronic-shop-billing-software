@@ -1,0 +1,16 @@
+@import "tailwindcss";
+
+/* Optional: Add custom theme overrides here (v4 style) */
+@theme {
+  /* Example custom colors – use oklch for best modern display support */
+  --color-primary: oklch(65% 0.2 240);   /* nice blue */
+  --color-accent: #fbce10;
+  --color-danger: oklch(60% 0.25 25);
+}
+
+/* Optional base styles */
+@layer base {
+  html, body {
+    @apply bg-white text-gray-900;
+  }
+}

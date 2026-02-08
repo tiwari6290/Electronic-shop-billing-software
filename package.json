@@ -1,35 +1,34 @@
 {
-  "name": "electronic-shop-billing-software",
+  "name": "electronapp",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "main": "dist/electron/main/index.js",
   "scripts": {
+    "dev": "concurrently \"vite\" \"npm:electron\"",
+    "electron": "tsc -p . && electron .",
+    "build:renderer": "vite build",
+    "build": "npm run build:renderer && tsc -p . && electron-builder",
     "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/tiwari6290/Electronic-shop-billing-software.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "type": "commonjs",
-  "bugs": {
-    "url": "https://github.com/tiwari6290/Electronic-shop-billing-software/issues"
-  },
-  "homepage": "https://github.com/tiwari6290/Electronic-shop-billing-software#readme",
+  "description": "",
   "dependencies": {
-    "better-sqlite3": "^12.6.2",
-    "electron": "^40.1.0",
-    "electron-store": "^11.0.2",
-    "moment": "^2.30.1",
-    "react": "^19.2.4",
-    "react-dom": "^19.2.4",
-    "sqlite3": "^5.1.7",
-    "uuid": "^13.0.0"
+    "@tailwindcss/vite": "^4.1.18",
+    "dotenv": "^17.2.4",
+    "electron": "^40.2.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^7.13.0",
+    "tailwindcss": "^4.1.18"
   },
   "devDependencies": {
-    "concurrently": "^9.2.1",
-    "wait-on": "^9.0.3"
+    "@types/react": "^18.0.0",
+    "@types/react-dom": "^18.0.0",
+    "@vitejs/plugin-react": "^4.0.0",
+    "concurrently": "^8.0.0",
+    "electron-builder": "^26.7.0",
+    "typescript": "^5.0.0",
+    "vite": "^7.3.1"
   }
 }
