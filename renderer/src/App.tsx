@@ -16,6 +16,7 @@ import PaymentIn from "./components/Cashier/PaymentIn/PaymentIn";
 import CreateCreditNote from "./components/Cashier/CreateCreditNote/CreateCreditNote";
 import DeliveryChallan from "./components/Cashier/DeliveryChallan/DeliveryChallan";
 import PurchaseOrder from "./components/Cashier/PurchaseOrder/PurchaseOrder";
+import Createexpense from "./components/Cashier/Createexpense";
 
 
 /* Dummy pages (replace later with real pages) */
@@ -68,7 +69,7 @@ function App() {
           <Route path="/purchase-return" element={<CreatePurchaseReturn/>} />
           <Route path="/debit-note" element={<CreateDebitNote />} />
           <Route path="/purchase-orders" element={<PurchaseOrder />} />
-          <Route path="/create-expense" element={<Page title="Create Expense" />} />
+          <Route path="/create-expense" element={<Createexpense />} />
 
         </Route>
 

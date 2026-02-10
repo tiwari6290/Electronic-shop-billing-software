@@ -75,8 +75,8 @@ const CreateParty: React.FC = () => {
   };
 
   const handleSettingsClick = () => {
-    console.log('Opening party settings...');
-  };
+  setShowPartySettingsModal(true);
+};
 
   const handleSubmitBankAccount = () => {
     console.log('Bank account submitted:', bankAccount);
