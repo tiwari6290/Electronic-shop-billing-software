@@ -38,7 +38,7 @@ export const useLogin = () => {
         localStorage.setItem("branch", selectedStore);
 
         // 🔥 Redirect to EXISTING route
-        window.location.href = "/dashboard";
+        window.location.href = "/create-party";
       } else {
         setError("Invalid credentials");
       }

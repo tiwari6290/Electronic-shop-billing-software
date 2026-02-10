@@ -9,6 +9,7 @@ export default function CreateQuotation() {
   showBackButton={true}
   backPath="/dashboard"
   showSettings={true}
+  settingsLabel="Settings"
   primaryAction={{
     label: "Save",
     onClick: () => console.log("Save clicked"),

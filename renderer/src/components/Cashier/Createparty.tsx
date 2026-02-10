@@ -96,6 +96,7 @@ const CreateParty: React.FC = () => {
         showBackButton={true}
         backPath="/dashboard"
         showSettings={true}
+        settingsLabel="Party Settings"
         onSettingsClick={handleSettingsClick}
         primaryAction={{
           label: 'Save',

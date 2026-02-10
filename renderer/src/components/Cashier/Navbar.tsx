@@ -6,7 +6,9 @@ interface NavbarProps {
   title: string;
   showBackButton?: boolean;
   backPath?: string;
+
   showSettings?: boolean;
+  settingsLabel?: string; // ✅ NEW (Party Settings / Settings)
   onSettingsClick?: () => void;
 
   uploadAction?: {
@@ -34,8 +36,11 @@ const Navbar: React.FC<NavbarProps> = ({
   title,
   showBackButton = true,
   backPath = "/dashboard",
+
   showSettings = false,
+  settingsLabel = "Settings", // ✅ DEFAULT
   onSettingsClick,
+
   uploadAction,
   secondaryAction,
   primaryAction,
@@ -130,7 +135,7 @@ const Navbar: React.FC<NavbarProps> = ({
           </button>
         )}
 
-        {/* Party Settings */}
+        {/* SETTINGS BUTTON (Dynamic Label) */}
         {showSettings && (
           <button
             onClick={onSettingsClick}
@@ -147,7 +152,7 @@ const Navbar: React.FC<NavbarProps> = ({
               fontSize: "14px",
             }}
           >
-            <span>Party Settings</span>
+            <span>{settingsLabel}</span>
             <Settings size={16} />
           </button>
         )}
