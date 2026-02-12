@@ -161,3 +161,79 @@
 .dropdown-item:hover {
   background: #f3f4f6;
 }
+
+
+/* ── Add these to your existing PaymentIn.css ── */
+
+/* Icons group (X + chevron) on the right of the field */
+.custom-select-icons {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+/* ✕ clear / deselect button */
+.clear-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #e0e0e0;
+  color: #555;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+  flex-shrink: 0;
+}
+
+.clear-btn:hover {
+  background: #f5222d;
+  color: #fff;
+}
+
+/* Placeholder text color */
+.custom-select .placeholder {
+  color: #aaa;
+}
+
+/* Search input wrapper inside dropdown */
+.dropdown-search {
+  padding: 8px 10px;
+  border-bottom: 1px solid #f0f0f0;
+  position: sticky;
+  top: 0;
+  background: #fff;
+  z-index: 1;
+}
+
+.dropdown-search input {
+  width: 100%;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  padding: 7px 10px;
+  font-size: 13px;
+  outline: none;
+  box-sizing: border-box;
+  color: #333;
+}
+
+.dropdown-search input:focus {
+  border-color: #4096ff;
+}
+
+/* Selected item highlight */
+.dropdown-item--selected {
+  background-color: #f0f7ff;
+  color: #1677ff;
+  font-weight: 500;
+}
+
+/* No results state */
+.dropdown-empty {
+  padding: 12px 14px;
+  font-size: 13px;
+  color: #aaa;
+  text-align: center;
+}

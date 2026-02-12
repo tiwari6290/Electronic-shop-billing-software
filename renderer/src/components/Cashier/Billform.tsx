@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Trash2, X, Search, Calendar } from 'lucide-react';
 import AddItemsToBill from './AddItemsToBill/AddItemsToBill';
 import PurchaseOrder from './PurchaseOrder/PurchaseOrder';
+import { useNavigate } from "react-router-dom";
+
 
 interface BillFormProps {
   mode?: "sale" | "purchase" | "debit" | "credit" | "purchaseReturn"| "deliveryChallan" | "purchaseOrder";
@@ -75,6 +77,8 @@ const BillForm: React.FC<BillFormProps> = ({ mode = "sale" }) => {
   const isCreditNote = mode === "credit";
   const isDeliveryChallan = mode === "deliveryChallan";
   const isPurchaseOrder = mode === "purchaseOrder";
+  const navigate = useNavigate();
+
 
   const [formData, setFormData] = useState({
     partyName: '',
@@ -1638,7 +1642,10 @@ const BillForm: React.FC<BillFormProps> = ({ mode = "sale" }) => {
             </div>
 
             <div style={{ padding: '16px', borderTop: '1px solid #e5e7eb' }}>
-              <button style={{ color: '#6366f1', fontSize: '14px', fontWeight: '500', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+              <button onClick={() => {
+    setShowPartyModal(false); // close modal
+    navigate("/create-party"); // navigate to page
+  }}style={{ color: '#6366f1', fontSize: '14px', fontWeight: '500', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
                 + Create Party
               </button>
             </div>
@@ -1671,7 +1678,10 @@ const BillForm: React.FC<BillFormProps> = ({ mode = "sale" }) => {
               <select style={{ padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '14px' }}>
                 <option>Select Category</option>
               </select>
-              <button style={{ padding: '8px 16px', backgroundColor: '#6366f1', color: '#ffffff', fontSize: '14px', fontWeight: '500', borderRadius: '6px', border: 'none', cursor: 'pointer' }}>
+              <button  onClick={() => {
+    setShowPartyModal(false); 
+    navigate("/create-item "); 
+  }} style={{ padding: '8px 16px', backgroundColor: '#6366f1', color: '#ffffff', fontSize: '14px', fontWeight: '500', borderRadius: '6px', border: 'none', cursor: 'pointer' }}>
                 Create New Item
               </button>
             </div>

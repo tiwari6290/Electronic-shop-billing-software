@@ -1,6 +1,6 @@
 import "./PaymentIn.css"; // reuse same CSS
-import { Calendar, ChevronDown } from "lucide-react";
-import { useState, useRef } from "react";
+import { Calendar, ChevronDown, X } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
 import emptyImg from "../../../assets/5.png";
 import Navbar from "../Navbar";
 import { useNavigate } from "react-router-dom";
@@ -11,12 +11,47 @@ export default function PaymentIn() {
 
   /* ================= PARTY DROPDOWN ================= */
   const [showPartyDropdown, setShowPartyDropdown] = useState(false);
+  const [partySearch, setPartySearch] = useState("");
+  const partyDropdownRef = useRef<HTMLDivElement>(null);
+  const partySearchRef = useRef<HTMLInputElement>(null);
 
   const parties = [
     { id: 1, name: "Customer A" },
     { id: 2, name: "Customer B" },
     { id: 3, name: "Customer C" },
   ];
+
+  const filteredParties = parties.filter((p) =>
+    p.name.toLowerCase().includes(partySearch.toLowerCase())
+  );
+
+  /* ================= CLICK OUTSIDE TO CLOSE DROPDOWN ================= */
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        partyDropdownRef.current &&
+        !partyDropdownRef.current.contains(e.target as Node)
+      ) {
+        setShowPartyDropdown(false);
+        setPartySearch("");
+      }
+    };
+
+    if (showPartyDropdown) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showPartyDropdown]);
+
+  /* Auto-focus search input when dropdown opens */
+  useEffect(() => {
+    if (showPartyDropdown) {
+      setTimeout(() => partySearchRef.current?.focus(), 0);
+    }
+  }, [showPartyDropdown]);
 
   /* ================= FORM DATA ================= */
   const [formData, setFormData] = useState({
@@ -35,9 +70,23 @@ export default function PaymentIn() {
     setShowPartyDropdown(true);
   };
 
+  const togglePartyDropdown = () => {
+    setShowPartyDropdown((prev) => !prev);
+    if (showPartyDropdown) setPartySearch("");
+  };
+
   const selectParty = (partyName: string) => {
     setFormData({ ...formData, partyName });
     setShowPartyDropdown(false);
+    setPartySearch("");
+  };
+
+  /* Clears selection — stops propagation so dropdown doesn't open */
+  const clearParty = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setFormData({ ...formData, partyName: "" });
+    setShowPartyDropdown(false);
+    setPartySearch("");
   };
 
   const handleChange = (
@@ -75,29 +124,80 @@ export default function PaymentIn() {
             <div className="field">
               <label>Party Name</label>
 
-              <div
-                className="custom-select"
-                onClick={openPartyDropdown}
-              >
-                <span>
-                  {formData.partyName || "Search party by name or number"}
-                </span>
-                <ChevronDown size={16} />
-              </div>
+              <div className="custom-select-wrapper" ref={partyDropdownRef}>
+                {/* ---- TRIGGER ROW ---- */}
+                <div
+                  className="custom-select"
+                  onClick={togglePartyDropdown}
+                >
+                  <span className={formData.partyName ? "" : "placeholder"}>
+                    {formData.partyName || "Search party by name or number"}
+                  </span>
 
-              {showPartyDropdown && (
-                <div className="custom-dropdown">
-                  {parties.map((party) => (
-                    <div
-                      key={party.id}
-                      className="dropdown-item"
-                      onClick={() => selectParty(party.name)}
-                    >
-                      {party.name}
-                    </div>
-                  ))}
+                  <div className="custom-select-icons">
+                    {/* ✕ clear button — only shows when a party is selected */}
+                    {formData.partyName && (
+                      <span
+                        className="clear-btn"
+                        onMouseDown={clearParty}
+                        title="Deselect party"
+                      >
+                        <X size={14} />
+                      </span>
+                    )}
+
+                    <ChevronDown
+                      size={16}
+                      style={{
+                        transform: showPartyDropdown
+                          ? "rotate(180deg)"
+                          : "rotate(0deg)",
+                        transition: "transform 0.2s ease",
+                        flexShrink: 0,
+                      }}
+                    />
+                  </div>
                 </div>
-              )}
+
+                {/* ---- DROPDOWN ---- */}
+                {showPartyDropdown && (
+                  <div className="custom-dropdown">
+                    {/* Search input */}
+                    <div className="dropdown-search">
+                      <input
+                        ref={partySearchRef}
+                        type="text"
+                        placeholder="Search party by name or number"
+                        value={partySearch}
+                        onChange={(e) => setPartySearch(e.target.value)}
+                        onMouseDown={(e) => e.stopPropagation()}
+                      />
+                    </div>
+
+                    {/* Filtered list */}
+                    {filteredParties.length > 0 ? (
+                      filteredParties.map((party) => (
+                        <div
+                          key={party.id}
+                          className={`dropdown-item${
+                            formData.partyName === party.name
+                              ? " dropdown-item--selected"
+                              : ""
+                          }`}
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            selectParty(party.name);
+                          }}
+                        >
+                          {party.name}
+                        </div>
+                      ))
+                    ) : (
+                      <div className="dropdown-empty">No party found</div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="row">
