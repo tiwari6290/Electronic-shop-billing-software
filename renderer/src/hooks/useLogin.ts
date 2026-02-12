@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { validateLoginForm } from "../utils/validators";
+import { loginApi } from "../services/authService";
 
 export type UserRole = "Admin" | "Cashier" | "Accountant";
 
@@ -15,7 +16,7 @@ export const useLogin = () => {
   const handleLogin = async () => {
     setError("");
 
-    // ✅ Form validation
+    // ✅ Keep your existing validation
     const errorMsg = validateLoginForm({
       role: selectedRole,
       branch: selectedStore,
@@ -28,23 +29,32 @@ export const useLogin = () => {
       return;
     }
 
-    setLoading(true);
+    try {
+      setLoading(true);
 
-    // ✅ FRONTEND-ONLY DUMMY LOGIN (Cashier)
-    setTimeout(() => {
-      if (email === "admin@test.com" && password === "123456") {
-        localStorage.setItem("token", "dummy-token");
-        localStorage.setItem("role", "Cashier");
-        localStorage.setItem("branch", selectedStore);
+      // ✅ REAL BACKEND CALL
+      const response = await loginApi({
+        role: selectedRole,
+        branch: selectedStore,
+        username: email,
+        password,
+      });
 
-        // 🔥 Redirect to EXISTING route
-        window.location.href = "/create-party";
-      } else {
-        setError("Invalid credentials");
-      }
+      // ✅ Store backend response
+      localStorage.setItem("token", response.token);
+      localStorage.setItem("role", response.role);
+      localStorage.setItem("branch", selectedStore);
 
+      // ✅ Redirect (same as before)
+      window.location.href = "/create-party";
+
+    } catch (err: any) {
+      setError(
+        err.response?.data?.message || "Invalid credentials"
+      );
+    } finally {
       setLoading(false);
-    }, 800); // fake API delay
+    }
   };
 
   return {
