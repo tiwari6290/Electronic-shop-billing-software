@@ -46,6 +46,7 @@ const Sidebar: React.FC = () => {
         { id: 'quotation', label: 'Quotation', icon: <FileEdit size={18} />, path: '/quotation' },
         { id: 'payment-in', label: 'Payment In', icon: <CreditCard size={18} />, path: '/payment-in' },
         { id: 'sales-return', label: 'Sales Return', icon: <RotateCcw size={18} />, path: '/sales-return' },
+        { id: 'sales-invoice', label: 'Sales Invoice', icon: <FileEdit size={18} />, path: '/sales-invoice' },
         { id: 'credit-note', label: 'Credit Note', icon: <FileSpreadsheet size={18} />, path: '/credit-note' },
         { id: 'delivery-challan', label: 'Delivery Challan', icon: <Truck size={18} />, path: '/delivery-challan' },
         { id: 'proforma-invoice', label: 'Proforma Invoice', icon: <Receipt size={18} />, path: '/proforma-invoice' },

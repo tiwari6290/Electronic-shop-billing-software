@@ -17,7 +17,7 @@ import CreateCreditNote from "./components/Cashier/CreateCreditNote/CreateCredit
 import DeliveryChallan from "./components/Cashier/DeliveryChallan/DeliveryChallan";
 import PurchaseOrder from "./components/Cashier/PurchaseOrder/PurchaseOrder";
 import Createexpense from "./components/Cashier/Createexpense";
-
+import Salesinvoice from "./components/Cashier/Salesinvoice";
 
 /* Dummy pages (replace later with real pages) */
 const Page = ({ title }: { title: string }) => (
@@ -70,6 +70,7 @@ function App() {
           <Route path="/debit-note" element={<CreateDebitNote />} />
           <Route path="/purchase-orders" element={<PurchaseOrder />} />
           <Route path="/create-expense" element={<Createexpense />} />
+          <Route path="/sales-invoice" element={<Salesinvoice/>} />
 
         </Route>
 
