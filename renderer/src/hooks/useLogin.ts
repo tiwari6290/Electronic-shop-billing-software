@@ -5,7 +5,7 @@ import { loginApi } from "../services/authService";
 export type UserRole = "Admin" | "Cashier" | "Accountant";
 
 export const useLogin = () => {
-  const [selectedRole, setSelectedRole] = useState<UserRole>("Admin");
+  const [selectedRole, setSelectedRole] = useState<UserRole>("Cashier");
   const [selectedStore, setSelectedStore] = useState("01");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
