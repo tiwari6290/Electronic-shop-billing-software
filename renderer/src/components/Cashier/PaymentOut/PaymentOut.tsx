@@ -4,10 +4,14 @@ import { useState, useRef, useEffect } from "react";
 import emptyImg from "../../../assets/5.png";
 import Navbar from "../Navbar";
 import { useNavigate } from "react-router-dom";
+import QuickVoucherSettingsModal from "../QuickQuotationSettingsModal/QuickVoucherSettingsModal";
+
 
 export default function PaymentOut() {
   const navigate = useNavigate();
   const dateInputRef = useRef<HTMLInputElement>(null);
+  const [openSettings, setOpenSettings] = useState(false);
+
 
   /* ================= PARTY DROPDOWN ================= */
   const [showPartyDropdown, setShowPartyDropdown] = useState(false);
@@ -103,16 +107,19 @@ export default function PaymentOut() {
     <>
       {/* ================= NAVBAR ================= */}
       <Navbar
-        title="Payment Out"
-        cancelAction={{
-          label: "Cancel",
-          onClick: () => navigate(-1),
-        }}
-        primaryAction={{
-          label: "Save",
-          onClick: () => console.log("Saving Payment Out", formData),
-        }}
-      />
+  title="Payment Out"
+  showSettings
+  onSettingsClick={() => setOpenSettings(true)}   
+  cancelAction={{
+    label: "Cancel",
+    onClick: () => navigate(-1),
+  }}
+  primaryAction={{
+    label: "Save",
+    onClick: () => console.log("Saving Payment Out", formData),
+  }}
+/>
+
 
       {/* ================= PAGE BODY ================= */}
       <div className="paymentout-page">
@@ -318,6 +325,13 @@ export default function PaymentOut() {
           <button onClick={openPartyDropdown}>Select Party</button>
         </div>
       </div>
+      {openSettings && (
+  <QuickVoucherSettingsModal
+    type="paymentOut"
+    onClose={() => setOpenSettings(false)}
+  />
+)}
+
     </>
   );
 }

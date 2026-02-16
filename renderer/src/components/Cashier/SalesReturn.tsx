@@ -1,8 +1,10 @@
 import { useEffect } from "react";
 import Navbar from "./Navbar";
 import BillForm from "./Billform";
-
+import { useState } from "react";
+import QuickVoucherSettingsModal from "./QuickQuotationSettingsModal/QuickVoucherSettingsModal";
 export default function SalesReturn() {
+  const [openSettings, setOpenSettings] = useState(false);
 
   useEffect(() => {
     // Change Invoice Prefix
@@ -25,11 +27,12 @@ export default function SalesReturn() {
   }, []);
   return (
     <>
-      <Navbar
+     <Navbar
   title="Create Sales Return"
-  showBackButton={true}
+  showBackButton
   backPath="/dashboard"
-  showSettings={true}
+  showSettings
+  onSettingsClick={() => setOpenSettings(true)}   // 👈 IMPORTANT
   primaryAction={{
     label: "Save",
     onClick: () => console.log("Save clicked"),
@@ -39,7 +42,15 @@ export default function SalesReturn() {
     onClick: () => console.log("Save & New clicked"),
   }}
 />
+
       <BillForm />
+      {openSettings && (
+  <QuickVoucherSettingsModal
+    type="salesReturn"
+    onClose={() => setOpenSettings(false)}
+  />
+)}
+
     </>
   );
 }

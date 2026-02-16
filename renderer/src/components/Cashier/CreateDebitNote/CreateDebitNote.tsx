@@ -1,23 +1,25 @@
+import { useState } from "react";
 import Navbar from "../Navbar";
 import BillForm from "../Billform";
+import QuickVoucherSettingsModal from "../QuickQuotationSettingsModal/QuickVoucherSettingsModal";
 
 export default function CreateDebitNote() {
+  const [openSettings, setOpenSettings] = useState(false);
+
   return (
     <>
       <Navbar
         title="Create Debit Note"
-        showBackButton={true}
+        showBackButton
         backPath="/dashboard"
-
-        showSettings={true}
-
+        showSettings
+        onSettingsClick={() => setOpenSettings(true)}   
         primaryAction={{
           label: "Save",
           onClick: () => {
             console.log("Save Debit Note");
           },
         }}
-
         secondaryAction={{
           label: "Save & New",
           onClick: () => {
@@ -27,6 +29,13 @@ export default function CreateDebitNote() {
       />
 
       <BillForm mode="debit" />
+
+      {openSettings && (
+        <QuickVoucherSettingsModal
+          type="debitNote"  
+          onClose={() => setOpenSettings(false)}
+        />
+      )}
     </>
   );
 }

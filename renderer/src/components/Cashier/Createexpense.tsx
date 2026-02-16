@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Search, MoreVertical, Settings } from 'lucide-react';
 import Navbar from './Navbar';
+import QuickVoucherSettingsModal from "./QuickQuotationSettingsModal/QuickVoucherSettingsModal";
 
 // Types
 interface ExpenseItem {
@@ -164,7 +165,10 @@ const ExpensesPage: React.FC = () => {
   title="Create Expense"
   showBackButton={true}
   backPath="/expenses"
+  showSettings={true}
+  onSettingsClick={() => setShowSettingsModal(true)}
 />
+
       {/* Page Header Actions */}
 <div
   style={{
@@ -1181,7 +1185,17 @@ const ExpensesPage: React.FC = () => {
         </div>
       )}
     </div>
+    
   );
+{showSettingsModal && (
+  <QuickVoucherSettingsModal
+    type="expense"
+    onClose={() => setShowSettingsModal(false)}
+  />
+)}
+
+
+
 };
 
 export default ExpensesPage;
