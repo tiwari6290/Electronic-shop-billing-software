@@ -1,12 +1,13 @@
-import React from 'react';
-import Navbar from './Navbar';
+import React from "react";
+import Navbar from "./AdminNavbar/AdminNavbar";
 
 const ManageBusiness: React.FC = () => {
   return (
     <div>
-      {/* Admin Navbar with all modals */}
-      <Navbar />
-      
+      {/* Business Settings Navbar */}
+      <Navbar type="business" />
+
+      {/* Your Manage Business Page Content Here */}
       
     </div>
   );
