@@ -1,9 +1,12 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { validateLoginForm } from "../utils/validators";
 
 export type UserRole = "Admin" | "Cashier" | "Accountant";
 
 export const useLogin = () => {
+  const navigate = useNavigate();
+  
   const [selectedRole, setSelectedRole] = useState<UserRole>("Cashier");
   const [selectedStore, setSelectedStore] = useState("Main Store");
   const [email, setEmail] = useState("");
@@ -30,15 +33,24 @@ export const useLogin = () => {
 
     setLoading(true);
 
-    // ✅ FRONTEND-ONLY DUMMY LOGIN (Cashier)
+    // ✅ FRONTEND-ONLY DUMMY LOGIN
     setTimeout(() => {
       if (email === "admin@test.com" && password === "123456") {
         localStorage.setItem("token", "dummy-token");
-        localStorage.setItem("role", "Cashier");
+        localStorage.setItem("role", selectedRole);
         localStorage.setItem("branch", selectedStore);
 
-        // 🔥 Redirect to EXISTING route
-        window.location.href = "/create-party";
+        // 🔥 Role-based navigation
+        if (selectedRole === "Admin") {
+          navigate("/admin/dashboard");
+        } else if (selectedRole === "Cashier") {
+          navigate("/cashier/dashboard");
+        } else {
+          // Accountant - coming soon
+          setError("Accountant login coming soon!");
+          setLoading(false);
+          return;
+        }
       } else {
         setError("Invalid credentials");
       }
@@ -61,3 +73,5 @@ export const useLogin = () => {
     handleLogin,
   };
 };
+
+
