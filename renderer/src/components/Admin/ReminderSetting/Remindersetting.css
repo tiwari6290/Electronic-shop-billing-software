@@ -1,0 +1,200 @@
+/* ReminderSettings.css */
+
+.reminder-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: #f5f6fa;
+  font-family: "Segoe UI", sans-serif;
+}
+
+.reminder-body {
+  padding: 24px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* ── Top toggle cards ── */
+.toggle-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fff;
+  margin-bottom: 12px;
+}
+
+.toggle-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-right: 1px solid #e5e7eb;
+}
+
+.toggle-card:last-child {
+  border-right: none;
+}
+
+.toggle-card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 4px;
+}
+
+.toggle-card-sub {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* Toggle switch */
+.toggle-switch {
+  width: 42px;
+  height: 24px;
+  border-radius: 999px;
+  background: #d1d5db;
+  position: relative;
+  cursor: pointer;
+  transition: background 0.2s;
+  flex-shrink: 0;
+  margin-left: 16px;
+}
+
+.toggle-switch.on {
+  background: #4f46e5;
+}
+
+.toggle-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  transition: left 0.2s;
+}
+
+.toggle-switch.on .toggle-knob {
+  left: 21px;
+}
+
+/* ── Accordion rows ── */
+.accordion-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-top: none;
+  cursor: pointer;
+  font-size: 13.5px;
+  color: #374151;
+  user-select: none;
+  transition: background 0.15s;
+}
+
+.accordion-row:first-of-type {
+  border-top: 1px solid #e5e7eb;
+  margin-top: 0;
+}
+
+.accordion-row:hover {
+  background: #f9fafb;
+}
+
+.accordion-arrow {
+  font-size: 20px;
+  color: #6b7280;
+  transition: transform 0.2s;
+  display: inline-block;
+  line-height: 1;
+}
+
+.accordion-arrow.open {
+  transform: rotate(90deg);
+}
+
+/* ── Accordion content ── */
+.accordion-content {
+  border: 1px solid #e5e7eb;
+  border-top: none;
+  background: #f9fafb;
+  padding: 16px 20px;
+}
+
+.accordion-content.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+/* ── Reminder cards ── */
+.reminder-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.reminder-card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.reminder-card-sub {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: -6px;
+}
+
+/* Checkbox rows */
+.check-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  color: #374151;
+}
+
+.check-row input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #4f46e5;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+/* View sample SMS */
+.view-sample-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: #374151;
+  cursor: pointer;
+  margin-top: 4px;
+  transition: background 0.15s;
+}
+
+.view-sample-row:hover {
+  background: #f5f3ff;
+}
+
+.chevron-right {
+  font-size: 18px;
+  color: #6b7280;
+}

@@ -22,6 +22,9 @@ import Salesinvoice from "./components/Cashier/Salesinvoice";
 import ManageBusiness from "./components/Admin/ManageBuisness";
 import Account from "./components/Admin/Account/Account";
 import Pricing from "./components/Admin/Pricing/Pricing";
+import PrintSetting from "./components/Admin/PrintSetting/Printsetting";
+import ReminderSetting from "./components/Admin/ReminderSetting/Remindersetting";
+import Reportsharing from "./components/Admin/ReportSharing/Reportsharing";
 
 /* Dummy pages (replace later with real pages) */
 const Page = ({ title }: { title: string }) => (
@@ -108,10 +111,10 @@ function App() {
           <Route path="account" element={<Account />} />
           <Route path="manage-business" element={<ManageBusiness />} />
           <Route path="invoice-settings" element={<Page title="Invoice Settings" />} />
-          <Route path="print-settings" element={<Page title="Print Settings" />} />
+          <Route path="print-settings" element={< PrintSetting />} />
           <Route path="manage-users" element={<Page title="Manage Users" />} />
-          <Route path="reminders" element={<Page title="Reminders" />} />
-          <Route path="ca-reports" element={<Page title="CA Reports Sharing" />} />
+          <Route path="reminders" element={<ReminderSetting />} />
+          <Route path="ca-reports" element={< Reportsharing />} />
           <Route path="pricing" element={<Pricing />} />
           <Route path="refer-earn" element={<Page title="Refer & Earn" />} />
           <Route path="help-support" element={<Page title="Help and Support" />} />
