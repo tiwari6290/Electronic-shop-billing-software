@@ -25,6 +25,8 @@ import Pricing from "./components/Admin/Pricing/Pricing";
 import PrintSetting from "./components/Admin/PrintSetting/Printsetting";
 import ReminderSetting from "./components/Admin/ReminderSetting/Remindersetting";
 import Reportsharing from "./components/Admin/ReportSharing/Reportsharing";
+import ReferralPage from "./components/Admin/Referralpage/Referralpage";
+import ManageUsers from "./components/Admin/Manageusers/Manageusers";
 
 /* Dummy pages (replace later with real pages) */
 const Page = ({ title }: { title: string }) => (
@@ -112,11 +114,11 @@ function App() {
           <Route path="manage-business" element={<ManageBusiness />} />
           <Route path="invoice-settings" element={<Page title="Invoice Settings" />} />
           <Route path="print-settings" element={< PrintSetting />} />
-          <Route path="manage-users" element={<Page title="Manage Users" />} />
+          <Route path="manage-users" element={<ManageUsers />} />
           <Route path="reminders" element={<ReminderSetting />} />
           <Route path="ca-reports" element={< Reportsharing />} />
           <Route path="pricing" element={<Pricing />} />
-          <Route path="refer-earn" element={<Page title="Refer & Earn" />} />
+          <Route path="refer-earn" element={<ReferralPage />} />
           <Route path="help-support" element={<Page title="Help and Support" />} />
 
         </Route>
