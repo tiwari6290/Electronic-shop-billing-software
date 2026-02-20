@@ -51,6 +51,7 @@ interface BusinessVisibility {
   email: boolean;
 }
 
+// ── UPDATED: added backgroundUrl & backgroundOpacity fields ──
 interface TableSettings {
   hsnSummary: boolean;
   showDesc: boolean;
@@ -59,9 +60,10 @@ interface TableSettings {
   quantityMode: string;
   cols: Record<string, boolean>;
   customCols: string[];
+  backgroundUrl: string;
+  backgroundOpacity: number;
 }
 
-// ── UPDATED: added signatureUrl field ──
 interface MiscState {
   showNotes: boolean;
   amountWords: boolean;
@@ -192,14 +194,16 @@ const DEFAULT_PV: PartyVisibility = {
   billCustomFields: [], shipCustomFields: [],
 };
 
+// ── UPDATED: added backgroundUrl and backgroundOpacity defaults ──
 const DEFAULT_TS: TableSettings = {
   hsnSummary: false, showDesc: true, capitalize: false, stretch: true,
   quantityMode: "Total",
   cols: { "Serial Number": true, "Item Name": true, "HSN": true, "MRP": false, "Quantity": true, "Rate/Item": true, "Discount": true, "Amount": true },
   customCols: [],
+  backgroundUrl: "",
+  backgroundOpacity: 15,
 };
 
-// ── UPDATED: added signatureUrl: "" ──
 const DEFAULT_MISC: MiscState = {
   showNotes: true,
   amountWords: true,
@@ -577,6 +581,7 @@ const PartyPanel: React.FC<{
   </div>
 );
 
+// ── UPDATED: ItemPanel now includes Background Image section ──
 const ItemPanel: React.FC<{ ts: TableSettings; setTs: React.Dispatch<React.SetStateAction<TableSettings>> }> = ({ ts, setTs }) => {
   const toggleCol = (col: string) => setTs((t) => ({ ...t, cols: { ...t.cols, [col]: t.cols[col] === false } }));
   return (
@@ -600,11 +605,88 @@ const ItemPanel: React.FC<{ ts: TableSettings; setTs: React.Dispatch<React.SetSt
         </div>
       ))}
       <button className="add-btn" onClick={() => setTs((t) => ({ ...t, customCols: [...t.customCols, ""] }))} type="button">+ Add Column</button>
+
+      {/* ── NEW: Background Image Section ── */}
+      <SL>BACKGROUND IMAGE</SL>
+      <p style={{ fontSize: 11, color: "#868e96", marginBottom: 8, lineHeight: 1.5 }}>
+        Upload an image to use as the full-page background of the invoice bill.
+      </p>
+      <input
+        type="file"
+        className="file-input"
+        accept="image/*"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) {
+            const url = URL.createObjectURL(file);
+            setTs((t) => ({ ...t, backgroundUrl: url }));
+          }
+        }}
+      />
+      {ts.backgroundUrl && (
+        <>
+          {/* Thumbnail preview */}
+          <div
+            style={{
+              marginTop: 10,
+              borderRadius: 8,
+              overflow: "hidden",
+              border: "1px solid #dee2e6",
+              position: "relative",
+              height: 90,
+              background: `url(${ts.backgroundUrl}) center/cover no-repeat`,
+            }}
+          >
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                background: "rgba(0,0,0,0.25)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#fff",
+                fontSize: 12,
+                fontWeight: 600,
+                letterSpacing: 0.5,
+              }}
+            >
+              Background Preview
+            </div>
+          </div>
+
+          {/* Opacity slider */}
+          <div style={{ marginTop: 12 }}>
+            <div className="section-label">OPACITY ({ts.backgroundOpacity}%)</div>
+            <input
+              type="range"
+              min={5}
+              max={60}
+              value={ts.backgroundOpacity}
+              style={{ width: "100%" }}
+              onChange={(e) => setTs((t) => ({ ...t, backgroundOpacity: Number(e.target.value) }))}
+            />
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "#adb5bd", marginTop: 2 }}>
+              <span>5% (Subtle)</span>
+              <span>60% (Bold)</span>
+            </div>
+          </div>
+
+          {/* Remove button */}
+          <button
+            className="remove-btn"
+            type="button"
+            style={{ marginTop: 10 }}
+            onClick={() => setTs((t) => ({ ...t, backgroundUrl: "", backgroundOpacity: 15 }))}
+          >
+            × Remove Background
+          </button>
+        </>
+      )}
     </div>
   );
 };
 
-// ── UPDATED: MiscPanel now handles signature upload & preview ──
 const MiscPanel: React.FC<{
   inv: InvoiceData; setInv: React.Dispatch<React.SetStateAction<InvoiceData>>;
   misc: MiscState; setMisc: React.Dispatch<React.SetStateAction<MiscState>>;
@@ -623,7 +705,6 @@ const MiscPanel: React.FC<{
       <IBInput value={inv.ifsc} onChange={(v) => setInv((i) => ({ ...i, ifsc: v }))} placeholder="IFSC Code" />
     </div>
 
-    {/* ── UPDATED: Signature upload with live preview ── */}
     <div style={{ marginTop: 16 }}>
       <SL>UPLOAD SIGNATURE</SL>
       <input
@@ -689,170 +770,199 @@ const InvoicePreview: React.FC<PreviewProps> = ({ inv, style, print, ts, misc, v
   }, {});
 
   return (
-    <div className="invoice-preview" style={{ fontFamily: style.font, fontSize: style.textSize, padding: `${print.top}px ${print.right}px ${print.bottom}px ${print.left}px` }}>
-
-      {print.showHeader && (
-        <div className="inv-header">
-          {style.showLogo && style.logoUrl && <img src={style.logoUrl} alt="logo" className="inv-logo" />}
-          <div style={{ flex: 1 }}>
-            {vis.companyName && <p className="inv-company-name" style={{ color: tc }}>{inv.companyName}</p>}
-            {vis.slogan && <p className="inv-slogan">{inv.slogan}</p>}
-            {vis.address && <p className="inv-meta-small">{inv.address}</p>}
-            <p className="inv-meta-small">
-              {[vis.gstin && `GSTIN: ${inv.gstin}`, vis.phone && `Ph: ${inv.phone}`, vis.email && `Email: ${inv.email}`].filter(Boolean).join("  ")}
-            </p>
-            {vis.pan && <p className="inv-meta-small">PAN: {inv.pan}</p>}
-          </div>
-        </div>
+    // ── UPDATED: wrapper div carries the background image with controlled opacity ──
+    <div
+      className="invoice-preview"
+      style={{
+        fontFamily: style.font,
+        fontSize: style.textSize,
+        padding: `${print.top}px ${print.right}px ${print.bottom}px ${print.left}px`,
+        position: "relative",
+        overflow: "hidden",
+      }}
+    >
+      {/* Background image layer */}
+      {ts.backgroundUrl && (
+        <div
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            inset: 0,
+            backgroundImage: `url(${ts.backgroundUrl})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            backgroundRepeat: "no-repeat",
+            opacity: ts.backgroundOpacity / 100,
+            pointerEvents: "none",
+            zIndex: 0,
+          }}
+        />
       )}
 
-      <hr className="inv-divider" style={{ borderColor: tc }} />
-      <p className="inv-title" style={{ color: tc }}>TAX INVOICE</p>
+      {/* All invoice content sits above the background */}
+      <div style={{ position: "relative", zIndex: 1 }}>
+        {print.showHeader && (
+          <div className="inv-header">
+            {style.showLogo && style.logoUrl && <img src={style.logoUrl} alt="logo" className="inv-logo" />}
+            <div style={{ flex: 1 }}>
+              {vis.companyName && <p className="inv-company-name" style={{ color: tc }}>{inv.companyName}</p>}
+              {vis.slogan && <p className="inv-slogan">{inv.slogan}</p>}
+              {vis.address && <p className="inv-meta-small">{inv.address}</p>}
+              <p className="inv-meta-small">
+                {[vis.gstin && `GSTIN: ${inv.gstin}`, vis.phone && `Ph: ${inv.phone}`, vis.email && `Email: ${inv.email}`].filter(Boolean).join("  ")}
+              </p>
+              {vis.pan && <p className="inv-meta-small">PAN: {inv.pan}</p>}
+            </div>
+          </div>
+        )}
 
-      <div className="inv-info-grid">
-        <span><b>Invoice No:</b> {inv.invoiceNo}</span>
-        <span className="inv-info-right"><b>Due Date:</b> {inv.dueDate}</span>
-        <span><b>Date:</b> {inv.date}</span>
-        <span className="inv-info-right"><b>Place of Supply:</b> {inv.placeOfSupply}</span>
-        {det.showPO && <span><b>PO No:</b> {inv.poNo}</span>}
-        {det.showEwayBill && det.ewayBillNo && <span className="inv-info-right"><b>E-way Bill:</b> {det.ewayBillNo}</span>}
-        {det.showVehicle && det.vehicleNo && <span><b>Vehicle No:</b> {det.vehicleNo}</span>}
-        {det.customFields.map((f, i) => f.label && f.value && <span key={i}><b>{f.label}:</b> {f.value}</span>)}
-      </div>
+        <hr className="inv-divider" style={{ borderColor: tc }} />
+        <p className="inv-title" style={{ color: tc }}>TAX INVOICE</p>
 
-      <div className="inv-party-grid">
-        <div className="inv-party-box" style={{ border: bw }}>
-          <div className="inv-party-label" style={{ color: tc }}>BILL TO</div>
-          {pv.billCompany  && <div className="inv-party-name">{inv.billTo.name}</div>}
-          {pv.billAddress  && <div>{inv.billTo.address}</div>}
-          {pv.billMobile   && <div>{inv.billTo.mobile}</div>}
-          {pv.billGstin    && <div>GSTIN: {inv.billTo.gstin}</div>}
-          {pv.billCustomFields.map((f, i) => f.label && <div key={i}><b>{f.label}:</b> {f.value}</div>)}
+        <div className="inv-info-grid">
+          <span><b>Invoice No:</b> {inv.invoiceNo}</span>
+          <span className="inv-info-right"><b>Due Date:</b> {inv.dueDate}</span>
+          <span><b>Date:</b> {inv.date}</span>
+          <span className="inv-info-right"><b>Place of Supply:</b> {inv.placeOfSupply}</span>
+          {det.showPO && <span><b>PO No:</b> {inv.poNo}</span>}
+          {det.showEwayBill && det.ewayBillNo && <span className="inv-info-right"><b>E-way Bill:</b> {det.ewayBillNo}</span>}
+          {det.showVehicle && det.vehicleNo && <span><b>Vehicle No:</b> {det.vehicleNo}</span>}
+          {det.customFields.map((f, i) => f.label && f.value && <span key={i}><b>{f.label}:</b> {f.value}</span>)}
         </div>
-        <div className="inv-party-box" style={{ border: bw }}>
-          <div className="inv-party-label" style={{ color: tc }}>SHIP TO</div>
-          {pv.shipCompany  && <div className="inv-party-name">{inv.shipTo.name}</div>}
-          {pv.shipAddress  && <div>{inv.shipTo.address}</div>}
-          {pv.shipMobile   && <div>{inv.shipTo.mobile}</div>}
-          {pv.shipGstin    && <div>GSTIN: {inv.shipTo.gstin}</div>}
-          {pv.shipCustomFields.map((f, i) => f.label && <div key={i}><b>{f.label}:</b> {f.value}</div>)}
-        </div>
-      </div>
 
-      <table className="inv-table">
-        <thead>
-          <tr style={{ background: tc }}>
-            {showSerial && <th>#</th>}
-            <th>Item</th>
-            {showHSN  && <th className="center">HSN</th>}
-            {showMRP  && <th className="center">MRP</th>}
-            {showQty  && <th className="center">Qty</th>}
-            {showRate && <th className="center">Rate</th>}
-            {showDisc && <th className="center">Disc</th>}
-            {activeCols.map((col) => <th key={col} className="center">{col}</th>)}
-            {showAmt  && <th className="right">Amount</th>}
-          </tr>
-        </thead>
-        <tbody>
-          {inv.items.map((item, i) => (
-            <React.Fragment key={item.id}>
-              <tr className={i % 2 === 0 ? "even" : "odd"}>
-                {showSerial && <td>{item.id}</td>}
-                <td>{ts.capitalize ? item.name.toUpperCase() : item.name}</td>
-                {showHSN  && <td className="center">{item.hsn}</td>}
-                {showMRP  && <td className="center">₹{item.mrp.toFixed(2)}</td>}
-                {showQty  && <td className="center">{item.qty}</td>}
-                {showRate && <td className="center">₹{item.rate.toFixed(2)}</td>}
-                {showDisc && <td className="center">{item.disc != null ? `₹${item.disc.toFixed(2)}` : "—"}</td>}
-                {activeCols.map((col) => <td key={col} className="center">—</td>)}
-                {showAmt  && <td className="right">₹{item.amount.toFixed(2)}</td>}
-              </tr>
-              {ts.showDesc && (
-                <tr className={`desc-row ${i % 2 === 0 ? "even" : "odd"}`}>
-                  {showSerial && <td />}
-                  <td colSpan={[showHSN, showMRP, showQty, showRate, showDisc, showAmt].filter(Boolean).length + activeCols.length}>{item.desc}</td>
+        <div className="inv-party-grid">
+          <div className="inv-party-box" style={{ border: bw }}>
+            <div className="inv-party-label" style={{ color: tc }}>BILL TO</div>
+            {pv.billCompany  && <div className="inv-party-name">{inv.billTo.name}</div>}
+            {pv.billAddress  && <div>{inv.billTo.address}</div>}
+            {pv.billMobile   && <div>{inv.billTo.mobile}</div>}
+            {pv.billGstin    && <div>GSTIN: {inv.billTo.gstin}</div>}
+            {pv.billCustomFields.map((f, i) => f.label && <div key={i}><b>{f.label}:</b> {f.value}</div>)}
+          </div>
+          <div className="inv-party-box" style={{ border: bw }}>
+            <div className="inv-party-label" style={{ color: tc }}>SHIP TO</div>
+            {pv.shipCompany  && <div className="inv-party-name">{inv.shipTo.name}</div>}
+            {pv.shipAddress  && <div>{inv.shipTo.address}</div>}
+            {pv.shipMobile   && <div>{inv.shipTo.mobile}</div>}
+            {pv.shipGstin    && <div>GSTIN: {inv.shipTo.gstin}</div>}
+            {pv.shipCustomFields.map((f, i) => f.label && <div key={i}><b>{f.label}:</b> {f.value}</div>)}
+          </div>
+        </div>
+
+        <table className="inv-table">
+          <thead>
+            <tr style={{ background: tc }}>
+              {showSerial && <th>#</th>}
+              <th>Item</th>
+              {showHSN  && <th className="center">HSN</th>}
+              {showMRP  && <th className="center">MRP</th>}
+              {showQty  && <th className="center">Qty</th>}
+              {showRate && <th className="center">Rate</th>}
+              {showDisc && <th className="center">Disc</th>}
+              {activeCols.map((col) => <th key={col} className="center">{col}</th>)}
+              {showAmt  && <th className="right">Amount</th>}
+            </tr>
+          </thead>
+          <tbody>
+            {inv.items.map((item, i) => (
+              <React.Fragment key={item.id}>
+                <tr className={i % 2 === 0 ? "even" : "odd"}>
+                  {showSerial && <td>{item.id}</td>}
+                  <td>{ts.capitalize ? item.name.toUpperCase() : item.name}</td>
+                  {showHSN  && <td className="center">{item.hsn}</td>}
+                  {showMRP  && <td className="center">₹{item.mrp.toFixed(2)}</td>}
+                  {showQty  && <td className="center">{item.qty}</td>}
+                  {showRate && <td className="center">₹{item.rate.toFixed(2)}</td>}
+                  {showDisc && <td className="center">{item.disc != null ? `₹${item.disc.toFixed(2)}` : "—"}</td>}
+                  {activeCols.map((col) => <td key={col} className="center">—</td>)}
+                  {showAmt  && <td className="right">₹{item.amount.toFixed(2)}</td>}
                 </tr>
-              )}
-            </React.Fragment>
-          ))}
-        </tbody>
-      </table>
+                {ts.showDesc && (
+                  <tr className={`desc-row ${i % 2 === 0 ? "even" : "odd"}`}>
+                    {showSerial && <td />}
+                    <td colSpan={[showHSN, showMRP, showQty, showRate, showDisc, showAmt].filter(Boolean).length + activeCols.length}>{item.desc}</td>
+                  </tr>
+                )}
+              </React.Fragment>
+            ))}
+          </tbody>
+        </table>
 
-      {ts.hsnSummary && (
-        <div className="hsn-summary">
-          <div className="hsn-summary-title" style={{ color: tc }}>HSN-wise Tax Summary</div>
-          <table className="inv-table" style={{ marginTop: 6 }}>
-            <thead>
-              <tr style={{ background: tc }}>
-                <th>HSN</th><th className="right">Taxable Amt</th>
-                <th className="right">CGST 9%</th><th className="right">SGST 9%</th><th className="right">Total Tax</th>
-              </tr>
-            </thead>
+        {ts.hsnSummary && (
+          <div className="hsn-summary">
+            <div className="hsn-summary-title" style={{ color: tc }}>HSN-wise Tax Summary</div>
+            <table className="inv-table" style={{ marginTop: 6 }}>
+              <thead>
+                <tr style={{ background: tc }}>
+                  <th>HSN</th><th className="right">Taxable Amt</th>
+                  <th className="right">CGST 9%</th><th className="right">SGST 9%</th><th className="right">Total Tax</th>
+                </tr>
+              </thead>
+              <tbody>
+                {Object.entries(hsnGroups).map(([hsn, { taxable, tax }], i) => (
+                  <tr key={hsn} className={i % 2 === 0 ? "even" : "odd"}>
+                    <td>{hsn}</td>
+                    <td className="right">₹{taxable.toFixed(2)}</td>
+                    <td className="right">₹{tax.toFixed(2)}</td>
+                    <td className="right">₹{tax.toFixed(2)}</td>
+                    <td className="right">₹{(tax * 2).toFixed(2)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        <div className="inv-totals">
+          <table className="inv-totals-table">
             <tbody>
-              {Object.entries(hsnGroups).map(([hsn, { taxable, tax }], i) => (
-                <tr key={hsn} className={i % 2 === 0 ? "even" : "odd"}>
-                  <td>{hsn}</td>
-                  <td className="right">₹{taxable.toFixed(2)}</td>
-                  <td className="right">₹{tax.toFixed(2)}</td>
-                  <td className="right">₹{tax.toFixed(2)}</td>
-                  <td className="right">₹{(tax * 2).toFixed(2)}</td>
-                </tr>
+              {([["Subtotal", `₹${inv.subtotal.toFixed(2)}`], ["CGST (9%)", `₹${inv.cgst.toFixed(2)}`], ["SGST (9%)", `₹${inv.sgst.toFixed(2)}`]] as [string,string][]).map(([k,v]) => (
+                <tr key={k}><td>{k}</td><td>{v}</td></tr>
               ))}
+              <tr className="grand"><td>Grand Total</td><td style={{ color: tc }}>₹{inv.grandTotal.toFixed(2)}</td></tr>
             </tbody>
           </table>
         </div>
-      )}
 
-      <div className="inv-totals">
-        <table className="inv-totals-table">
-          <tbody>
-            {([["Subtotal", `₹${inv.subtotal.toFixed(2)}`], ["CGST (9%)", `₹${inv.cgst.toFixed(2)}`], ["SGST (9%)", `₹${inv.sgst.toFixed(2)}`]] as [string,string][]).map(([k,v]) => (
-              <tr key={k}><td>{k}</td><td>{v}</td></tr>
-            ))}
-            <tr className="grand"><td>Grand Total</td><td style={{ color: tc }}>₹{inv.grandTotal.toFixed(2)}</td></tr>
-          </tbody>
-        </table>
-      </div>
+        {misc.amountWords && <p className="inv-amount-words"><b>Amount in Words:</b> Twenty Two Thousand Four Hundred Seventy Three Rupees Only</p>}
 
-      {misc.amountWords && <p className="inv-amount-words"><b>Amount in Words:</b> Twenty Two Thousand Four Hundred Seventy Three Rupees Only</p>}
-
-      <div className="inv-bank-box" style={{ border: bw }}>
-        <div className="inv-bank-title">Bank Details</div>
-        <div>Account: {inv.bank}</div>
-        <div>IFSC: {inv.ifsc}</div>
-      </div>
-
-      {misc.showNotes && <div className="inv-section-text"><b>Notes</b><br />{inv.notes}</div>}
-      {misc.showTerms && <div className="inv-section-text"><b>Terms &amp; Conditions</b><br />{inv.terms}</div>}
-
-      {/* ── UPDATED: Footer now shows uploaded signature image above "Authorized Signatory" ── */}
-      {print.showFooter && (
-        <div className={`inv-footer${misc.receiverSig ? " dual" : ""}`}>
-          {misc.receiverSig && (
-            <div style={{ textAlign: "center" }}>
-              <span>Receiver's Signature</span>
-            </div>
-          )}
-          <div style={{ textAlign: "center" }}>
-            {misc.signatureUrl && (
-              <img
-                src={misc.signatureUrl}
-                alt="Authorized Signature"
-                style={{
-                  height: 60,
-                  maxWidth: 160,
-                  objectFit: "contain",
-                  display: "block",
-                  margin: "0 auto 4px",
-                }}
-              />
-            )}
-            <span>Authorized Signatory</span>
-          </div>
+        <div className="inv-bank-box" style={{ border: bw }}>
+          <div className="inv-bank-title">Bank Details</div>
+          <div>Account: {inv.bank}</div>
+          <div>IFSC: {inv.ifsc}</div>
         </div>
-      )}
 
-      <div className="inv-generated">This is a computer generated invoice.</div>
+        {misc.showNotes && <div className="inv-section-text"><b>Notes</b><br />{inv.notes}</div>}
+        {misc.showTerms && <div className="inv-section-text"><b>Terms &amp; Conditions</b><br />{inv.terms}</div>}
+
+        {print.showFooter && (
+          <div className={`inv-footer${misc.receiverSig ? " dual" : ""}`}>
+            {misc.receiverSig && (
+              <div style={{ textAlign: "center" }}>
+                <span>Receiver's Signature</span>
+              </div>
+            )}
+            <div style={{ textAlign: "center" }}>
+              {misc.signatureUrl && (
+                <img
+                  src={misc.signatureUrl}
+                  alt="Authorized Signature"
+                  style={{
+                    height: 60,
+                    maxWidth: 160,
+                    objectFit: "contain",
+                    display: "block",
+                    margin: "0 auto 4px",
+                  }}
+                />
+              )}
+              <span>Authorized Signatory</span>
+            </div>
+          </div>
+        )}
+
+        <div className="inv-generated">This is a computer generated invoice.</div>
+      </div>
     </div>
   );
 };
