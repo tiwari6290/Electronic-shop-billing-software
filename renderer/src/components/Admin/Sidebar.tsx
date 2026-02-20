@@ -134,7 +134,6 @@ const menuItemStyle: React.CSSProperties = {
     { path: '/admin/ca-reports', label: 'CA Reports Sharing', icon: '📊' },
     { path: '/admin/pricing', label: 'Pricing', icon: '💰' },
     { path: '/admin/refer-earn', label: 'Refer & Earn', icon: '🎁' },
-    { path: '/admin/help-support', label: 'Help And Support', icon: '❓' },
   ];
 
   const isActive = (path: string) => location.pathname === path;

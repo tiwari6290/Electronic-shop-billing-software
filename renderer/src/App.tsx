@@ -27,6 +27,7 @@ import ReminderSetting from "./components/Admin/ReminderSetting/Remindersetting"
 import Reportsharing from "./components/Admin/ReportSharing/Reportsharing";
 import ReferralPage from "./components/Admin/Referralpage/Referralpage";
 import ManageUsers from "./components/Admin/Manageusers/Manageusers";
+import InvoiceBuilder from "./components/Admin/Invoicebuilder/Invoicebuilder";
 
 /* Dummy pages (replace later with real pages) */
 const Page = ({ title }: { title: string }) => (
@@ -112,7 +113,7 @@ function App() {
           <Route path="dashboard" element={<AdminDashboard />} />
           <Route path="account" element={<Account />} />
           <Route path="manage-business" element={<ManageBusiness />} />
-          <Route path="invoice-settings" element={<Page title="Invoice Settings" />} />
+          <Route path="invoice-settings" element={<InvoiceBuilder/>} />
           <Route path="print-settings" element={< PrintSetting />} />
           <Route path="manage-users" element={<ManageUsers />} />
           <Route path="reminders" element={<ReminderSetting />} />
