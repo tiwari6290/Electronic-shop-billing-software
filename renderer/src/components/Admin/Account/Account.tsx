@@ -1,6 +1,7 @@
 import React from "react";
 import Navbar from "../AdminNavbar/AdminNavbar";
 import "./Account.css";
+import { useNavigate } from "react-router-dom";
 
 /* Import Feature Icons */
 import icon1 from "../../../assets/adminaccount1.png";
@@ -11,6 +12,7 @@ import icon5 from "../../../assets/adminaccount5.png";
 import icon6 from "../../../assets/adminaccount6.png";
 
 const Account: React.FC = () => {
+  const navigate = useNavigate();
   return (
     <div className="account-page">
       <Navbar type="account" />
@@ -70,7 +72,10 @@ const Account: React.FC = () => {
               <p className="current-plan-label">CURRENT PLAN</p>
               <h2 className="plan-name">Trial</h2>
 
-              <button className="buy-btn">
+              <button
+                className="buy-btn"
+                onClick={() => navigate("/admin/pricing")}
+              >
                 Buy Subscription Plan
               </button>
 
