@@ -15,6 +15,7 @@ import {
   StickyNote, 
   ShoppingBag, 
   DollarSign,
+  LogOut,
 } from 'lucide-react';
 
 interface NavItem {
@@ -36,8 +37,8 @@ const Sidebar: React.FC = () => {
     {
       title: 'GENERAL',
       items: [
-        { id: 'create-party', label: 'Create Party', icon: <Users size={18} />, path: '/create-party' },
-        { id: 'create-item', label: 'Create Item', icon: <Package size={18} />, path: '/create-item' },
+        { id: 'create-party', label: 'Create Party', icon: <Users size={18} />, path: '/cashier/create-party' },
+        { id: 'create-item', label: 'Create Item', icon: <Package size={18} />, path: '/cashier/create-item' },
       ]
     },
     {
@@ -61,13 +62,27 @@ const Sidebar: React.FC = () => {
         { id: 'debit-note', label: 'Debit Note', icon: <StickyNote size={18} />, path: '/cashier/debit-note' },
         { id: 'purchase-orders', label: 'Purchase Orders', icon: <ShoppingBag size={18} />, path: '/cashier/purchase-orders' },
         { id: 'create-expense', label: 'Create Expense', icon: <DollarSign size={18} />, path: '/cashier/create-expense' },
+        { id: 'logout', label: 'Logout', icon: <LogOut size={18} />, path: 'logout' },
       ]
     }
   ];
 
-  const handleItemClick = (path: string) => {
+ const handleItemClick = (path: string) => {
+  if (path === "logout") {
+    handleLogout();
+  } else {
     navigate(path);
-  };
+  }
+};
+
+
+const handleLogout = () => {
+  localStorage.removeItem("token");
+  localStorage.removeItem("role");
+  localStorage.removeItem("branch");
+
+  navigate("/login", { replace: true });
+};
 
   const isActive = (path: string) => {
     return location.pathname === path;
@@ -129,7 +144,7 @@ const Sidebar: React.FC = () => {
                     className="w-full flex items-center rounded-lg"
                     style={{
                       gap: '12px',
-                      padding: '10px 12px',
+                      padding: '10px',
                       backgroundColor: isActive(item.path) ? '#3b5a8f' : 'transparent',
                       color: isActive(item.path) ? '#ffffff' : '#b8c5d6',
                       border: 'none',
@@ -164,6 +179,7 @@ const Sidebar: React.FC = () => {
                 ))}
               </nav>
             </div>
+            
           ))}
         </div>
       </div>
@@ -175,6 +191,7 @@ const Sidebar: React.FC = () => {
           padding: '16px'
         }}
       >
+        
         <div 
           className="flex items-center" 
           style={{ 

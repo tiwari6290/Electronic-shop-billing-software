@@ -3,7 +3,6 @@ import Login from "@/components/Login/Login";
 import Sidebar from "./components/Cashier/Sidebar";
 import AdminSidebar from "./components/Admin/Sidebar";
 import Navbar from "./components/Cashier/Navbar";
-import CashierDashboard from "./components/CashierDashboard/CashierDashboard";
 import Createparty from "./components/Cashier/Createparty";
 import CreateQuotation from "./components/Cashier/CreateQuotation";
 import CreateItem from "./components/Cashier/CreateItem/CreateItem";
@@ -82,8 +81,7 @@ function App() {
         {/* Cashier Routes with Cashier Sidebar */}
         <Route path="/cashier" element={<CashierLayout />}>
 
-          <Route index element={<Navigate to="/cashier/dashboard" replace />} />
-          <Route path="dashboard" element={<CashierDashboard />} />
+          <Route index element={<Navigate to="/cashier/create-party" replace />} />
           <Route path="navbar" element={<Navbar title="Dashboard" />} />
 
           <Route path="create-party" element={<Createparty />} />

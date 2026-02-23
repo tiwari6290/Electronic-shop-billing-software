@@ -44,7 +44,7 @@ export const useLogin = () => {
         if (selectedRole === "Admin") {
           navigate("/admin/dashboard");
         } else if (selectedRole === "Cashier") {
-          navigate("/cashier/dashboard");
+          navigate("/cashier/create-party");
         } else {
           // Accountant - coming soon
           setError("Accountant login coming soon!");
