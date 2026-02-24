@@ -1,10 +1,13 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { validateLoginForm } from "../utils/validators";
 import { loginApi } from "../services/authService";
 
 export type UserRole = "Admin" | "Cashier" | "Accountant";
 
 export const useLogin = () => {
+  const navigate = useNavigate();
+
   const [selectedRole, setSelectedRole] = useState<UserRole>("Cashier");
   const [selectedStore, setSelectedStore] = useState("01");
   const [email, setEmail] = useState("");
@@ -16,7 +19,6 @@ export const useLogin = () => {
   const handleLogin = async () => {
     setError("");
 
-    // ✅ Keep your existing validation
     const errorMsg = validateLoginForm({
       role: selectedRole,
       branch: selectedStore,
@@ -32,7 +34,6 @@ export const useLogin = () => {
     try {
       setLoading(true);
 
-      // ✅ REAL BACKEND CALL
       const response = await loginApi({
         role: selectedRole,
         branch: selectedStore,
@@ -40,18 +41,23 @@ export const useLogin = () => {
         password,
       });
 
-      // ✅ Store backend response
       localStorage.setItem("token", response.token);
       localStorage.setItem("role", response.role);
       localStorage.setItem("branch", selectedStore);
 
-      // ✅ Redirect (same as before)
-      window.location.href = "/create-party";
+      // ✅ Role-based navigation
+      if (response.role === "Admin") {
+        navigate("/admin/dashboard");
+      } else if (response.role === "Cashier") {
+        navigate("/cashier/dashboard");
+      } else if (response.role === "Accountant") {
+        navigate("/accountant/dashboard");
+      } else {
+        navigate("/");
+      }
 
     } catch (err: any) {
-      setError(
-        err.response?.data?.message || "Invalid credentials"
-      );
+      setError(err?.response?.data?.message || "Invalid credentials");
     } finally {
       setLoading(false);
     }

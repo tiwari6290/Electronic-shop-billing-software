@@ -821,7 +821,7 @@ const BillForm: React.FC<BillFormProps> = ({ mode = "sale" }) => {
                   {/* Signature */}
                   <div style={{ marginTop: '24px', paddingTop: '16px', borderTop: '1px solid #e5e7eb' }}>
                     <p style={{ fontSize: '12px', color: '#6b7280', marginBottom: '8px' }}>
-                      Authorized signatory for <strong>Santosh cycle van reparing shop</strong>
+                      Authorized signatory for <strong>mondal electronic </strong>
                     </p>
                     
                     {!signature ? (

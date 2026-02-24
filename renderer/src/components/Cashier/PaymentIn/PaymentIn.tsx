@@ -4,10 +4,14 @@ import { useState, useRef, useEffect } from "react";
 import emptyImg from "../../../assets/5.png";
 import Navbar from "../Navbar";
 import { useNavigate } from "react-router-dom";
+import QuickQuotationSettingsModal from "../QuickQuotationSettingsModal/QuickVoucherSettingsModal";
+
 
 export default function PaymentIn() {
   const navigate = useNavigate();
   const dateInputRef = useRef<HTMLInputElement>(null);
+  const [openSettings, setOpenSettings] = useState(false);
+
 
   /* ================= PARTY DROPDOWN ================= */
   const [showPartyDropdown, setShowPartyDropdown] = useState(false);
@@ -103,17 +107,19 @@ export default function PaymentIn() {
     <>
       {/* ================= NAVBAR ================= */}
       <Navbar
-        title="Payment In"
-        showSettings={true}
-        cancelAction={{
-          label: "Cancel",
-          onClick: () => navigate(-1),
-        }}
-        primaryAction={{
-          label: "Save",
-          onClick: () => console.log("Saving Payment In", formData),
-        }}
-      />
+  title="Payment In"
+  showSettings={true}
+  onSettingsClick={() => setOpenSettings(true)}
+  cancelAction={{
+    label: "Cancel",
+    onClick: () => navigate(-1),
+  }}
+  primaryAction={{
+    label: "Save",
+    onClick: () => console.log("Saving Payment In", formData),
+  }}
+/>
+
 
       {/* ================= PAGE BODY ================= */}
       <div className="paymentout-page">
@@ -321,6 +327,13 @@ export default function PaymentIn() {
           <button onClick={openPartyDropdown}>Select Party</button>
         </div>
       </div>
+      {openSettings && (
+  <QuickQuotationSettingsModal
+    type="paymentIn"
+    onClose={() => setOpenSettings(false)}
+  />
+)}
+
     </>
   );
 }

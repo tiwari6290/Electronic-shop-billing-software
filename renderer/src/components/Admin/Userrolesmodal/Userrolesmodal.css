@@ -1,0 +1,222 @@
+/* ===== UserRolesModal.css ===== */
+
+.ur-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  animation: urFade 0.15s ease;
+}
+
+@keyframes urFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.ur-modal {
+  background: #ffffff;
+  border-radius: 14px;
+  width: 95vw;
+  max-width: 860px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.2);
+  animation: urSlide 0.2s ease;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+@keyframes urSlide {
+  from { transform: translateY(16px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* ===== Header ===== */
+.ur-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e5e7eb;
+  flex-shrink: 0;
+}
+
+.ur-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+}
+
+.ur-close {
+  background: none;
+  border: none;
+  font-size: 18px;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  line-height: 1;
+  transition: color 0.15s;
+}
+
+.ur-close:hover { color: #111827; }
+
+/* ===== Scrollable body ===== */
+.ur-body {
+  overflow: auto;
+  flex: 1;
+}
+
+/* ===== Table ===== */
+.ur-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+/* ===== TH ===== */
+.ur-th {
+  background: #f9fafb;
+  padding: 8px 10px;
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: #374151;
+  border: 1px solid #e5e7eb;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  white-space: nowrap;
+}
+
+.ur-th--feature {
+  text-align: left;
+  min-width: 110px;
+  width: 110px;
+  position: sticky;
+  left: 0;
+  z-index: 20;
+}
+
+.ur-th--permission {
+  text-align: left;
+  min-width: 130px;
+  width: 130px;
+  position: sticky;
+  left: 110px;
+  z-index: 20;
+}
+
+.ur-th--role {
+  min-width: 100px;
+  padding: 10px 6px 8px;
+}
+
+/* ===== Role header cell ===== */
+.ur-role-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.ur-role-img {
+  width: 38px;
+  height: 38px;
+  object-fit: cover;
+  border-radius: 50%;
+  background: #e5e7eb;
+}
+
+.ur-role-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: #374151;
+  text-align: center;
+  white-space: normal;
+  line-height: 1.3;
+}
+
+/* ===== TD ===== */
+.ur-td {
+  padding: 6px 10px;
+  border: 1px solid #e5e7eb;
+  text-align: center;
+  font-size: 11px;
+  color: #374151;
+  vertical-align: middle;
+}
+
+.ur-td--feature {
+  text-align: left;
+  font-weight: 700;
+  font-size: 11px;
+  color: #111827;
+  background: #f9fafb;
+  vertical-align: top;
+  padding: 8px 10px;
+  position: sticky;
+  left: 0;
+  z-index: 5;
+  line-height: 1.5;
+}
+
+.ur-td--permission {
+  text-align: left;
+  color: #5b5fcf;
+  font-size: 11px;
+  background: #fff;
+  position: sticky;
+  left: 110px;
+  z-index: 5;
+}
+
+.ur-td--val {
+  font-weight: 500;
+  font-size: 11px;
+}
+
+.ur-td--partner {
+  background: #f9fafb;
+  border-color: #e5e7eb;
+}
+
+/* ===== Row alternating ===== */
+.ur-row--even td:not(.ur-td--feature):not(.ur-td--permission) {
+  background: #fafafa;
+}
+
+/* ===== Cell value colours ===== */
+.ur-cell--yes {
+  background: #d1fae5 !important;
+  color: #065f46;
+  font-weight: 600;
+}
+
+.ur-cell--no {
+  background: transparent;
+  color: #374151;
+}
+
+.ur-cell--yn {
+  background: #fef9c3 !important;
+  color: #92400e;
+  font-weight: 600;
+}
+
+.ur-cell--orange {
+  background: #fed7aa !important;
+  color: #7c2d12;
+  font-weight: 500;
+  font-size: 10px;
+}
+
+.ur-cell--green {
+  background: #d1fae5 !important;
+  color: #065f46;
+}

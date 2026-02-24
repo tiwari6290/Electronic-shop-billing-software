@@ -1,19 +1,16 @@
 import { useEffect } from "react";
 import Navbar from "./Navbar";
 import BillForm from "./Billform";
-import { useState } from "react";
-import QuickVoucherSettingsModal from "./QuickQuotationSettingsModal/QuickVoucherSettingsModal";
-export default function SalesReturn() {
-  const [openSettings, setOpenSettings] = useState(false);
-
-  useEffect(() => {
+ 
+export default function SalesInvoice() {
+    useEffect(() => {
     // Change Invoice Prefix
     const prefixInput = document.querySelector(
       'input[value="ME/QO/26-27/"]'
     ) as HTMLInputElement;
 
     if (prefixInput) {
-      prefixInput.value = "ME/SR/26-27/";
+      prefixInput.value = "ME/SI/26-27/";
       prefixInput.dispatchEvent(new Event("input", { bubbles: true }));
     }
 
@@ -21,18 +18,17 @@ export default function SalesReturn() {
     const labels = document.querySelectorAll("label");
     labels.forEach(label => {
       if (label.textContent?.includes("Quotation Date")) {
-        label.textContent = "Sales Return Date";
+        label.textContent = "Sales Invoice Date";
       }
     });
   }, []);
   return (
     <>
-     <Navbar
-  title="Create Sales Return"
-  showBackButton
+      <Navbar
+  title="Create Sales Invoice"
+  showBackButton={true}
   backPath="/dashboard"
-  showSettings
-  onSettingsClick={() => setOpenSettings(true)}   // 👈 IMPORTANT
+  showSettings={true}
   primaryAction={{
     label: "Save",
     onClick: () => console.log("Save clicked"),
@@ -42,15 +38,7 @@ export default function SalesReturn() {
     onClick: () => console.log("Save & New clicked"),
   }}
 />
-
       <BillForm />
-      {openSettings && (
-  <QuickVoucherSettingsModal
-    type="salesReturn"
-    onClose={() => setOpenSettings(false)}
-  />
-)}
-
     </>
   );
 }
