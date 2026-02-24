@@ -45,12 +45,9 @@ export const useLogin = () => {
           navigate("/admin/dashboard");
         } else if (selectedRole === "Cashier") {
           navigate("/cashier/create-party");
-        } else {
-          // Accountant - coming soon
-          setError("Accountant login coming soon!");
-          setLoading(false);
-          return;
-        }
+        } else if (selectedRole === "Accountant") {
+  navigate("/accountant/dashboard");
+}
       } else {
         setError("Invalid credentials");
       }

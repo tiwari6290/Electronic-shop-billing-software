@@ -27,6 +27,8 @@ import Reportsharing from "./components/Admin/ReportSharing/Reportsharing";
 import ReferralPage from "./components/Admin/Referralpage/Referralpage";
 import ManageUsers from "./components/Admin/Manageusers/Manageusers";
 import InvoiceBuilder from "./components/Admin/Invoicebuilder/Invoicebuilder";
+import AccountantSidebar from "./components/Accountant/Sidebar";
+import CashBank from "./components/Accountant/Cashbank/Cashbank";
 
 /* Dummy pages (replace later with real pages) */
 const Page = ({ title }: { title: string }) => (
@@ -38,6 +40,12 @@ const AdminDashboard = () => (
   <div style={{ padding: 30 }}>
     <h1 style={{ fontSize: 28, fontWeight: 600, marginBottom: 20 }}>Admin Dashboard</h1>
     <p style={{ fontSize: 16, color: '#6b7280' }}>Welcome to Admin Panel</p>
+  </div>
+);
+const AccountantDashboard = () => (
+  <div style={{ padding: 30 }}>
+    <h1 style={{ fontSize: 28, fontWeight: 600, marginBottom: 20 }}>Accountant Dashboard</h1>
+    <p style={{ fontSize: 16, color: '#6b7280' }}>Welcome to Accountant Panel</p>
   </div>
 );
 
@@ -60,6 +68,16 @@ const AdminLayout = () => {
     <div style={{ display: "flex", height: "100vh" }}>
       <AdminSidebar userName="mondal electronic" userPhone="9142581382" />
 
+      <div style={{ flex: 1, overflow: "auto", background: "#f5f7fb" }}>
+        <Outlet />
+      </div>
+    </div>
+  );
+};
+const AccountantLayout = () => {
+  return (
+    <div style={{ display: "flex", height: "100vh" }}>
+      <AccountantSidebar userName="mondal electronic" userPhone="9142581382" />
       <div style={{ flex: 1, overflow: "auto", background: "#f5f7fb" }}>
         <Outlet />
       </div>
@@ -121,6 +139,15 @@ function App() {
           <Route path="help-support" element={<Page title="Help and Support" />} />
 
         </Route>
+        {/* Accountant Routes */}
+<Route path="/accountant" element={<AccountantLayout />}>
+  <Route index element={<Navigate to="/accountant/dashboard" replace />} />
+  <Route path="dashboard" element={<AccountantDashboard />} />
+  <Route path="cash-bank" element={<CashBank />} />
+  <Route path="e-invoicing" element={<Page title="E-Invoicing" />} />
+  <Route path="automated-bills" element={<Page title="Automated Bills" />} />
+  <Route path="expenses" element={<Page title="Expenses" />} />
+</Route>
 
         {/* Legacy routes redirect - for backward compatibility */}
         <Route path="/dashboard" element={<Navigate to="/cashier/dashboard" replace />} />
