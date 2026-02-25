@@ -29,6 +29,8 @@ import ReferralPage from "./components/Admin/Referralpage/Referralpage";
 import ManageUsers from "./components/Admin/Manageusers/Manageusers";
 import InvoiceBuilder from "./components/Admin/Invoicebuilder/Invoicebuilder";
 import StaffAttendance from "./components/Admin/StaffAttendance/StaffAttendance";
+import Onlineorders from "./components/Admin/Onlineorders/Onlineorders";
+import SMSPromotion from "./components/Admin/Smspromotion/Smspromotion";
 import AccountantSidebar from "./components/Accountant/Sidebar";
 import CashBank from "./components/Accountant/Cashbank/Cashbank";
 import Expenses from "./components/Accountant/Expenses/Expenses";
@@ -148,6 +150,8 @@ function App() {
                 <Route path="dashboard" element={<AdminDashboard />} />
                 <Route path="manage-users" element={<ManageUsers />} /> 
                 <Route path="staff-attendence" element={<StaffAttendance />} /> 
+                <Route path="online-orders" element={<Onlineorders />} /> 
+                <Route path="sms-marketing" element={<SMSPromotion />} /> 
               </Route>
 
               {/* 🔹 Settings Section */}
