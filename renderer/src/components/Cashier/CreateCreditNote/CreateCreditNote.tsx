@@ -1,30 +1,41 @@
+import { useState } from "react";
 import BillForm from "../Billform";
 import Navbar from "../Navbar";
-export default function CreateCreditNote(){
-    return(
-        <>
-        <Navbar
+import QuickVoucherSettingsModal from "../QuickQuotationSettingsModal/QuickVoucherSettingsModal";
+
+export default function CreateCreditNote() {
+  const [openSettings, setOpenSettings] = useState(false);
+
+  return (
+    <>
+      <Navbar
         title="Create Credit Note"
-        showBackButton={true}
+        showBackButton
         backPath="/dashboard"
-
-        showSettings={true}
-
+        showSettings
+        onSettingsClick={() => setOpenSettings(true)}   // 🔥 IMPORTANT
         primaryAction={{
           label: "Save",
           onClick: () => {
-            console.log("Save Debit Note");
+            console.log("Save Credit Note");
           },
         }}
-
         secondaryAction={{
           label: "Save & New",
           onClick: () => {
-            console.log("Save & New Debit Note");
+            console.log("Save & New Credit Note");
           },
         }}
       />
-        <BillForm mode="credit" />
-        </>
-    );
+
+      <BillForm mode="credit" />
+
+      {openSettings && (
+        <QuickVoucherSettingsModal
+          type="creditNote"
+          onClose={() => setOpenSettings(false)}
+        />
+      )}
+    </>
+  );
 }

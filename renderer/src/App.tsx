@@ -1,8 +1,12 @@
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
+import ProtectedRoute from "./components/ProtectedRoute";
+
 import Login from "@/components/Login/Login";
+
+/* --- Your existing imports remain SAME --- */
 import Sidebar from "./components/Cashier/Sidebar";
+import AdminSidebar from "./components/Admin/AdminSidebar/AdminSidebar";
 import Navbar from "./components/Cashier/Navbar";
-import CashierDashboard from "./components/CashierDashboard/CashierDashboard";
 import Createparty from "./components/Cashier/Createparty";
 import CreateQuotation from "./components/Cashier/CreateQuotation";
 import CreateItem from "./components/Cashier/CreateItem/CreateItem";
@@ -17,63 +21,165 @@ import CreateCreditNote from "./components/Cashier/CreateCreditNote/CreateCredit
 import DeliveryChallan from "./components/Cashier/DeliveryChallan/DeliveryChallan";
 import PurchaseOrder from "./components/Cashier/PurchaseOrder/PurchaseOrder";
 import Createexpense from "./components/Cashier/Createexpense";
+import Salesinvoice from "./components/Cashier/Salesinvoice";
 
+import AdminSettingSidebar from "./components/Admin/AdminSettingSidebar";
+import ManageBusiness from "./components/Admin/ManageBuisness";
+import Account from "./components/Admin/Account/Account";
+import Pricing from "./components/Admin/Pricing/Pricing";
+import PrintSetting from "./components/Admin/PrintSetting/Printsetting";
+import ReminderSetting from "./components/Admin/ReminderSetting/Remindersetting";
+import Reportsharing from "./components/Admin/ReportSharing/Reportsharing";
+import ReferralPage from "./components/Admin/Referralpage/Referralpage";
+import ManageUsers from "./components/Admin/Manageusers/Manageusers";
+import InvoiceBuilder from "./components/Admin/Invoicebuilder/Invoicebuilder";
+import StaffAttendance from "./components/Admin/StaffAttendance/StaffAttendance";
+import Onlineorders from "./components/Admin/Onlineorders/Onlineorders";
+import SMSPromotion from "./components/Admin/Smspromotion/Smspromotion";
 
-/* Dummy pages (replace later with real pages) */
+import AccountantSidebar from "./components/Accountant/Sidebar";
+import CashBank from "./components/Accountant/Cashbank/Cashbank";
+import Expenses from "./components/Accountant/Expenses/Expenses";
+import Billing from "./components/Cashier/POS Billing/Billing";
+import Invoicing from "./components/Accountant/E-Invoicing/Invoicing";
+import AutomatedBills from "./components/Accountant/Automatedbills/automatedbills";
+/* Dummy Pages */
 const Page = ({ title }: { title: string }) => (
   <div style={{ padding: 30, fontSize: 22, fontWeight: 600 }}>{title}</div>
 );
 
-/* Layout with Sidebar */
-const DashboardLayout = () => {
-  return (
-    <div style={{ display: "flex", height: "100vh" }}>
-      <Sidebar />
+const AdminDashboard = () => (
+  <div style={{ padding: 30 }}>
+    <h1>Admin Dashboard</h1>
+  </div>
+);
 
-      <div style={{ flex: 1, overflow: "auto", background: "#f5f7fb" }}>
-        <Outlet />
-      </div>
+const AccountantDashboard = () => (
+  <div style={{ padding: 30 }}>
+    <h1>Accountant Dashboard</h1>
+  </div>
+);
+
+/* Layouts */
+
+const CashierLayout = () => (
+  <div style={{ display: "flex", height: "100vh" }}>
+    <Sidebar />
+    <div style={{ flex: 1, overflow: "auto", background: "#f5f7fb" }}>
+      <Outlet />
     </div>
-  );
-};
+  </div>
+);
+
+const AdminMainLayout = () => (
+  <div style={{ display: "flex", height: "100vh" }}>
+    <AdminSidebar userName="mondal electronic" userPhone="9142581382" />
+    <div style={{ flex: 1, overflow: "auto", background: "#f5f7fb" }}>
+      <Outlet />
+    </div>
+  </div>
+);
+
+const AdminSettingsLayout = () => (
+  <div style={{ display: "flex", height: "100vh" }}>
+    <AdminSettingSidebar />
+    <div style={{ flex: 1, overflow: "auto", background: "#f5f7fb" }}>
+      <Outlet />
+    </div>
+  </div>
+);
+
+const AccountantLayout = () => (
+  <div style={{ display: "flex", height: "100vh" }}>
+    <AccountantSidebar userName="mondal electronic" userPhone="9142581382" />
+    <div style={{ flex: 1, overflow: "auto", background: "#f5f7fb" }}>
+      <Outlet />
+    </div>
+  </div>
+);
 
 function App() {
   return (
     <BrowserRouter>
       <Routes>
 
-        {/* Default */}
         <Route path="/" element={<Navigate to="/login" replace />} />
-
-        {/* Login */}
         <Route path="/login" element={<Login />} />
 
-        {/* Sidebar Layout */}
-        <Route element={<DashboardLayout />}>
-
-          <Route path="/dashboard" element={<CashierDashboard />} />
-         <Route path="/navbar" element={<Navbar title="Dashboard" />} />
-
-          <Route path="/create-party" element={<Createparty />} />
-          <Route path="/create-item" element={<CreateItem />} />
-
-          <Route path="/quotation" element={<CreateQuotation />} />
-          <Route path="/payment-in" element={<PaymentIn />} />
-           <Route path="/sales-return" element={<SalesReturn/>} /> 
-          <Route path="/credit-note" element={<CreateCreditNote />} />
-          <Route path="/delivery-challan" element={<DeliveryChallan />} />
-          <Route path="/proforma-invoice" element={<ProformaInvoice />} />
-
-          <Route path="/purchase" element={<Purchases />} />
-          <Route path="/payment-out" element={<PaymentOut />} />
-          <Route path="/purchase-return" element={<CreatePurchaseReturn/>} />
-          <Route path="/debit-note" element={<CreateDebitNote />} />
-          <Route path="/purchase-orders" element={<PurchaseOrder />} />
-          <Route path="/create-expense" element={<Createexpense />} />
-
+        {/* 🔒 CASHIER */}
+        <Route
+          path="/cashier"
+          element={
+            <ProtectedRoute allowedRole="Cashier">
+              <CashierLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<Navigate to="create-party" replace />} />
+          <Route path="create-party" element={<Createparty />} />
+          <Route path="create-item" element={<CreateItem />} />
+          <Route path="POS-Billing" element={<Billing />} />
+          <Route path="quotation" element={<CreateQuotation />} />
+          <Route path="payment-in" element={<PaymentIn />} />
+          <Route path="sales-return" element={<SalesReturn />} />
+          <Route path="credit-note" element={<CreateCreditNote />} />
+          <Route path="delivery-challan" element={<DeliveryChallan />} />
+          <Route path="proforma-invoice" element={<ProformaInvoice />} />
+          <Route path="purchase" element={<Purchases />} />
+          <Route path="payment-out" element={<PaymentOut />} />
+          <Route path="purchase-return" element={<CreatePurchaseReturn />} />
+          <Route path="debit-note" element={<CreateDebitNote />} />
+          <Route path="purchase-orders" element={<PurchaseOrder />} />
+          <Route path="create-expense" element={<Createexpense />} />
+          <Route path="sales-invoice" element={<Salesinvoice />} />
         </Route>
 
-        {/* Catch all */}
+        {/* 🔒 ADMIN */}
+        <Route
+          path="/admin"
+          element={
+            <ProtectedRoute allowedRole="Admin">
+              <Outlet />
+            </ProtectedRoute>
+          }
+        >
+          <Route element={<AdminMainLayout />}>
+            <Route path="dashboard" element={<AdminDashboard />} />
+            <Route path="manage-users" element={<ManageUsers />} />
+            <Route path="staff-attendence" element={<StaffAttendance />} />
+            <Route path="online-orders" element={<Onlineorders />} />
+            <Route path="sms-marketing" element={<SMSPromotion />} />
+          </Route>
+
+          <Route path="settings" element={<AdminSettingsLayout />}>
+            <Route path="account" element={<Account />} />
+            <Route path="manage-business" element={<ManageBusiness />} />
+            <Route path="invoice-settings" element={<InvoiceBuilder />} />
+            <Route path="print-settings" element={<PrintSetting />} />
+            <Route path="reminders" element={<ReminderSetting />} />
+            <Route path="ca-reports" element={<Reportsharing />} />
+            <Route path="pricing" element={<Pricing />} />
+            <Route path="refer-earn" element={<ReferralPage />} />
+          </Route>
+        </Route>
+
+        {/* 🔒 ACCOUNTANT */}
+        <Route
+          path="/accountant"
+          element={
+            <ProtectedRoute allowedRole="Accountant">
+              <AccountantLayout />
+            </ProtectedRoute>
+          }
+        >
+          <Route index element={<Navigate to="dashboard" replace />} />
+          <Route path="dashboard" element={<AccountantDashboard />} />
+          <Route path="cash-bank" element={<CashBank />} />
+          <Route path="e-invoicing" element={<Invoicing />} />
+          <Route path="automated-bills" element={<AutomatedBills />} />
+          <Route path="expenses" element={<Expenses />} />
+        </Route>
+
         <Route path="*" element={<Navigate to="/login" replace />} />
 
       </Routes>

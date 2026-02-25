@@ -1,0 +1,239 @@
+/* ===============================
+   PAGE LAYOUT
+================================ */
+
+.account-page {
+  background: #f5f6fa;
+  min-height: 100vh;
+}
+
+.account-container {
+  padding: 30px 40px;
+}
+
+/* ===============================
+   SUGGESTION BANNER
+================================ */
+
+.suggestion-banner {
+  background: #eadbd0;
+  padding: 18px 24px;
+  border-radius: 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.suggestion-banner h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.share-btn {
+  background: #e56a1c;
+  color: white;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.share-btn:hover {
+  opacity: 0.9;
+}
+
+/* ===============================
+   SECTION CARD
+================================ */
+
+.account-section {
+  background: white;
+  padding: 24px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  border: 1px solid #e5e7eb;
+}
+
+.section-title {
+  margin-bottom: 20px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+/* ===============================
+   FORM
+================================ */
+
+.form-row {
+  display: flex;
+  gap: 30px;
+}
+
+.form-group {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.form-group label {
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: #6b7280;
+}
+
+.required {
+  color: red;
+}
+
+.form-group input {
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  font-size: 14px;
+}
+
+.form-group input:focus {
+  border-color: #5b5fed;
+  outline: none;
+}
+
+/* ===============================
+   REFERRAL
+================================ */
+
+.referral-row {
+  display: flex;
+  gap: 12px;
+  max-width: 400px;
+}
+
+.referral-row input {
+  flex: 1;
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+}
+
+.apply-btn {
+  background: #5b5fed;
+  color: white;
+  border: none;
+  padding: 10px 22px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.apply-btn:hover {
+  background: #4a4dd9;
+}
+
+/* ===============================
+   SUBSCRIPTION
+================================ */
+
+.subscription-wrapper {
+  display: flex;
+  justify-content: space-between;
+  gap: 40px;
+}
+
+.plan-left {
+  width: 40%;
+}
+
+.current-plan-label {
+  font-size: 12px;
+  color: #6b7280;
+  margin-bottom: 5px;
+}
+
+.plan-name {
+  font-size: 32px;
+  margin-bottom: 20px;
+}
+
+.buy-btn {
+  background: #e56a1c;
+  color: white;
+  border: none;
+  padding: 12px 22px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-bottom: 15px;
+}
+
+.buy-btn:hover {
+  opacity: 0.9;
+}
+
+.users-text {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+/* ===============================
+   RIGHT SIDE FEATURES
+================================ */
+
+.plan-right {
+  width: 55%;
+  background: #f3f4f6;
+  padding: 20px;
+  border-radius: 6px;
+}
+
+.upgrade-title {
+  font-size: 14px;
+  margin-bottom: 18px;
+  font-weight: 600;
+}
+
+.features-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px 40px;
+}
+
+.feature-item {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 15px;
+  font-weight: 500;
+  color: #1a1d2e;
+}
+
+.feature-item img {
+  width: 38px;
+  height: 38px;
+  object-fit: contain;
+}
+
+/* ===============================
+   RESPONSIVE
+================================ */
+
+@media (max-width: 992px) {
+  .form-row {
+    flex-direction: column;
+  }
+
+  .subscription-wrapper {
+    flex-direction: column;
+  }
+
+  .plan-left,
+  .plan-right {
+    width: 100%;
+  }
+
+  .features-grid {
+    grid-template-columns: 1fr;
+  }
+}

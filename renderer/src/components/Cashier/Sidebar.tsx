@@ -15,6 +15,7 @@ import {
   StickyNote, 
   ShoppingBag, 
   DollarSign,
+  LogOut,
 } from 'lucide-react';
 
 interface NavItem {
@@ -36,37 +37,53 @@ const Sidebar: React.FC = () => {
     {
       title: 'GENERAL',
       items: [
-        { id: 'create-party', label: 'Create Party', icon: <Users size={18} />, path: '/create-party' },
-        { id: 'create-item', label: 'Create Item', icon: <Package size={18} />, path: '/create-item' },
+        { id: 'create-party', label: 'Create Party', icon: <Users size={18} />, path: '/cashier/create-party' },
+        { id: 'create-item', label: 'Create Item', icon: <Package size={18} />, path: '/cashier/create-item' },
+        { id: 'POS-Billing', label: 'POS Billing', icon: <Package size={18} />, path: '/cashier/POS-Billing' },
       ]
     },
     {
       title: 'SALES TRANSACTIONS',
       items: [
-        { id: 'quotation', label: 'Quotation', icon: <FileEdit size={18} />, path: '/quotation' },
-        { id: 'payment-in', label: 'Payment In', icon: <CreditCard size={18} />, path: '/payment-in' },
-        { id: 'sales-return', label: 'Sales Return', icon: <RotateCcw size={18} />, path: '/sales-return' },
-        { id: 'credit-note', label: 'Credit Note', icon: <FileSpreadsheet size={18} />, path: '/credit-note' },
-        { id: 'delivery-challan', label: 'Delivery Challan', icon: <Truck size={18} />, path: '/delivery-challan' },
-        { id: 'proforma-invoice', label: 'Proforma Invoice', icon: <Receipt size={18} />, path: '/proforma-invoice' },
+        { id: 'quotation', label: 'Quotation', icon: <FileEdit size={18} />, path: '/cashier/quotation' },
+        { id: 'payment-in', label: 'Payment In', icon: <CreditCard size={18} />, path: '/cashier/payment-in' },
+        { id: 'sales-return', label: 'Sales Return', icon: <RotateCcw size={18} />, path: '/cashier/sales-return' },
+        { id: 'sales-invoice', label: 'Sales Invoice', icon: <FileEdit size={18} />, path: '/cashier/sales-invoice' },
+        { id: 'credit-note', label: 'Credit Note', icon: <FileSpreadsheet size={18} />, path: '/cashier/credit-note' },
+        { id: 'delivery-challan', label: 'Delivery Challan', icon: <Truck size={18} />, path: '/cashier/delivery-challan' },
+        { id: 'proforma-invoice', label: 'Proforma Invoice', icon: <Receipt size={18} />, path: '/cashier/proforma-invoice' },
       ]
     },
     {
       title: 'PURCHASE TRANSACTIONS',
       items: [
-        { id: 'purchase', label: 'Purchase', icon: <ShoppingCart size={18} />, path: '/purchase' },
-        { id: 'payment-out', label: 'Payment Out', icon: <ArrowLeftRight size={18} />, path: '/payment-out' },
-        { id: 'purchase-return', label: 'Purchase Return', icon: <CornerUpLeft size={18} />, path: '/purchase-return' },
-        { id: 'debit-note', label: 'Debit Note', icon: <StickyNote size={18} />, path: '/debit-note' },
-        { id: 'purchase-orders', label: 'Purchase Orders', icon: <ShoppingBag size={18} />, path: '/purchase-orders' },
-        { id: 'create-expense', label: 'Create Expense', icon: <DollarSign size={18} />, path: '/create-expense' },
+        { id: 'purchase', label: 'Purchase', icon: <ShoppingCart size={18} />, path: '/cashier/purchase' },
+        { id: 'payment-out', label: 'Payment Out', icon: <ArrowLeftRight size={18} />, path: '/cashier/payment-out' },
+        { id: 'purchase-return', label: 'Purchase Return', icon: <CornerUpLeft size={18} />, path: '/cashier/purchase-return' },
+        { id: 'debit-note', label: 'Debit Note', icon: <StickyNote size={18} />, path: '/cashier/debit-note' },
+        { id: 'purchase-orders', label: 'Purchase Orders', icon: <ShoppingBag size={18} />, path: '/cashier/purchase-orders' },
+        { id: 'create-expense', label: 'Create Expense', icon: <DollarSign size={18} />, path: '/cashier/create-expense' },
+        { id: 'logout', label: 'Logout', icon: <LogOut size={18} />, path: 'logout' },
       ]
     }
   ];
 
-  const handleItemClick = (path: string) => {
+ const handleItemClick = (path: string) => {
+  if (path === "logout") {
+    handleLogout();
+  } else {
     navigate(path);
-  };
+  }
+};
+
+
+const handleLogout = () => {
+  localStorage.removeItem("token");
+  localStorage.removeItem("role");
+  localStorage.removeItem("branch");
+
+  navigate("/login", { replace: true });
+};
 
   const isActive = (path: string) => {
     return location.pathname === path;
@@ -128,7 +145,7 @@ const Sidebar: React.FC = () => {
                     className="w-full flex items-center rounded-lg"
                     style={{
                       gap: '12px',
-                      padding: '10px 12px',
+                      padding: '10px',
                       backgroundColor: isActive(item.path) ? '#3b5a8f' : 'transparent',
                       color: isActive(item.path) ? '#ffffff' : '#b8c5d6',
                       border: 'none',
@@ -163,6 +180,7 @@ const Sidebar: React.FC = () => {
                 ))}
               </nav>
             </div>
+            
           ))}
         </div>
       </div>
@@ -174,6 +192,7 @@ const Sidebar: React.FC = () => {
           padding: '16px'
         }}
       >
+        
         <div 
           className="flex items-center" 
           style={{ 

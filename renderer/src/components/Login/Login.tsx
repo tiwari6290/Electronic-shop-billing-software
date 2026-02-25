@@ -168,10 +168,10 @@ const Login: React.FC = () => {
                 className="w-full h-[52px] px-[18px] bg-white border-2 border-[#dee2e6] rounded-[12px] text-[#212529] text-[15px] appearance-none focus:outline-none focus:ring-2 focus:ring-[#7c3aed] focus:border-[#7c3aed] cursor-pointer transition-all"
                 style={{ fontFamily: 'system-ui, -apple-system, "Segoe UI", sans-serif' }}
               >
-                <option>Main Store</option>
-                <option>Branch Store 1</option>
-                <option>Branch Store 2</option>
-                <option>Warehouse</option>
+                <option value="01">Main Store</option>
+                <option value="02">Branch Store 1</option>
+                <option value="03">Branch Store 2</option>
+                <option value="04">Warehouse</option>
               </select>
               <div className="absolute top-1/2 right-[18px] -translate-y-1/2 pointer-events-none">
                 <svg
