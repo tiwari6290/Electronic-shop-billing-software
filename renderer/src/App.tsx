@@ -34,7 +34,8 @@ import SMSPromotion from "./components/Admin/Smspromotion/Smspromotion";
 import AccountantSidebar from "./components/Accountant/Sidebar";
 import CashBank from "./components/Accountant/Cashbank/Cashbank";
 import Expenses from "./components/Accountant/Expenses/Expenses";
-
+import Billing from "./components/Cashier/POS Billing/Billing";
+import Invoicing from "./components/Accountant/E-Invoicing/Invoicing";
 
 /* Dummy pages (replace later with real pages) */
 const Page = ({ title }: { title: string }) => (
@@ -122,6 +123,7 @@ function App() {
 
           <Route path="create-party" element={<Createparty />} />
           <Route path="create-item" element={<CreateItem />} />
+          <Route path="POS-Billing" element={<Billing />} />
 
           <Route path="quotation" element={<CreateQuotation />} />
           <Route path="payment-in" element={<PaymentIn />} />
@@ -174,7 +176,7 @@ function App() {
   <Route index element={<Navigate to="/accountant/dashboard" replace />} />
   <Route path="dashboard" element={<AccountantDashboard />} />
   <Route path="cash-bank" element={<CashBank />} />
-  <Route path="e-invoicing" element={<Page title="E-Invoicing" />} />
+  <Route path="e-invoicing" element={<Invoicing />} />
   <Route path="automated-bills" element={<Page title="Automated Bills" />} />
   <Route path="expenses" element={<Expenses />} />
 </Route>
