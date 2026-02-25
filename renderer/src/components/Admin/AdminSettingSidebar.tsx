@@ -125,15 +125,15 @@ const menuItemStyle: React.CSSProperties = {
   };
 
   const menuItems = [
-    { path: '/admin/account', label: 'Account', icon: '👤' },
-    { path: '/admin/manage-business', label: 'Manage Business', icon: '🏢' },
-    { path: '/admin/invoice-settings', label: 'Invoice Settings', icon: '⚙️' },
-    { path: '/admin/print-settings', label: 'Print Settings', icon: '🖨️' },
-    { path: '/admin/manage-users', label: 'Manage Users', icon: '👥' },
-    { path: '/admin/reminders', label: 'Reminders', icon: '🔔' },
-    { path: '/admin/ca-reports', label: 'CA Reports Sharing', icon: '📊' },
-    { path: '/admin/pricing', label: 'Pricing', icon: '💰' },
-    { path: '/admin/refer-earn', label: 'Refer & Earn', icon: '🎁' },
+    { path: '/admin/settings/account', label: 'Account', icon: '👤' },
+    { path: '/admin/settings/manage-business', label: 'Manage Business', icon: '🏢' },
+    { path: '/admin/settings/invoice-settings', label: 'Invoice Settings', icon: '⚙️' },
+    { path: '/admin/settings/print-settings', label: 'Print Settings', icon: '🖨️' },
+    { path: '/admin/settings/manage-users', label: 'Manage Users', icon: '👥' },
+    { path: '/admin/settings/reminders', label: 'Reminders', icon: '🔔' },
+    { path: '/admin/settings/ca-reports', label: 'CA Reports Sharing', icon: '📊' },
+    { path: '/admin/settings/pricing', label: 'Pricing', icon: '💰' },
+    { path: '/admin/settings/refer-earn', label: 'Refer & Earn', icon: '🎁' },
   ];
 
   const isActive = (path: string) => location.pathname === path;
