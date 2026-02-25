@@ -1,9 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
 import Login from "@/components/Login/Login";
 import Sidebar from "./components/Cashier/Sidebar";
-import AdminSidebar from "./components/Admin/Sidebar";
+import AdminSidebar from "./components/Admin/AdminSidebar/AdminSidebar";
 import Navbar from "./components/Cashier/Navbar";
-import CashierDashboard from "./components/CashierDashboard/CashierDashboard";
 import Createparty from "./components/Cashier/Createparty";
 import CreateQuotation from "./components/Cashier/CreateQuotation";
 import CreateItem from "./components/Cashier/CreateItem/CreateItem";
@@ -19,6 +18,7 @@ import DeliveryChallan from "./components/Cashier/DeliveryChallan/DeliveryChalla
 import PurchaseOrder from "./components/Cashier/PurchaseOrder/PurchaseOrder";
 import Createexpense from "./components/Cashier/Createexpense";
 import Salesinvoice from "./components/Cashier/Salesinvoice";
+import AdminSettingSidebar from "./components/Admin/AdminSettingSidebar"
 import ManageBusiness from "./components/Admin/ManageBuisness";
 import Account from "./components/Admin/Account/Account";
 import Pricing from "./components/Admin/Pricing/Pricing";
@@ -28,6 +28,14 @@ import Reportsharing from "./components/Admin/ReportSharing/Reportsharing";
 import ReferralPage from "./components/Admin/Referralpage/Referralpage";
 import ManageUsers from "./components/Admin/Manageusers/Manageusers";
 import InvoiceBuilder from "./components/Admin/Invoicebuilder/Invoicebuilder";
+import StaffAttendance from "./components/Admin/StaffAttendance/StaffAttendance";
+import Onlineorders from "./components/Admin/Onlineorders/Onlineorders";
+import SMSPromotion from "./components/Admin/Smspromotion/Smspromotion";
+import AccountantSidebar from "./components/Accountant/Sidebar";
+import CashBank from "./components/Accountant/Cashbank/Cashbank";
+import Expenses from "./components/Accountant/Expenses/Expenses";
+import Billing from "./components/Cashier/POS Billing/Billing";
+import Invoicing from "./components/Accountant/E-Invoicing/Invoicing";
 
 /* Dummy pages (replace later with real pages) */
 const Page = ({ title }: { title: string }) => (
@@ -39,6 +47,12 @@ const AdminDashboard = () => (
   <div style={{ padding: 30 }}>
     <h1 style={{ fontSize: 28, fontWeight: 600, marginBottom: 20 }}>Admin Dashboard</h1>
     <p style={{ fontSize: 16, color: '#6b7280' }}>Welcome to Admin Panel</p>
+  </div>
+);
+const AccountantDashboard = () => (
+  <div style={{ padding: 30 }}>
+    <h1 style={{ fontSize: 28, fontWeight: 600, marginBottom: 20 }}>Accountant Dashboard</h1>
+    <p style={{ fontSize: 16, color: '#6b7280' }}>Welcome to Accountant Panel</p>
   </div>
 );
 
@@ -56,11 +70,33 @@ const CashierLayout = () => {
 };
 
 /* Layout with Admin Sidebar */
-const AdminLayout = () => {
+const AdminMainLayout = () => {
   return (
     <div style={{ display: "flex", height: "100vh" }}>
-      <AdminSidebar userName="mondal electronic" userPhone="9142581382" />
-
+      <AdminSidebar 
+        userName="mondal electronic"
+        userPhone="9142581382"
+      />
+      <div style={{ flex: 1, overflow: "auto", background: "#f5f7fb" }}>
+        <Outlet />
+      </div>
+    </div>
+  );
+};
+const AdminSettingsLayout = () => {
+  return (
+    <div style={{ display: "flex", height: "100vh" }}>
+      <AdminSettingSidebar />
+      <div style={{ flex: 1, overflow: "auto", background: "#f5f7fb" }}>
+        <Outlet />
+      </div>
+    </div>
+  );
+};
+const AccountantLayout = () => {
+  return (
+    <div style={{ display: "flex", height: "100vh" }}>
+      <AccountantSidebar userName="mondal electronic" userPhone="9142581382" />
       <div style={{ flex: 1, overflow: "auto", background: "#f5f7fb" }}>
         <Outlet />
       </div>
@@ -82,12 +118,12 @@ function App() {
         {/* Cashier Routes with Cashier Sidebar */}
         <Route path="/cashier" element={<CashierLayout />}>
 
-          <Route index element={<Navigate to="/cashier/dashboard" replace />} />
-          <Route path="dashboard" element={<CashierDashboard />} />
+          <Route index element={<Navigate to="/cashier/create-party" replace />} />
           <Route path="navbar" element={<Navbar title="Dashboard" />} />
 
           <Route path="create-party" element={<Createparty />} />
           <Route path="create-item" element={<CreateItem />} />
+          <Route path="POS-Billing" element={<Billing />} />
 
           <Route path="quotation" element={<CreateQuotation />} />
           <Route path="payment-in" element={<PaymentIn />} />
@@ -107,22 +143,43 @@ function App() {
         </Route>
 
         {/* Admin Routes with Admin Sidebar and Navbar */}
-        <Route path="/admin" element={<AdminLayout />}>
-          
-          <Route index element={<Navigate to="/admin/dashboard" replace />} />
-          <Route path="dashboard" element={<AdminDashboard />} />
-          <Route path="account" element={<Account />} />
-          <Route path="manage-business" element={<ManageBusiness />} />
-          <Route path="invoice-settings" element={<InvoiceBuilder/>} />
-          <Route path="print-settings" element={< PrintSetting />} />
-          <Route path="manage-users" element={<ManageUsers />} />
-          <Route path="reminders" element={<ReminderSetting />} />
-          <Route path="ca-reports" element={< Reportsharing />} />
-          <Route path="pricing" element={<Pricing />} />
-          <Route path="refer-earn" element={<ReferralPage />} />
-          <Route path="help-support" element={<Page title="Help and Support" />} />
+        {/* ADMIN ROUTES */}
+            <Route path="/admin" element={<Outlet />}>
 
-        </Route>
+              {/* 🔹 Normal Admin Section */}
+              <Route element={<AdminMainLayout />}>
+                <Route index element={<Navigate to="/cashier/dashboard" replace />} />
+                <Route path="dashboard" element={<AdminDashboard />} />
+                <Route path="manage-users" element={<ManageUsers />} /> 
+                <Route path="staff-attendence" element={<StaffAttendance />} /> 
+                <Route path="online-orders" element={<Onlineorders />} /> 
+                <Route path="sms-marketing" element={<SMSPromotion />} /> 
+              </Route>
+
+              {/* 🔹 Settings Section */}
+              <Route path="settings" element={<AdminSettingsLayout />}>
+                <Route index element={<Navigate to="account" replace />} />
+                <Route path="account" element={<Account />} />
+                <Route path="manage-business" element={<ManageBusiness />} />
+                <Route path="invoice-settings" element={<InvoiceBuilder />} />
+                <Route path="print-settings" element={<PrintSetting />} />
+                <Route path="manage-users" element={<ManageUsers />} />
+                <Route path="reminders" element={<ReminderSetting />} />
+                <Route path="ca-reports" element={<Reportsharing />} />
+                <Route path="pricing" element={<Pricing />} />
+                <Route path="refer-earn" element={<ReferralPage />} />
+              </Route>
+
+          </Route>
+        {/* Accountant Routes */}
+<Route path="/accountant" element={<AccountantLayout />}>
+  <Route index element={<Navigate to="/accountant/dashboard" replace />} />
+  <Route path="dashboard" element={<AccountantDashboard />} />
+  <Route path="cash-bank" element={<CashBank />} />
+  <Route path="e-invoicing" element={<Invoicing />} />
+  <Route path="automated-bills" element={<Page title="Automated Bills" />} />
+  <Route path="expenses" element={<Expenses />} />
+</Route>
 
         {/* Legacy routes redirect - for backward compatibility */}
         <Route path="/dashboard" element={<Navigate to="/cashier/dashboard" replace />} />
