@@ -39,6 +39,7 @@ const Sidebar: React.FC = () => {
       items: [
         { id: 'create-party', label: 'Create Party', icon: <Users size={18} />, path: '/cashier/create-party' },
         { id: 'create-item', label: 'Create Item', icon: <Package size={18} />, path: '/cashier/create-item' },
+        { id: 'POS-billing', label: 'POS Billing', icon: <Users size={18} />, path: '/cashier/POS-billing' },
       ]
     },
     {

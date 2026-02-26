@@ -300,3 +300,114 @@
   margin-bottom: 4px;
   font-family: 'Segoe UI', sans-serif;
 }
+/* ── Add to your existing Navbar.css ── */
+
+/* Toggle row (Add Bank Details) */
+.cb-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  margin-bottom: 2px;
+}
+
+/* iOS-style toggle switch */
+.cb-switch {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 22px;
+  flex-shrink: 0;
+}
+
+.cb-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.cb-switch__slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background-color: #d1d5db;
+  border-radius: 999px;
+  transition: background-color 0.2s ease;
+}
+
+.cb-switch__slider::before {
+  content: "";
+  position: absolute;
+  height: 16px;
+  width: 16px;
+  left: 3px;
+  bottom: 3px;
+  background: white;
+  border-radius: 50%;
+  transition: transform 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+.cb-switch input:checked + .cb-switch__slider {
+  background-color: #4169e1;
+}
+
+.cb-switch input:checked + .cb-switch__slider::before {
+  transform: translateX(18px);
+}
+
+/* Bank details section */
+.cb-bank-details-section {
+  border-top: 1px solid #f0f0f0;
+  padding-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Date input with icon wrapper */
+.cb-date-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.cb-date-icon {
+  position: absolute;
+  left: 10px;
+  color: #888;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.cb-date-input {
+  padding-left: 32px !important;
+}
+
+/* Wide modal variant — compact */
+.cb-modal--wide {
+  max-width: 480px;
+  padding: 16px !important;
+}
+
+/* Tighten form groups inside wide modal */
+.cb-modal--wide .cb-form-group {
+  margin-bottom: 8px;
+}
+
+.cb-modal--wide .cb-form-row {
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.cb-modal--wide .cb-form-label {
+  font-size: 12px;
+  margin-bottom: 3px;
+}
+
+.cb-modal--wide .cb-form-input,
+.cb-modal--wide .cb-form-select,
+.cb-modal--wide .cb-amount-input {
+  padding: 6px 10px;
+  font-size: 13px;
+}
