@@ -395,6 +395,15 @@ export default function SalesInvoice() {
   const [reportsOpen, setReportsOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState("Last 365 Days");
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
+  const handleSaveInvoice = (newInvoiceData: Omit<Invoice, "id">) => {
+  const newInvoice: Invoice = {
+    ...newInvoiceData,
+    id: Date.now(),
+  };
+
+  setInvoices(prev => [newInvoice, ...prev]);
+  setView("landing");
+};
 
   // Bulk dropdown + modal states
   const [bulkOpen, setBulkOpen]             = useState(false);
@@ -485,7 +494,29 @@ export default function SalesInvoice() {
     <>
       <Navbar
         title="Create Sales Invoice" showBackButton={true} backPath="/dashboard" showSettings={true}
-        primaryAction={{ label: "Save", onClick: () => setView("landing") }}
+       primaryAction={{
+  label: "Save",
+  onClick: () => {
+    const today = new Date();
+    const formattedDate = today
+      .toLocaleDateString("en-GB")
+      .replace(/\//g, "-");
+
+    const newInvoice: Omit<Invoice, "id"> = {
+      date: formattedDate,
+      invoiceNumber: String(invoices.length + 1),
+      party: "New Party",
+      dueIn: "-",
+      amount: 1000,
+      unpaid: 0,
+      status: "Paid",
+      invoiceType: "cash",
+      dueDate: today.toISOString().split("T")[0],
+    };
+
+    handleSaveInvoice(newInvoice);
+  },
+}}
         secondaryAction={{ label: "Save & New", onClick: () => console.log("Save & New") }}
       />
       <BillForm />
