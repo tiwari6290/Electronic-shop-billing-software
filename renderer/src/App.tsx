@@ -34,18 +34,16 @@ import SMSPromotion from "./components/Admin/Smspromotion/Smspromotion";
 import AccountantSidebar from "./components/Accountant/Sidebar";
 import CashBank from "./components/Accountant/Cashbank/Cashbank";
 import Expenses from "./components/Accountant/Expenses/Expenses";
-<<<<<<< Updated upstream
 import Invoicing from "./components/Accountant/E-Invoicing/Invoicing";
 import Billing from "./components/Cashier/POS Billing/Billing";
 import Bills from "./components/Accountant/Automatedbills/Bills";
 import PaymentInList from "./components/Cashier/PaymentIn/PaymentInList";
 import PaymentOutList from "./components/Cashier/PaymentOut/PaymentOutList";
-=======
 import Reports from "./components/Admin/Reports/Reports";
 import ReceivableAgeingReport from "./components/Admin/Reports/ReceivableAgeingReport";
 import PurchaseOrderList from "./components/Cashier/PurchaseOrder/PurchaseOrderList";
 import PurchaseOrdersPage from "./components/Cashier/PurchaseOrder/Purchaseorderspage";
->>>>>>> Stashed changes
+
 
 
 /* Dummy pages (replace later with real pages) */
@@ -134,6 +132,7 @@ function App() {
 
           <Route path="create-party" element={<Createparty />} />
           <Route path="create-item" element={<CreateItem />} />
+          <Route path="/cashier/POS-billing" element ={<Billing />}/>
 
           <Route path="quotation" element={<CreateQuotation />} />
           <Route path="payment-in" element={<PaymentIn />} />
