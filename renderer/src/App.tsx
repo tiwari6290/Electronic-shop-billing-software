@@ -34,11 +34,18 @@ import SMSPromotion from "./components/Admin/Smspromotion/Smspromotion";
 import AccountantSidebar from "./components/Accountant/Sidebar";
 import CashBank from "./components/Accountant/Cashbank/Cashbank";
 import Expenses from "./components/Accountant/Expenses/Expenses";
+<<<<<<< Updated upstream
 import Invoicing from "./components/Accountant/E-Invoicing/Invoicing";
 import Billing from "./components/Cashier/POS Billing/Billing";
 import Bills from "./components/Accountant/Automatedbills/Bills";
 import PaymentInList from "./components/Cashier/PaymentIn/PaymentInList";
 import PaymentOutList from "./components/Cashier/PaymentOut/PaymentOutList";
+=======
+import Reports from "./components/Admin/Reports/Reports";
+import ReceivableAgeingReport from "./components/Admin/Reports/ReceivableAgeingReport";
+import PurchaseOrderList from "./components/Cashier/PurchaseOrder/PurchaseOrderList";
+import PurchaseOrdersPage from "./components/Cashier/PurchaseOrder/Purchaseorderspage";
+>>>>>>> Stashed changes
 
 
 /* Dummy pages (replace later with real pages) */
@@ -125,10 +132,8 @@ function App() {
           <Route index element={<Navigate to="/cashier/create-party" replace />} />
           <Route path="navbar" element={<Navbar title="Dashboard" />} />
 
-
           <Route path="create-party" element={<Createparty />} />
           <Route path="create-item" element={<CreateItem />} />
-          <Route path="/cashier/POS-billing" element={<Billing />} />
 
           <Route path="quotation" element={<CreateQuotation />} />
           <Route path="payment-in" element={<PaymentIn />} />
@@ -143,7 +148,10 @@ function App() {
           <Route path="payment-out-list" element={<PaymentOutList/>}/>
           <Route path="purchase-return" element={<CreatePurchaseReturn/>} />
           <Route path="debit-note" element={<CreateDebitNote />} />
-          <Route path="purchase-orders" element={<PurchaseOrder />} />
+          {/* <Route path="purchase-orders" element={<PurchaseOrder />} />
+          <Route path="purchase-orders-list" element={<PurchaseOrderList />} /> */}
+          <Route path="purchase-orders" element={<PurchaseOrdersPage />} />
+
           <Route path="create-expense" element={<Createexpense />} />
           <Route path="sales-invoice" element={<Salesinvoice/>} />
 
@@ -161,6 +169,8 @@ function App() {
                 <Route path="staff-attendence" element={<StaffAttendance />} /> 
                 <Route path="online-orders" element={<Onlineorders />} /> 
                 <Route path="sms-marketing" element={<SMSPromotion />} /> 
+                <Route path="reports" element={<Reports />} />
+                <Route path="receivable-ageing" element={<ReceivableAgeingReport />} />
               </Route>
 
               {/* 🔹 Settings Section */}
@@ -183,8 +193,8 @@ function App() {
   <Route index element={<Navigate to="/accountant/dashboard" replace />} />
   <Route path="dashboard" element={<AccountantDashboard />} />
   <Route path="cash-bank" element={<CashBank />} />
-  <Route path="/accountant/e-invoicing" element={<Invoicing />} />
-  <Route path="automated-bills" element={< Bills />} />
+  <Route path="e-invoicing" element={<Page title="E-Invoicing" />} />
+  <Route path="automated-bills" element={<Page title="Automated Bills" />} />
   <Route path="expenses" element={<Expenses />} />
 </Route>
 
