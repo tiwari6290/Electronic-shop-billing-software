@@ -34,7 +34,8 @@ import SMSPromotion from "./components/Admin/Smspromotion/Smspromotion";
 import AccountantSidebar from "./components/Accountant/Sidebar";
 import CashBank from "./components/Accountant/Cashbank/Cashbank";
 import Expenses from "./components/Accountant/Expenses/Expenses";
-
+import PaymentInList from "./components/Cashier/PaymentIn/PaymentInList";
+import PaymentOutList from "./components/Cashier/PaymentOut/PaymentOutList";
 
 /* Dummy pages (replace later with real pages) */
 const Page = ({ title }: { title: string }) => (
@@ -125,6 +126,7 @@ function App() {
 
           <Route path="quotation" element={<CreateQuotation />} />
           <Route path="payment-in" element={<PaymentIn />} />
+          <Route path="payment-in-list" element={<PaymentInList/>}/>
           <Route path="sales-return" element={<SalesReturn/>} /> 
           <Route path="credit-note" element={<CreateCreditNote />} />
           <Route path="delivery-challan" element={<DeliveryChallan />} />
@@ -132,6 +134,7 @@ function App() {
 
           <Route path="purchase" element={<Purchases />} />
           <Route path="payment-out" element={<PaymentOut />} />
+          <Route path="payment-out-list" element={<PaymentOutList/>}/>
           <Route path="purchase-return" element={<CreatePurchaseReturn/>} />
           <Route path="debit-note" element={<CreateDebitNote />} />
           <Route path="purchase-orders" element={<PurchaseOrder />} />

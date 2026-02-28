@@ -115,9 +115,41 @@ export default function PaymentIn() {
     onClick: () => navigate(-1),
   }}
   primaryAction={{
-    label: "Save",
-    onClick: () => console.log("Saving Payment In", formData),
-  }}
+  label: "Save",
+  onClick: () => {
+    // Basic validation (optional but recommended)
+    if (!formData.partyName || !formData.amountReceived) {
+      alert("Please fill required fields");
+      return;
+    }
+
+    // Get existing payments
+    const existingPayments = JSON.parse(
+      localStorage.getItem("paymentInList") || "[]"
+    );
+
+    // Create new payment object
+    const newPayment = {
+      id: Date.now(),
+      date: formData.paymentDate,
+      paymentNumber: `${formData.prefix}${formData.number}`,
+      partyName: formData.partyName,
+      totalAmountSettled: formData.amountReceived,
+      amountReceived: formData.amountReceived,
+      paymentMode: formData.paymentMode,
+      notes: formData.notes,
+    };
+
+    // Save to localStorage
+    localStorage.setItem(
+      "paymentInList",
+      JSON.stringify([...existingPayments, newPayment])
+    );
+
+    // Redirect to list page
+    navigate("/cashier/payment-in-list");
+  },
+}}
 />
 
 
