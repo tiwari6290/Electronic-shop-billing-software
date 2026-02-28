@@ -1,0 +1,267 @@
+.paymentoutlist-page {
+  padding: 24px;
+  background: #f6f7fb;
+  min-height: 100vh;
+  font-family: Inter, sans-serif;
+}
+
+/* ================= DATE DROPDOWN MINI TABLE ================= */
+
+.date-filter-wrapper {
+  position: relative;
+}
+
+.date-dropdown-table {
+  position: absolute;
+  top: 45px;
+  left: 0;
+  width: 360px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+  z-index: 100;
+  overflow: hidden;
+}
+
+/* Header */
+.date-dropdown-header {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+/* Scrollable body */
+.date-dropdown-body {
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+/* Row */
+.date-dropdown-row {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  padding: 10px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.date-dropdown-row:hover {
+  background: #f3f4f6;
+}
+
+.date-label {
+  font-weight: 500;
+}
+
+.date-range {
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.active-date {
+  background: #eef2ff;
+}
+
+/* ================= SEARCH EXPAND ================= */
+
+.search-wrapper {
+  position: relative;
+}
+
+.search-icon-box {
+  width: 38px;
+  height: 38px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.search-icon-box:hover {
+  background: #f3f4f6;
+}
+
+.search-input {
+  width: 260px;
+  height: 38px;
+  padding: 0 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  outline: none;
+  font-size: 14px;
+  transition: 0.2s ease;
+}
+
+.search-input:focus {
+  border-color: #4f46e5;
+}
+/* ================= HEADER ================= */
+.paymentoutlist-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.paymentoutlist-header h2 {
+  font-size: 22px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.paymentoutlist-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #4f46e5;
+  font-weight: 500;
+  font-size: 14px;
+  border-bottom: 2px solid #4f46e5;
+  padding-bottom: 4px;
+}
+
+.tab-icon {
+  font-size: 14px;
+}
+.edit-btn {
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.delete-btn {
+  background: #fee2e2;
+  border: 1px solid #fecaca;
+  padding: 4px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+}
+/* ================= HEADER ACTIONS ================= */
+.header-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.icon-btn {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  padding: 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.icon-btn:hover {
+  background: #f3f4f6;
+}
+
+/* ================= TOOLBAR ================= */
+.paymentoutlist-toolbar {
+  margin-top: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.search-box {
+  width: 38px;
+  height: 38px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.date-filter {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+/* ================= CREATE BUTTON ================= */
+.create-btn {
+  background: #4f46e5;
+  color: white;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.create-btn:hover {
+  background: #4338ca;
+}
+
+/* ================= TABLE ================= */
+.paymentoutlist-table-wrapper {
+  margin-top: 20px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  min-height: 420px;
+  position: relative;
+}
+
+.paymentoutlist-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.paymentoutlist-table thead {
+  background: #f3f4f6;
+}
+
+.paymentoutlist-table th {
+  text-align: left;
+  padding: 14px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+/* ================= EMPTY STATE ================= */
+.empty-state {
+  position: absolute;
+  top: 55%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  color: #6b7280;
+}
+
+.empty-icon {
+  font-size: 40px;
+  margin-bottom: 10px;
+  color: #9ca3af;
+}

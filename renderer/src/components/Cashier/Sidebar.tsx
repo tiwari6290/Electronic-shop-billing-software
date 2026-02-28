@@ -46,7 +46,7 @@ const Sidebar: React.FC = () => {
       title: 'SALES TRANSACTIONS',
       items: [
         { id: 'quotation', label: 'Quotation', icon: <FileEdit size={18} />, path: '/cashier/quotation' },
-        { id: 'payment-in', label: 'Payment In', icon: <CreditCard size={18} />, path: '/cashier/payment-in' },
+        { id: 'payment-in', label: 'Payment In', icon: <CreditCard size={18} />, path: '/cashier/payment-in-list' },
         { id: 'sales-return', label: 'Sales Return', icon: <RotateCcw size={18} />, path: '/cashier/sales-return' },
         { id: 'sales-invoice', label: 'Sales Invoice', icon: <FileEdit size={18} />, path: '/cashier/sales-invoice' },
         { id: 'credit-note', label: 'Credit Note', icon: <FileSpreadsheet size={18} />, path: '/cashier/credit-note' },
@@ -58,7 +58,7 @@ const Sidebar: React.FC = () => {
       title: 'PURCHASE TRANSACTIONS',
       items: [
         { id: 'purchase', label: 'Purchase', icon: <ShoppingCart size={18} />, path: '/cashier/purchase' },
-        { id: 'payment-out', label: 'Payment Out', icon: <ArrowLeftRight size={18} />, path: '/cashier/payment-out' },
+        { id: 'payment-out', label: 'Payment Out', icon: <ArrowLeftRight size={18} />, path: '/cashier/payment-out-list' },
         { id: 'purchase-return', label: 'Purchase Return', icon: <CornerUpLeft size={18} />, path: '/cashier/purchase-return' },
         { id: 'debit-note', label: 'Debit Note', icon: <StickyNote size={18} />, path: '/cashier/debit-note' },
         { id: 'purchase-orders', label: 'Purchase Orders', icon: <ShoppingBag size={18} />, path: '/cashier/purchase-orders' },

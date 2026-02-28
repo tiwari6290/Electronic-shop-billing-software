@@ -114,10 +114,42 @@ export default function PaymentOut() {
     label: "Cancel",
     onClick: () => navigate(-1),
   }}
-  primaryAction={{
-    label: "Save",
-    onClick: () => console.log("Saving Payment Out", formData),
-  }}
+    primaryAction={{
+  label: "Save",
+  onClick: () => {
+    // Basic validation (optional but recommended)
+    if (!formData.partyName || !formData.amountPaid) {
+      alert("Please fill required fields");
+      return;
+    }
+
+    // Get existing payments
+    const existingPayments = JSON.parse(
+      localStorage.getItem("paymentOutList") || "[]"
+    );
+
+    // Create new payment object
+    const newPayment = {
+      id: Date.now(),
+      date: formData.paymentDate,
+      paymentNumber: `${formData.prefix}${formData.number}`,
+      partyName: formData.partyName,
+      totalAmountSettled: formData.amountPaid,
+      amountReceived: formData.amountPaid,
+      paymentMode: formData.paymentMode,
+      notes: formData.notes,
+    };
+
+    // Save to localStorage
+    localStorage.setItem(
+      "paymentOutList",
+      JSON.stringify([...existingPayments, newPayment])
+    );
+
+    // Redirect to list page
+    navigate("/cashier/payment-out-list");
+  },
+}}
 />
 
 
