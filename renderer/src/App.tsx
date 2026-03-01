@@ -185,8 +185,6 @@ function App() {
 
           </Route>
 
-          
-
         {/* 🔒 ACCOUNTANT */}
         <Route
           path="/accountant"
