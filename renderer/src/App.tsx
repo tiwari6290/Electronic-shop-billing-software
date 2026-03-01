@@ -185,17 +185,7 @@ function App() {
 
           </Route>
 
-          <Route path="settings" element={<AdminSettingsLayout />}>
-            <Route path="account" element={<Account />} />
-            <Route path="manage-business" element={<ManageBusiness />} />
-            <Route path="invoice-settings" element={<InvoiceBuilder />} />
-            <Route path="print-settings" element={<PrintSetting />} />
-            <Route path="reminders" element={<ReminderSetting />} />
-            <Route path="ca-reports" element={<Reportsharing />} />
-            <Route path="pricing" element={<Pricing />} />
-            <Route path="refer-earn" element={<ReferralPage />} />
-          </Route>
-        </Route>
+          
 
         {/* 🔒 ACCOUNTANT */}
         <Route
@@ -210,7 +200,7 @@ function App() {
           <Route path="dashboard" element={<AccountantDashboard />} />
           <Route path="cash-bank" element={<CashBank />} />
           <Route path="e-invoicing" element={<Invoicing />} />
-          <Route path="automated-bills" element={<AutomatedBills />} />
+          <Route path="automated-bills" element={<Bills />} />
           <Route path="expenses" element={<Expenses />} />
         </Route>
 
