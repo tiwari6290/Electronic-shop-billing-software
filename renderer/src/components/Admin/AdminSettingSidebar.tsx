@@ -1,5 +1,18 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import {
+  User,
+  Briefcase,
+  Settings,
+  Printer,
+  Users,
+  Bell,
+  BarChart,
+  DollarSign,
+  Gift,
+  LogOut
+} from "lucide-react";
+
 
 interface SidebarProps {
   userName?: string;
@@ -125,16 +138,16 @@ const menuItemStyle: React.CSSProperties = {
   };
 
   const menuItems = [
-    { path: '/admin/settings/account', label: 'Account', icon: '👤' },
-    { path: '/admin/settings/manage-business', label: 'Manage Business', icon: '🏢' },
-    { path: '/admin/settings/invoice-settings', label: 'Invoice Settings', icon: '⚙️' },
-    { path: '/admin/settings/print-settings', label: 'Print Settings', icon: '🖨️' },
-    { path: '/admin/settings/manage-users', label: 'Manage Users', icon: '👥' },
-    { path: '/admin/settings/reminders', label: 'Reminders', icon: '🔔' },
-    { path: '/admin/settings/ca-reports', label: 'CA Reports Sharing', icon: '📊' },
-    { path: '/admin/settings/pricing', label: 'Pricing', icon: '💰' },
-    { path: '/admin/settings/refer-earn', label: 'Refer & Earn', icon: '🎁' },
-  ];
+  { path: '/admin/settings/account', label: 'Account', icon: <User size={18}/> },
+  { path: '/admin/settings/manage-business', label: 'Manage Business', icon: <Briefcase size={18}/> },
+  { path: '/admin/settings/invoice-settings', label: 'Invoice Settings', icon: <Settings size={18}/> },
+  { path: '/admin/settings/print-settings', label: 'Print Settings', icon: <Printer size={18}/> },
+  { path: '/admin/settings/manage-users', label: 'Manage Users', icon: <Users size={18}/> },
+  { path: '/admin/settings/reminders', label: 'Reminders', icon: <Bell size={18}/> },
+  { path: '/admin/settings/ca-reports', label: 'CA Reports Sharing', icon: <BarChart size={18}/> },
+  { path: '/admin/settings/pricing', label: 'Pricing', icon: <DollarSign size={18}/> },
+  { path: '/admin/settings/refer-earn', label: 'Refer & Earn', icon: <Gift size={18}/> },
+];
 
   const isActive = (path: string) => location.pathname === path;
 
@@ -190,7 +203,7 @@ const menuItemStyle: React.CSSProperties = {
           onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#ffffff'}
           onClick={() => navigate('/login')}
         >
-          <span style={iconStyle}>🚪</span>
+          <span style={iconStyle}><LogOut size={18} /></span>
           Logout
         </button>
       </div>
