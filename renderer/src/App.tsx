@@ -43,6 +43,8 @@ import Reports from "./components/Admin/Reports/Reports";
 import ReceivableAgeingReport from "./components/Admin/Reports/ReceivableAgeingReport";
 import PurchaseOrderList from "./components/Cashier/PurchaseOrder/PurchaseOrderList";
 import PurchaseOrdersPage from "./components/Cashier/PurchaseOrder/Purchaseorderspage";
+import Parties from "./components/Cashier/Parties/Parties";
+import PartyDetails from "./components/Cashier/Parties/PartyDetails";
 
 
 
@@ -132,7 +134,9 @@ function App() {
 
           <Route path="create-party" element={<Createparty />} />
           <Route path="create-item" element={<CreateItem />} />
-          <Route path="/cashier/POS-billing" element ={<Billing />}/>
+          <Route path="POS-billing" element ={<Billing />}/>
+          <Route path="parties" element ={<Parties/>}/>
+          <Route path="party/:id" element={<PartyDetails />} />
 
           <Route path="quotation" element={<CreateQuotation />} />
           <Route path="payment-in" element={<PaymentIn />} />
@@ -147,8 +151,8 @@ function App() {
           <Route path="payment-out-list" element={<PaymentOutList/>}/>
           <Route path="purchase-return" element={<CreatePurchaseReturn/>} />
           <Route path="debit-note" element={<CreateDebitNote />} />
-          {/* <Route path="purchase-orders" element={<PurchaseOrder />} />
-          <Route path="purchase-orders-list" element={<PurchaseOrderList />} /> */}
+           <Route path="purchase-orders-form" element={<PurchaseOrder />} />
+          {/*<Route path="purchase-orders-list" element={<PurchaseOrderList />} /> */}
           <Route path="purchase-orders" element={<PurchaseOrdersPage />} />
 
           <Route path="create-expense" element={<Createexpense />} />

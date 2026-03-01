@@ -1,0 +1,308 @@
+.itemwise-container {
+  margin-top: 20px;
+}
+
+.itemwise-actions {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.itemwise-actions select,
+.itemwise-actions button {
+  padding: 8px 14px;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  cursor: pointer;
+}
+
+.itemwise-table table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.itemwise-table th {
+  background: #f3f4f6;
+  padding: 12px;
+  text-align: left;
+  font-weight: 600;
+}
+
+.itemwise-table td {
+  padding: 12px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.date-dropdown {
+  position: absolute;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  margin-top: 5px;
+  z-index: 10;
+}
+
+.date-dropdown div {
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.date-dropdown div:hover {
+  background: #f3f4f6;
+}
+
+.custom-date-range {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.custom-date-range input {
+  padding: 6px 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+}
+
+/* Top Action Bar */
+.itemwise-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+}
+
+/* Left side (date dropdown) */
+.itemwise-actions select {
+  padding: 8px 14px;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+/* Right side button group */
+.itemwise-actions .action-buttons {
+  display: flex;
+  gap: 12px;
+}
+
+/* Base button style */
+.itemwise-actions button {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+/* Download button */
+.download-btn {
+  background-color: #4f46e5;
+  color: #ffffff;
+  border: none;
+}
+
+.download-btn:hover {
+  background-color: #4338ca;
+}
+
+/* Print button */
+.print-btn {
+  background-color: #ffffff;
+  color: #374151;
+  border: 1px solid #d1d5db;
+}
+
+.print-btn:hover {
+  background-color: #f3f4f6;
+}
+
+/* Active click feel */
+.itemwise-actions button:active {
+  transform: scale(0.98);
+}
+
+/* ============================= */
+/* REPORT WRAPPER */
+/* ============================= */
+
+.report-wrapper {
+  margin-top: 20px;
+}
+
+/* ============================= */
+/* TOP BAR */
+/* ============================= */
+
+.report-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+  gap: 16px;
+}
+
+/* LEFT CONTROLS */
+
+.left-controls {
+  position: relative;
+}
+
+/* Date Button */
+
+.date-btn {
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 150px;
+  text-align: left;
+}
+
+.date-btn:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
+}
+
+/* Dropdown */
+
+.date-dropdown {
+  position: absolute;
+  top: 42px;
+  left: 0;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  width: 200px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+  z-index: 100;
+  overflow: hidden;
+}
+
+.date-dropdown div {
+  padding: 10px 14px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.date-dropdown div:hover {
+  background: #f3f4f6;
+}
+
+/* Custom Date Range */
+
+.custom-date-range {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.custom-date-range input {
+  padding: 6px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+/* ============================= */
+/* RIGHT CONTROLS */
+/* ============================= */
+
+.right-controls {
+  display: flex;
+  gap: 12px;
+}
+
+/* Download Button */
+
+.right-controls button:first-child {
+  background-color: #4f46e5;
+  color: #ffffff;
+  border: none;
+  padding: 8px 18px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.right-controls button:first-child:hover {
+  background-color: #4338ca;
+}
+
+/* Print Button */
+
+.right-controls button:last-child {
+  background-color: #ffffff;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  padding: 8px 18px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.right-controls button:last-child:hover {
+  background-color: #f3f4f6;
+}
+
+/* Click Animation */
+
+.right-controls button:active {
+  transform: scale(0.98);
+}
+
+/* ============================= */
+/* TABLE CARD */
+/* ============================= */
+
+.report-card {
+  background: #ffffff;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+}
+
+.report-card table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.report-card th {
+  background: #f3f4f6;
+  padding: 12px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.report-card td {
+  padding: 12px;
+  border-top: 1px solid #e5e7eb;
+  font-size: 14px;
+}
+
+.no-data {
+  text-align: center;
+  padding: 20px;
+  color: #6b7280;
+}
+
+.totals-row {
+  background: #f9fafb;
+  font-weight: 600;
+}
