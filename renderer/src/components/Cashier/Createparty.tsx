@@ -1,8 +1,16 @@
 import React, { useState } from 'react';
 import Navbar from './Navbar';
 import { X, MessageSquare, FileText } from 'lucide-react';
+import { useNavigate } from "react-router-dom";
+import { useEffect } from "react";
+import { useParams } from "react-router-dom";
 
 const CreateParty: React.FC = () => {
+  const navigate = useNavigate();
+  const { id } = useParams();
+const [showAddCategoryInput, setShowAddCategoryInput] = useState(false);
+const [newCategoryName, setNewCategoryName] = useState("");
+  const [categories, setCategories] = useState<string[]>([]);
   const [formData, setFormData] = useState({
     partyName: '',
     mobileNumber: '',
@@ -62,13 +70,110 @@ const CreateParty: React.FC = () => {
     }
   };
 
+
+useEffect(() => {
+  if (!id) return;
+
+  const storedParties =
+    JSON.parse(localStorage.getItem("parties") || "[]");
+
+  const partyToEdit = storedParties.find(
+    (p: any) => p.id === Number(id)
+  );
+
+  if (partyToEdit) {
+    setFormData((prev) => ({
+      ...prev,
+      partyName: partyToEdit.name,
+      mobileNumber: partyToEdit.mobile,
+      partyCategory: partyToEdit.category,
+      partyType: partyToEdit.type,
+      openingBalance: Math.abs(partyToEdit.balance).toString(),
+      balanceType:
+        partyToEdit.balance >= 0 ? "To Collect" : "To Pay",
+    }));
+  }
+}, [id]);
+
+
+
+
   const handleGetDetails = () => {
     console.log('Fetching GSTIN details...');
   };
 
-  const handleSave = () => {
-    console.log('Saving party:', formData);
-  };
+const handleSave = () => {
+  if (!formData.partyName.trim()) {
+    alert("Party Name is required");
+    return;
+  }
+
+  const existingParties =
+    JSON.parse(localStorage.getItem("parties") || "[]");
+
+  const existingCategories =
+    JSON.parse(localStorage.getItem("categories") || "[]");
+
+  const categoryValue =
+    formData.partyCategory?.trim() || "-";
+
+    
+
+  // ✅ If category is new, add it to categories list
+  if (
+    categoryValue !== "-" &&
+    !existingCategories.includes(categoryValue)
+  ) {
+    const updatedCategories = [
+      ...existingCategories,
+      categoryValue,
+    ];
+
+    localStorage.setItem(
+      "categories",
+      JSON.stringify(updatedCategories)
+    );
+  }
+
+const newParty = {
+  id: id ? Number(id) : Date.now(),
+  name: formData.partyName,
+  category: categoryValue,
+  mobile: formData.mobileNumber || "-",
+  type: formData.partyType,
+  balance:
+    formData.balanceType === "To Collect"
+      ? Number(formData.openingBalance || 0)
+      : -Number(formData.openingBalance || 0),
+
+  // 🔥 extra fields
+  email: formData.email,
+  gstin: formData.gstin,
+  panNumber: formData.panNumber,
+  billingAddress: formData.billingAddress,
+  shippingAddress: formData.shippingAddress,
+  creditPeriod: formData.creditPeriod,
+  creditLimit: formData.creditLimit,
+};
+
+  const updatedParties = [...existingParties, newParty];
+
+  localStorage.setItem(
+    "parties",
+    JSON.stringify(updatedParties)
+  );
+
+  navigate("/cashier/parties");
+  if (id) {
+  const updatedParties = existingParties.map((p: any) =>
+    p.id === Number(id) ? newParty : p
+  );
+
+  localStorage.setItem("parties", JSON.stringify(updatedParties));
+} else {
+  localStorage.setItem("parties", JSON.stringify(updatedParties));
+}
+};
 
   const handleSaveAndNew = () => {
     console.log('Saving party and creating new:', formData);
@@ -201,12 +306,13 @@ const CreateParty: React.FC = () => {
                       ₹
                     </span>
                     <input
+                    className='aab'
                       type="number"
                       name="openingBalance"
                       value={formData.openingBalance}
                       onChange={handleInputChange}
                       style={{
-                        width: '100%',
+                        width: '100px',
                         paddingLeft: '28px',
                         paddingRight: '12px',
                         paddingTop: '8px',
@@ -345,33 +451,108 @@ const CreateParty: React.FC = () => {
                 </select>
               </div>
 
-              {/* Party Category */}
-              <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '400', color: '#6b7280', marginBottom: '6px' }}>
-                  Party Category
-                </label>
-                <select
-                  name="partyCategory"
-                  value={formData.partyCategory}
-                  onChange={handleInputChange}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    border: '1px solid #d1d5db',
-                    borderRadius: '6px',
-                    fontSize: '14px',
-                    color: formData.partyCategory ? '#111827' : '#9ca3af',
-                    outline: 'none',
-                    backgroundColor: '#ffffff',
-                    boxSizing: 'border-box'
-                  }}
-                >
-                  <option value="">Select Category</option>
-                  <option>Retail</option>
-                  <option>Wholesale</option>
-                  <option>Distributor</option>
-                </select>
-              </div>
+{/* Party Category */}
+<div>
+  <label style={{ display: 'block', fontSize: '13px', fontWeight: '400', color: '#6b7280', marginBottom: '6px' }}>
+    Party Category
+  </label>
+
+  <select
+    value={formData.partyCategory}
+    onChange={(e) => {
+      if (e.target.value === "__add_new__") {
+        setShowAddCategoryInput(true);
+        return;
+      }
+
+      setFormData((prev) => ({
+        ...prev,
+        partyCategory: e.target.value,
+      }));
+    }}
+    style={{
+      width: '100%',
+      padding: '8px 12px',
+      border: '1px solid #d1d5db',
+      borderRadius: '6px',
+      fontSize: '14px',
+      outline: 'none',
+      backgroundColor: '#ffffff',
+      boxSizing: 'border-box'
+    }}
+  >
+    <option value="">Select Category</option>
+
+    {categories.map((cat) => (
+      <option key={cat} value={cat}>
+        {cat}
+      </option>
+    ))}
+
+    <option value="__add_new__">+ Add New Category</option>
+  </select>
+
+  {/* 🔥 Show input when adding new category */}
+  {showAddCategoryInput && (
+    <div style={{ marginTop: '8px', display: 'flex', gap: '8px' }}>
+      <input
+        type="text"
+        placeholder="Enter new category"
+        value={newCategoryName}
+        onChange={(e) => setNewCategoryName(e.target.value)}
+        style={{
+          flex: 1,
+          padding: '6px 10px',
+          border: '1px solid #d1d5db',
+          borderRadius: '6px',
+          fontSize: '14px'
+        }}
+      />
+
+      <button
+        type="button"
+        onClick={() => {
+          if (!newCategoryName.trim()) return;
+
+          const existingCategories =
+            JSON.parse(localStorage.getItem("categories") || "[]");
+
+          if (!existingCategories.includes(newCategoryName)) {
+            const updatedCategories = [
+              ...existingCategories,
+              newCategoryName,
+            ];
+
+            localStorage.setItem(
+              "categories",
+              JSON.stringify(updatedCategories)
+            );
+
+            setCategories(updatedCategories);
+          }
+
+          setFormData((prev) => ({
+            ...prev,
+            partyCategory: newCategoryName,
+          }));
+
+          setNewCategoryName("");
+          setShowAddCategoryInput(false);
+        }}
+        style={{
+          padding: '6px 12px',
+          background: '#6366f1',
+          color: '#fff',
+          border: 'none',
+          borderRadius: '6px',
+          cursor: 'pointer'
+        }}
+      >
+        Add
+      </button>
+    </div>
+  )}
+</div>
 
               <div></div>
             </div>

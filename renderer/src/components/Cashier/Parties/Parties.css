@@ -1,0 +1,288 @@
+.parties-container {
+  padding: 24px;
+  background: #f6f8fb;
+  min-height: 100vh;
+  font-family: "Inter", sans-serif;
+}
+
+/* Header */
+.parties-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.parties-header h2 {
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.header-right {
+  display: flex;
+  gap: 12px;
+}
+
+/* Buttons */
+.outline-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 1px solid #d0d5dd;
+  background: white;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.icon-btn {
+  border: 1px solid #d0d5dd;
+  padding: 8px;
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+}
+
+.primary-btn {
+  background: #5b4bff;
+  color: white;
+  border: none;
+  padding: 8px 18px;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+/* Summary Cards */
+.summary-cards {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.card {
+  flex: 1;
+  background: white;
+  padding: 18px;
+  border-radius: 12px;
+  border: 1px solid #e4e7ec;
+}
+
+.active-card {
+  border: 2px solid #5b4bff;
+}
+
+.card p {
+  font-size: 14px;
+  color: #667085;
+  margin-bottom: 8px;
+}
+
+.card h3 {
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.green-text {
+  color: #12b76a;
+}
+
+.red-text {
+  color: #f04438;
+}
+
+/* Action Bar */
+.actions-bar {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #d0d5dd;
+  background: white;
+  padding: 8px 12px;
+  border-radius: 8px;
+  justify-content: space-between;
+}
+
+.search-box input {
+  border: none;
+  outline: none;
+  font-size: 14px;
+}
+
+/* Table */
+.table-wrapper {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #e4e7ec;
+}
+
+.party-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.party-table thead {
+  background: #f2f4f7;
+}
+
+.party-table th,
+.party-table td {
+  padding: 14px 16px;
+  text-align: left;
+  font-size: 14px;
+  border-bottom: 1px solid #eaecf0;
+}
+
+.party-table th {
+  font-weight: 600;
+  color: #344054;
+}
+
+.party-table tbody tr:hover {
+  background: #f9fafb;
+}
+
+.balance-positive {
+  color: #12b76a;
+  font-weight: 500;
+}
+
+.menu-icon {
+  cursor: pointer;
+  color: #667085;
+}
+.right-actions{
+    display: flex;
+    gap: 25px;
+}
+.card {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+}
+
+.balance-negative {
+  color: #f04438;
+  font-weight: 500;
+}
+
+.category-wrapper {
+  position: relative;
+}
+
+.dropdown {
+  position: absolute;
+  background: white;
+  border: 1px solid #e4e7ec;
+  border-radius: 8px;
+  width: 240px;
+  margin-top: 6px;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.08);
+  z-index: 100;
+}
+
+.dropdown-item {
+  padding: 10px 14px;
+  cursor: pointer;
+}
+
+.dropdown-item:hover {
+  background: #f2f4f7;
+}
+
+.create-category {
+  padding: 12px;
+  text-align: center;
+  border-top: 1px dashed #d0d5dd;
+  color: #5b4bff;
+  cursor: pointer;
+}
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.modal {
+  background: white;
+  width: 380px;
+  padding: 20px;
+  border-radius: 8px;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 15px;
+}
+.abc{
+    background: #5b4bff;
+    width: 100px;
+    height: 30px;
+    color: white;
+    border-radius: 10px;
+}
+.abcd{
+    width: 0px;
+}
+.left-actions{
+    display: flex;
+    gap: 25px;
+}
+
+.search-partyy{
+    display: flex;
+
+}
+.aa{
+    position: relative;
+    top: 10px;
+    left: -31px;
+}
+
+.action-menu {
+  position: absolute;
+  right: 10px;
+  top: 25px;
+  background: white;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  width: 120px;
+  z-index: 10;
+}
+
+.action-item {
+  padding: 10px 14px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.action-item:hover {
+  background: #f3f4f6;
+}
+
+.action-item.delete {
+  color: #ef4444;
+}
+
+.delete-btn {
+  background: #ef4444 !important;
+  color: white !important;
+}
