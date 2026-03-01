@@ -51,7 +51,6 @@ interface BusinessVisibility {
   email: boolean;
 }
 
-// ── UPDATED: added backgroundUrl & backgroundOpacity fields ──
 interface TableSettings {
   hsnSummary: boolean;
   showDesc: boolean;
@@ -146,14 +145,14 @@ const TEXT_SIZES = ["12px", "13px", "14px", "15px", "16px"];
 const TABLE_COLUMNS = ["Serial Number", "Item Name", "HSN", "MRP", "Quantity", "Rate/Item", "Discount", "Amount"];
 
 const DEFAULT_INVOICE: InvoiceData = {
-  companyName: "Acme Industries Pvt. Ltd.",
-  slogan: "Quality You Can Trust",
-  address: "123 Business Park, MG Road, Mumbai, Maharashtra - 400001",
-  state: "Maharashtra", city: "Mumbai",
-  gstin: "27AABCU9603R1ZM", phone: "+91 98765 43210",
-  email: "billing@acme.in", pan: "AABCU9603R",
+  companyName: "Mondal Electronic",
+  slogan: "",
+  address: "45 Electronics Market, College Street, Kolkata, West Bengal - 700073",
+  state: "West Bengal", city: "Kolkata",
+  gstin: "19AABCM1234R1ZX", phone: "+91 98765 43210",
+  email: "billing@mondalelectronic.in", pan: "AABCM1234R",
   invoiceNo: "INV-2026-0042", date: "20 Feb 2026",
-  dueDate: "22 Mar 2026", placeOfSupply: "Maharashtra", poNo: "PO-7891",
+  dueDate: "22 Mar 2026", placeOfSupply: "West Bengal", poNo: "PO-7891",
   billTo: { name: "Beta Corp Pvt. Ltd.", address: "456 Trade Center, Delhi", mobile: "+91 91234 56789", gstin: "07AABCB1234R1Z5" },
   shipTo: { name: "Beta Corp Warehouse", address: "789 Industrial Area, Gurgaon", mobile: "+91 98000 11111", gstin: "06AABCB1234R1Z6" },
   items: [
@@ -178,7 +177,7 @@ const DEFAULT_PRINT: PrintState = {
 };
 
 const DEFAULT_VIS: BusinessVisibility = {
-  companyName: true, slogan: true, address: true,
+  companyName: true, slogan: false, address: true,
   gstin: true, phone: true, pan: false, email: true,
 };
 
@@ -194,7 +193,6 @@ const DEFAULT_PV: PartyVisibility = {
   billCustomFields: [], shipCustomFields: [],
 };
 
-// ── UPDATED: added backgroundUrl and backgroundOpacity defaults ──
 const DEFAULT_TS: TableSettings = {
   hsnSummary: false, showDesc: true, capitalize: false, stretch: true,
   quantityMode: "Total",
@@ -212,17 +210,142 @@ const DEFAULT_MISC: MiscState = {
   signatureUrl: "",
 };
 
+// ─── NAV SVG ICONS ───────────────────────────────────────────────────────────
+
+const IconStyle: React.FC = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="13.5" cy="6.5" r="2.5"/>
+    <circle cx="6.5" cy="14.5" r="2.5"/>
+    <circle cx="17.5" cy="16.5" r="2.5"/>
+    <path d="M2 12a10 10 0 1 0 10-10"/>
+  </svg>
+);
+
+const IconPrint: React.FC = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="6 9 6 2 18 2 18 9"/>
+    <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+    <rect x="6" y="14" width="12" height="8"/>
+  </svg>
+);
+
+const IconBusiness: React.FC = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="2" y="7" width="20" height="14" rx="2"/>
+    <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>
+    <line x1="12" y1="12" x2="12" y2="12"/>
+    <path d="M12 12h.01"/>
+    <path d="M2 12a20.3 20.3 0 0 0 20 0"/>
+  </svg>
+);
+
+const IconInvoice: React.FC = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+    <polyline points="14 2 14 8 20 8"/>
+    <line x1="16" y1="13" x2="8" y2="13"/>
+    <line x1="16" y1="17" x2="8" y2="17"/>
+    <polyline points="10 9 9 9 8 9"/>
+  </svg>
+);
+
+const IconParty: React.FC = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+    <circle cx="9" cy="7" r="4"/>
+    <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+    <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+  </svg>
+);
+
+const IconItems: React.FC = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="3" width="18" height="18" rx="2"/>
+    <path d="M3 9h18"/>
+    <path d="M3 15h18"/>
+    <path d="M9 3v18"/>
+  </svg>
+);
+
+const IconMisc: React.FC = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="3"/>
+    <path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/>
+    <path d="M12 2v2M12 20v2M2 12h2M20 12h2"/>
+    <path d="m4.93 4.93 1.41 1.41M17.66 17.66l1.41 1.41M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
+  </svg>
+);
+
+const IconSave: React.FC = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+    <polyline points="17 21 17 13 7 13 7 21"/>
+    <polyline points="7 3 7 8 15 8"/>
+  </svg>
+);
+
+const NAV_ICONS: Record<string, React.FC> = {
+  style:    IconStyle,
+  print:    IconPrint,
+  business: IconBusiness,
+  invoice:  IconInvoice,
+  party:    IconParty,
+  items:    IconItems,
+  misc:     IconMisc,
+};
+
 const NAV_ITEMS = [
-  { id: "style",    icon: "🎨", label: "Style Settings" },
-  { id: "print",    icon: "🖨️", label: "Print Settings" },
-  { id: "business", icon: "🏢", label: "Business Details" },
-  { id: "invoice",  icon: "📄", label: "Invoice Details" },
-  { id: "party",    icon: "👥", label: "Party Details" },
-  { id: "items",    icon: "📦", label: "Item Table" },
-  { id: "misc",     icon: "⚙️", label: "Miscellaneous" },
+  { id: "style",    label: "Style Settings" },
+  { id: "print",    label: "Print Settings" },
+  { id: "business", label: "Business Details" },
+  { id: "invoice",  label: "Invoice Details" },
+  { id: "party",    label: "Party Details" },
+  { id: "items",    label: "Item Table" },
+  { id: "misc",     label: "Miscellaneous" },
 ] as const;
 
 type NavId = (typeof NAV_ITEMS)[number]["id"];
+
+// ─── HOME PAGE THEME DEFINITIONS ─────────────────────────────────────────────
+
+interface HomeTheme {
+  id: string;
+  name: string;
+  description: string;
+  color: string;
+  style: Partial<StyleState>;
+}
+
+const HOME_THEMES: HomeTheme[] = [
+  {
+    id: "modern-blue",
+    name: "Modern Blue",
+    description: "Clean professional look",
+    color: "#3b5bdb",
+    style: { themeColor: "#3b5bdb", font: "Inter", borderColor: "#dee2e6" },
+  },
+  {
+    id: "classic-dark",
+    name: "Classic Dark",
+    description: "Bold authoritative style",
+    color: "#1a1d23",
+    style: { themeColor: "#1a1d23", font: "Georgia", borderColor: "#adb5bd" },
+  },
+  {
+    id: "minimal",
+    name: "Minimal",
+    description: "Clean and understated",
+    color: "#212529",
+    style: { themeColor: "#212529", font: "Inter", borderColor: "#e9ecef" },
+  },
+  {
+    id: "elegant-gold",
+    name: "Elegant Gold",
+    description: "Premium warm tones",
+    color: "#c07000",
+    style: { themeColor: "#c07000", font: "Georgia", borderColor: "#e9c46a" },
+  },
+];
 
 // ─── SHARED UI ATOMS ──────────────────────────────────────────────────────────
 
@@ -258,38 +381,6 @@ const IBSelect: React.FC<{ value: string; onChange: (v: string) => void; options
   </select>
 );
 
-// ─── MINI PREVIEW (home page card) ───────────────────────────────────────────
-
-const MiniPreview: React.FC<{ color: string }> = ({ color }) => (
-  <div className="mini-preview">
-    <div className="mini-header" style={{ background: color }}>
-      <div className="mini-company">Company Name Pvt. Ltd.</div>
-      <div className="mini-sub">TAX INVOICE</div>
-    </div>
-    <div className="mini-body">
-      <div className="mini-row">
-        <div className="mini-line long" />
-        <div className="mini-line short" />
-      </div>
-      <div className="mini-row">
-        <div className="mini-line med" />
-        <div className="mini-line med" />
-      </div>
-      <div className="mini-table-head" style={{ background: color }} />
-      {[0,1,2].map(i => (
-        <div className="mini-table-row" key={i}>
-          <div className="mini-line" style={{ width: `${45 + i * 8}%`, background: "#e9ecef" }} />
-          <div className="mini-line short" />
-        </div>
-      ))}
-      <div className="mini-total-row">
-        <div className="mini-total-label" />
-        <div className="mini-total-val" style={{ background: color }} />
-      </div>
-    </div>
-  </div>
-);
-
 // ─── SAVE DIALOG ─────────────────────────────────────────────────────────────
 
 const SaveDialog: React.FC<{
@@ -314,77 +405,376 @@ const SaveDialog: React.FC<{
   );
 };
 
-// ─── HOME PAGE ────────────────────────────────────────────────────────────────
+// ─── INVOICE PREVIEW (shared between home and builder) ───────────────────────
 
-const STARTER_TEMPLATES = [
-  { id: "s1", name: "Classic Blue",   color: "#3b5bdb", badge: "DEFAULT" },
-  { id: "s2", name: "Forest Green",  color: "#2b8a3e", badge: null },
-  { id: "s3", name: "Warm Orange",   color: "#e8590c", badge: null },
-  { id: "s4", name: "Slate Gray",    color: "#495057", badge: null },
-];
-
-interface HomePageProps {
-  savedTemplates: SavedTemplate[];
-  onNew: () => void;
-  onUse: (t: SavedTemplate) => void;
-  onDelete: (id: string) => void;
-  onStarterUse: (color: string) => void;
+interface PreviewProps {
+  inv: InvoiceData; style: StyleState; print: PrintState;
+  ts: TableSettings; misc: MiscState; vis: BusinessVisibility;
+  det: InvoiceDetailsState; pv: PartyVisibility;
 }
 
-const HomePage: React.FC<HomePageProps> = ({ savedTemplates, onNew, onUse, onDelete, onStarterUse }) => (
-  <div className="home-page">
-    <div className="home-header">
-      <div>
-        <h1 className="home-title">Invoice Builder</h1>
-        <p className="home-subtitle">Create, customize, and manage your invoice templates</p>
-      </div>
-      <button className="create-btn" onClick={onNew} type="button">
-        <span>✦</span> New Invoice
-      </button>
-    </div>
+const InvoicePreview: React.FC<PreviewProps> = ({ inv, style, print, ts, misc, vis, det, pv }) => {
+  const tc = style.themeColor;
+  const bw = `${style.borderWidth || 1}px solid ${style.borderColor}`;
+  const showSerial = ts.cols["Serial Number"] !== false;
+  const showHSN    = ts.cols["HSN"] !== false;
+  const showMRP    = ts.cols["MRP"] !== false;
+  const showQty    = ts.cols["Quantity"] !== false;
+  const showRate   = ts.cols["Rate/Item"] !== false;
+  const showDisc   = ts.cols["Discount"] !== false;
+  const showAmt    = ts.cols["Amount"] !== false;
+  const activeCols = ts.customCols.filter((c) => c.trim() !== "");
 
-    {savedTemplates.length > 0 && (
-      <div className="home-section">
-        <div className="home-section-title">Your Templates</div>
-        <div className="template-grid">
-          {savedTemplates.map((t) => (
-            <div className="template-card" key={t.id} onClick={() => onUse(t)}>
-              <MiniPreview color={t.themeColor} />
-              <div className="template-card-footer">
-                <div className="template-color-dot" style={{ background: t.themeColor }} />
-                <div>
-                  <div className="template-name">{t.name}</div>
-                  <div className="template-date">{t.createdAt}</div>
-                </div>
-                <div className="card-actions">
-                  <button className="use-btn" type="button" onClick={(e) => { e.stopPropagation(); onUse(t); }}>Edit</button>
-                  <button className="delete-btn" type="button" onClick={(e) => { e.stopPropagation(); onDelete(t.id); }}>🗑</button>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    )}
+  const hsnGroups = inv.items.reduce<Record<string, { taxable: number; tax: number }>>((acc, item) => {
+    if (!acc[item.hsn]) acc[item.hsn] = { taxable: 0, tax: 0 };
+    acc[item.hsn].taxable += item.amount;
+    acc[item.hsn].tax += item.amount * 0.09;
+    return acc;
+  }, {});
 
-    <div className="home-section">
-      <div className="home-section-title">Starter Templates</div>
-      <div className="template-grid">
-        {STARTER_TEMPLATES.map((t) => (
-          <div className="template-card" key={t.id} onClick={() => onStarterUse(t.color)}>
-            {t.badge && <div className="template-card-badge">{t.badge}</div>}
-            <MiniPreview color={t.color} />
-            <div className="template-card-footer">
-              <div className="template-color-dot" style={{ background: t.color }} />
-              <div className="template-name">{t.name}</div>
-              <button className="use-btn" type="button" onClick={(e) => { e.stopPropagation(); onStarterUse(t.color); }}>Use</button>
+  return (
+    <div
+      className="invoice-preview"
+      style={{
+        fontFamily: style.font,
+        fontSize: style.textSize,
+        padding: `${print.top}px ${print.right}px ${print.bottom}px ${print.left}px`,
+        position: "relative",
+        overflow: "hidden",
+      }}
+    >
+      {ts.backgroundUrl && (
+        <div
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            inset: 0,
+            backgroundImage: `url(${ts.backgroundUrl})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            backgroundRepeat: "no-repeat",
+            opacity: ts.backgroundOpacity / 100,
+            pointerEvents: "none",
+            zIndex: 0,
+          }}
+        />
+      )}
+
+      <div style={{ position: "relative", zIndex: 1 }}>
+        {print.showHeader && (
+          <div className="inv-header">
+            {style.showLogo && style.logoUrl && <img src={style.logoUrl} alt="logo" className="inv-logo" />}
+            <div style={{ flex: 1 }}>
+              {vis.companyName && <p className="inv-company-name" style={{ color: tc }}>{inv.companyName}</p>}
+              {vis.slogan && <p className="inv-slogan">{inv.slogan}</p>}
+              {vis.address && <p className="inv-meta-small">{inv.address}</p>}
+              <p className="inv-meta-small">
+                {[vis.gstin && `GSTIN: ${inv.gstin}`, vis.phone && `Ph: ${inv.phone}`, vis.email && `Email: ${inv.email}`].filter(Boolean).join("  ")}
+              </p>
+              {vis.pan && <p className="inv-meta-small">PAN: {inv.pan}</p>}
             </div>
           </div>
-        ))}
+        )}
+
+        <hr className="inv-divider" style={{ borderColor: tc }} />
+        <p className="inv-title" style={{ color: tc }}>TAX INVOICE</p>
+
+        <div className="inv-info-grid">
+          <span><b>Invoice No:</b> {inv.invoiceNo}</span>
+          <span className="inv-info-right"><b>Due Date:</b> {inv.dueDate}</span>
+          <span><b>Date:</b> {inv.date}</span>
+          <span className="inv-info-right"><b>Place of Supply:</b> {inv.placeOfSupply}</span>
+          {det.showPO && <span><b>PO No:</b> {inv.poNo}</span>}
+          {det.showEwayBill && det.ewayBillNo && <span className="inv-info-right"><b>E-way Bill:</b> {det.ewayBillNo}</span>}
+          {det.showVehicle && det.vehicleNo && <span><b>Vehicle No:</b> {det.vehicleNo}</span>}
+          {det.customFields.map((f, i) => f.label && f.value && <span key={i}><b>{f.label}:</b> {f.value}</span>)}
+        </div>
+
+        <div className="inv-party-grid">
+          <div className="inv-party-box" style={{ border: bw }}>
+            <div className="inv-party-label" style={{ color: tc }}>BILL TO</div>
+            {pv.billCompany  && <div className="inv-party-name">{inv.billTo.name}</div>}
+            {pv.billAddress  && <div>{inv.billTo.address}</div>}
+            {pv.billMobile   && <div>{inv.billTo.mobile}</div>}
+            {pv.billGstin    && <div>GSTIN: {inv.billTo.gstin}</div>}
+            {pv.billCustomFields.map((f, i) => f.label && <div key={i}><b>{f.label}:</b> {f.value}</div>)}
+          </div>
+          <div className="inv-party-box" style={{ border: bw }}>
+            <div className="inv-party-label" style={{ color: tc }}>SHIP TO</div>
+            {pv.shipCompany  && <div className="inv-party-name">{inv.shipTo.name}</div>}
+            {pv.shipAddress  && <div>{inv.shipTo.address}</div>}
+            {pv.shipMobile   && <div>{inv.shipTo.mobile}</div>}
+            {pv.shipGstin    && <div>GSTIN: {inv.shipTo.gstin}</div>}
+            {pv.shipCustomFields.map((f, i) => f.label && <div key={i}><b>{f.label}:</b> {f.value}</div>)}
+          </div>
+        </div>
+
+        <table className="inv-table">
+          <thead>
+            <tr style={{ background: tc }}>
+              {showSerial && <th>#</th>}
+              <th>Item</th>
+              {showHSN  && <th className="center">HSN</th>}
+              {showMRP  && <th className="center">MRP</th>}
+              {showQty  && <th className="center">Qty</th>}
+              {showRate && <th className="center">Rate</th>}
+              {showDisc && <th className="center">Disc</th>}
+              {activeCols.map((col) => <th key={col} className="center">{col}</th>)}
+              {showAmt  && <th className="right">Amount</th>}
+            </tr>
+          </thead>
+          <tbody>
+            {inv.items.map((item, i) => (
+              <React.Fragment key={item.id}>
+                <tr className={i % 2 === 0 ? "even" : "odd"}>
+                  {showSerial && <td>{item.id}</td>}
+                  <td>{ts.capitalize ? item.name.toUpperCase() : item.name}</td>
+                  {showHSN  && <td className="center">{item.hsn}</td>}
+                  {showMRP  && <td className="center">₹{item.mrp.toFixed(2)}</td>}
+                  {showQty  && <td className="center">{item.qty}</td>}
+                  {showRate && <td className="center">₹{item.rate.toFixed(2)}</td>}
+                  {showDisc && <td className="center">{item.disc != null ? `₹${item.disc.toFixed(2)}` : "—"}</td>}
+                  {activeCols.map((col) => <td key={col} className="center">—</td>)}
+                  {showAmt  && <td className="right">₹{item.amount.toFixed(2)}</td>}
+                </tr>
+                {ts.showDesc && (
+                  <tr className={`desc-row ${i % 2 === 0 ? "even" : "odd"}`}>
+                    {showSerial && <td />}
+                    <td colSpan={[showHSN, showMRP, showQty, showRate, showDisc, showAmt].filter(Boolean).length + activeCols.length}>{item.desc}</td>
+                  </tr>
+                )}
+              </React.Fragment>
+            ))}
+          </tbody>
+        </table>
+
+        {ts.hsnSummary && (
+          <div className="hsn-summary">
+            <div className="hsn-summary-title" style={{ color: tc }}>HSN-wise Tax Summary</div>
+            <table className="inv-table" style={{ marginTop: 6 }}>
+              <thead>
+                <tr style={{ background: tc }}>
+                  <th>HSN</th><th className="right">Taxable Amt</th>
+                  <th className="right">CGST 9%</th><th className="right">SGST 9%</th><th className="right">Total Tax</th>
+                </tr>
+              </thead>
+              <tbody>
+                {Object.entries(hsnGroups).map(([hsn, { taxable, tax }], i) => (
+                  <tr key={hsn} className={i % 2 === 0 ? "even" : "odd"}>
+                    <td>{hsn}</td>
+                    <td className="right">₹{taxable.toFixed(2)}</td>
+                    <td className="right">₹{tax.toFixed(2)}</td>
+                    <td className="right">₹{tax.toFixed(2)}</td>
+                    <td className="right">₹{(tax * 2).toFixed(2)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        <div className="inv-totals">
+          <table className="inv-totals-table">
+            <tbody>
+              {([["Subtotal", `₹${inv.subtotal.toFixed(2)}`], ["CGST (9%)", `₹${inv.cgst.toFixed(2)}`], ["SGST (9%)", `₹${inv.sgst.toFixed(2)}`]] as [string,string][]).map(([k,v]) => (
+                <tr key={k}><td>{k}</td><td>{v}</td></tr>
+              ))}
+              <tr className="grand"><td>Grand Total</td><td style={{ color: tc }}>₹{inv.grandTotal.toFixed(2)}</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        {misc.amountWords && <p className="inv-amount-words"><b>Amount in Words:</b> Twenty Two Thousand Four Hundred Seventy Three Rupees Only</p>}
+
+        <div className="inv-bank-box" style={{ border: bw }}>
+          <div className="inv-bank-title">Bank Details</div>
+          <div>Account: {inv.bank}</div>
+          <div>IFSC: {inv.ifsc}</div>
+        </div>
+
+        {misc.showNotes && <div className="inv-section-text"><b>Notes</b><br />{inv.notes}</div>}
+        {misc.showTerms && <div className="inv-section-text"><b>Terms &amp; Conditions</b><br />{inv.terms}</div>}
+
+        {print.showFooter && (
+          <div className={`inv-footer${misc.receiverSig ? " dual" : ""}`}>
+            {misc.receiverSig && (
+              <div style={{ textAlign: "center" }}>
+                <span>Receiver's Signature</span>
+              </div>
+            )}
+            <div style={{ textAlign: "center" }}>
+              {misc.signatureUrl && (
+                <img
+                  src={misc.signatureUrl}
+                  alt="Authorized Signature"
+                  style={{
+                    height: 60,
+                    maxWidth: 160,
+                    objectFit: "contain",
+                    display: "block",
+                    margin: "0 auto 4px",
+                  }}
+                />
+              )}
+              <span>Authorized Signatory</span>
+            </div>
+          </div>
+        )}
+
+        <div className="inv-generated">This is a computer generated invoice.</div>
       </div>
+    </div>
+  );
+};
+
+// ─── THEME MINI CARD ──────────────────────────────────────────────────────────
+
+const ThemeMiniCard: React.FC<{ theme: HomeTheme; selected: boolean; onClick: () => void }> = ({ theme, selected, onClick }) => (
+  <div
+    className={`theme-mini-card${selected ? " selected" : ""}`}
+    onClick={onClick}
+  >
+    {selected && (
+      <div className="theme-check">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <circle cx="7" cy="7" r="7" fill="#3b5bdb" />
+          <path d="M4 7l2 2 4-4" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </div>
+    )}
+    <div className="theme-mini-preview">
+      <div className="theme-mini-header" style={{ background: theme.color }} />
+      <div className="theme-mini-body">
+        <div className="theme-mini-line long" />
+        <div className="theme-mini-line med" />
+        <div className="theme-mini-row">
+          <div className="theme-mini-col" />
+          <div className="theme-mini-col" />
+        </div>
+        <div className="theme-mini-table-head" style={{ background: theme.color }} />
+        {[0,1,2].map(i => (
+          <div key={i} className="theme-mini-table-row">
+            <div className="theme-mini-line" style={{ width: `${35 + i * 10}%` }} />
+            <div className="theme-mini-line short" />
+          </div>
+        ))}
+        <div className="theme-mini-total">
+          <div className="theme-mini-total-val" style={{ background: theme.color }} />
+        </div>
+      </div>
+    </div>
+    <div className="theme-mini-footer">
+      <span className="theme-mini-dot" style={{ background: theme.color }} />
+      <span className="theme-mini-name">{theme.name}</span>
     </div>
   </div>
 );
+
+// ─── HOME PAGE ────────────────────────────────────────────────────────────────
+
+interface HomePageProps {
+  savedTemplates: SavedTemplate[];
+  onCustomize: (themeId: string) => void;
+  onCreateOwn: () => void;
+  onUse: (t: SavedTemplate) => void;
+  onDelete: (id: string) => void;
+}
+
+const HomePage: React.FC<HomePageProps> = ({ savedTemplates, onCustomize, onCreateOwn, onUse, onDelete }) => {
+  const [selectedThemeId, setSelectedThemeId] = useState("modern-blue");
+
+  const selectedTheme = HOME_THEMES.find(t => t.id === selectedThemeId) ?? HOME_THEMES[0];
+
+  // Build a full style/state based on selected theme for the live preview
+  const previewStyle: StyleState = { ...DEFAULT_STYLE, ...selectedTheme.style };
+  const previewPrint: PrintState = DEFAULT_PRINT;
+
+  return (
+    <div className="home-page-new">
+      {/* ── LEFT: Live Preview ── */}
+      <div className="home-left">
+        <div className="home-left-inner">
+          <div className="home-preview-wrapper">
+            <InvoicePreview
+              inv={DEFAULT_INVOICE}
+              style={previewStyle}
+              print={previewPrint}
+              ts={DEFAULT_TS}
+              misc={DEFAULT_MISC}
+              vis={DEFAULT_VIS}
+              det={DEFAULT_DET}
+              pv={DEFAULT_PV}
+            />
+          </div>
+          <div className="home-preview-label">
+            <span className="home-preview-dot" style={{ background: selectedTheme.color }} />
+            <span className="home-preview-name">{selectedTheme.name}</span>
+            <span className="home-preview-desc">— {selectedTheme.description}</span>
+          </div>
+        </div>
+
+        {/* Saved templates at the bottom of left panel */}
+        {savedTemplates.length > 0 && (
+          <div className="home-saved-section">
+            <div className="home-saved-title">Your Saved Templates</div>
+            <div className="home-saved-list">
+              {savedTemplates.map((t) => (
+                <div key={t.id} className="home-saved-item" onClick={() => onUse(t)}>
+                  <span className="home-saved-dot" style={{ background: t.themeColor }} />
+                  <div className="home-saved-info">
+                    <div className="home-saved-name">{t.name}</div>
+                    <div className="home-saved-date">{t.createdAt}</div>
+                  </div>
+                  <div className="home-saved-actions">
+                    <button className="home-saved-edit" type="button" onClick={(e) => { e.stopPropagation(); onUse(t); }}>Edit</button>
+                    <button className="home-saved-del" type="button" onClick={(e) => { e.stopPropagation(); onDelete(t.id); }}>🗑</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ── RIGHT: Theme Selector + Actions ── */}
+      <div className="home-right">
+        <div className="home-right-header">
+          <h1 className="home-right-title">Invoice Builder</h1>
+          <p className="home-right-subtitle">Choose a template to get started</p>
+        </div>
+
+        <div className="theme-card-grid">
+          {HOME_THEMES.map(theme => (
+            <ThemeMiniCard
+              key={theme.id}
+              theme={theme}
+              selected={selectedThemeId === theme.id}
+              onClick={() => setSelectedThemeId(theme.id)}
+            />
+          ))}
+        </div>
+
+        <div className="home-right-actions">
+          <button
+            className="home-customize-btn"
+            type="button"
+            onClick={() => onCustomize(selectedTheme.color)}
+            style={{ background: selectedTheme.color }}
+          >
+            Customize "{selectedTheme.name}"
+          </button>
+          <button
+            className="home-create-own-btn"
+            type="button"
+            onClick={onCreateOwn}
+          >
+            <span>+</span> Create Own Theme
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // ─── SETTINGS PANELS ─────────────────────────────────────────────────────────
 
@@ -581,7 +971,6 @@ const PartyPanel: React.FC<{
   </div>
 );
 
-// ── UPDATED: ItemPanel now includes Background Image section ──
 const ItemPanel: React.FC<{ ts: TableSettings; setTs: React.Dispatch<React.SetStateAction<TableSettings>> }> = ({ ts, setTs }) => {
   const toggleCol = (col: string) => setTs((t) => ({ ...t, cols: { ...t.cols, [col]: t.cols[col] === false } }));
   return (
@@ -606,7 +995,6 @@ const ItemPanel: React.FC<{ ts: TableSettings; setTs: React.Dispatch<React.SetSt
       ))}
       <button className="add-btn" onClick={() => setTs((t) => ({ ...t, customCols: [...t.customCols, ""] }))} type="button">+ Add Column</button>
 
-      {/* ── NEW: Background Image Section ── */}
       <SL>BACKGROUND IMAGE</SL>
       <p style={{ fontSize: 11, color: "#868e96", marginBottom: 8, lineHeight: 1.5 }}>
         Upload an image to use as the full-page background of the invoice bill.
@@ -625,7 +1013,6 @@ const ItemPanel: React.FC<{ ts: TableSettings; setTs: React.Dispatch<React.SetSt
       />
       {ts.backgroundUrl && (
         <>
-          {/* Thumbnail preview */}
           <div
             style={{
               marginTop: 10,
@@ -654,8 +1041,6 @@ const ItemPanel: React.FC<{ ts: TableSettings; setTs: React.Dispatch<React.SetSt
               Background Preview
             </div>
           </div>
-
-          {/* Opacity slider */}
           <div style={{ marginTop: 12 }}>
             <div className="section-label">OPACITY ({ts.backgroundOpacity}%)</div>
             <input
@@ -671,8 +1056,6 @@ const ItemPanel: React.FC<{ ts: TableSettings; setTs: React.Dispatch<React.SetSt
               <span>60% (Bold)</span>
             </div>
           </div>
-
-          {/* Remove button */}
           <button
             className="remove-btn"
             type="button"
@@ -704,7 +1087,6 @@ const MiscPanel: React.FC<{
     <div style={{ marginTop: 8 }}>
       <IBInput value={inv.ifsc} onChange={(v) => setInv((i) => ({ ...i, ifsc: v }))} placeholder="IFSC Code" />
     </div>
-
     <div style={{ marginTop: 16 }}>
       <SL>UPLOAD SIGNATURE</SL>
       <input
@@ -737,235 +1119,9 @@ const MiscPanel: React.FC<{
         </div>
       )}
     </div>
-
     <SettingRow label="Receiver Signature" checked={misc.receiverSig} onChange={(v) => setMisc((m) => ({ ...m, receiverSig: v }))} />
   </div>
 );
-
-// ─── INVOICE PREVIEW ──────────────────────────────────────────────────────────
-
-interface PreviewProps {
-  inv: InvoiceData; style: StyleState; print: PrintState;
-  ts: TableSettings; misc: MiscState; vis: BusinessVisibility;
-  det: InvoiceDetailsState; pv: PartyVisibility;
-}
-
-const InvoicePreview: React.FC<PreviewProps> = ({ inv, style, print, ts, misc, vis, det, pv }) => {
-  const tc = style.themeColor;
-  const bw = `${style.borderWidth || 1}px solid ${style.borderColor}`;
-  const showSerial = ts.cols["Serial Number"] !== false;
-  const showHSN    = ts.cols["HSN"] !== false;
-  const showMRP    = ts.cols["MRP"] !== false;
-  const showQty    = ts.cols["Quantity"] !== false;
-  const showRate   = ts.cols["Rate/Item"] !== false;
-  const showDisc   = ts.cols["Discount"] !== false;
-  const showAmt    = ts.cols["Amount"] !== false;
-  const activeCols = ts.customCols.filter((c) => c.trim() !== "");
-
-  const hsnGroups = inv.items.reduce<Record<string, { taxable: number; tax: number }>>((acc, item) => {
-    if (!acc[item.hsn]) acc[item.hsn] = { taxable: 0, tax: 0 };
-    acc[item.hsn].taxable += item.amount;
-    acc[item.hsn].tax += item.amount * 0.09;
-    return acc;
-  }, {});
-
-  return (
-    // ── UPDATED: wrapper div carries the background image with controlled opacity ──
-    <div
-      className="invoice-preview"
-      style={{
-        fontFamily: style.font,
-        fontSize: style.textSize,
-        padding: `${print.top}px ${print.right}px ${print.bottom}px ${print.left}px`,
-        position: "relative",
-        overflow: "hidden",
-      }}
-    >
-      {/* Background image layer */}
-      {ts.backgroundUrl && (
-        <div
-          aria-hidden="true"
-          style={{
-            position: "absolute",
-            inset: 0,
-            backgroundImage: `url(${ts.backgroundUrl})`,
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-            backgroundRepeat: "no-repeat",
-            opacity: ts.backgroundOpacity / 100,
-            pointerEvents: "none",
-            zIndex: 0,
-          }}
-        />
-      )}
-
-      {/* All invoice content sits above the background */}
-      <div style={{ position: "relative", zIndex: 1 }}>
-        {print.showHeader && (
-          <div className="inv-header">
-            {style.showLogo && style.logoUrl && <img src={style.logoUrl} alt="logo" className="inv-logo" />}
-            <div style={{ flex: 1 }}>
-              {vis.companyName && <p className="inv-company-name" style={{ color: tc }}>{inv.companyName}</p>}
-              {vis.slogan && <p className="inv-slogan">{inv.slogan}</p>}
-              {vis.address && <p className="inv-meta-small">{inv.address}</p>}
-              <p className="inv-meta-small">
-                {[vis.gstin && `GSTIN: ${inv.gstin}`, vis.phone && `Ph: ${inv.phone}`, vis.email && `Email: ${inv.email}`].filter(Boolean).join("  ")}
-              </p>
-              {vis.pan && <p className="inv-meta-small">PAN: {inv.pan}</p>}
-            </div>
-          </div>
-        )}
-
-        <hr className="inv-divider" style={{ borderColor: tc }} />
-        <p className="inv-title" style={{ color: tc }}>TAX INVOICE</p>
-
-        <div className="inv-info-grid">
-          <span><b>Invoice No:</b> {inv.invoiceNo}</span>
-          <span className="inv-info-right"><b>Due Date:</b> {inv.dueDate}</span>
-          <span><b>Date:</b> {inv.date}</span>
-          <span className="inv-info-right"><b>Place of Supply:</b> {inv.placeOfSupply}</span>
-          {det.showPO && <span><b>PO No:</b> {inv.poNo}</span>}
-          {det.showEwayBill && det.ewayBillNo && <span className="inv-info-right"><b>E-way Bill:</b> {det.ewayBillNo}</span>}
-          {det.showVehicle && det.vehicleNo && <span><b>Vehicle No:</b> {det.vehicleNo}</span>}
-          {det.customFields.map((f, i) => f.label && f.value && <span key={i}><b>{f.label}:</b> {f.value}</span>)}
-        </div>
-
-        <div className="inv-party-grid">
-          <div className="inv-party-box" style={{ border: bw }}>
-            <div className="inv-party-label" style={{ color: tc }}>BILL TO</div>
-            {pv.billCompany  && <div className="inv-party-name">{inv.billTo.name}</div>}
-            {pv.billAddress  && <div>{inv.billTo.address}</div>}
-            {pv.billMobile   && <div>{inv.billTo.mobile}</div>}
-            {pv.billGstin    && <div>GSTIN: {inv.billTo.gstin}</div>}
-            {pv.billCustomFields.map((f, i) => f.label && <div key={i}><b>{f.label}:</b> {f.value}</div>)}
-          </div>
-          <div className="inv-party-box" style={{ border: bw }}>
-            <div className="inv-party-label" style={{ color: tc }}>SHIP TO</div>
-            {pv.shipCompany  && <div className="inv-party-name">{inv.shipTo.name}</div>}
-            {pv.shipAddress  && <div>{inv.shipTo.address}</div>}
-            {pv.shipMobile   && <div>{inv.shipTo.mobile}</div>}
-            {pv.shipGstin    && <div>GSTIN: {inv.shipTo.gstin}</div>}
-            {pv.shipCustomFields.map((f, i) => f.label && <div key={i}><b>{f.label}:</b> {f.value}</div>)}
-          </div>
-        </div>
-
-        <table className="inv-table">
-          <thead>
-            <tr style={{ background: tc }}>
-              {showSerial && <th>#</th>}
-              <th>Item</th>
-              {showHSN  && <th className="center">HSN</th>}
-              {showMRP  && <th className="center">MRP</th>}
-              {showQty  && <th className="center">Qty</th>}
-              {showRate && <th className="center">Rate</th>}
-              {showDisc && <th className="center">Disc</th>}
-              {activeCols.map((col) => <th key={col} className="center">{col}</th>)}
-              {showAmt  && <th className="right">Amount</th>}
-            </tr>
-          </thead>
-          <tbody>
-            {inv.items.map((item, i) => (
-              <React.Fragment key={item.id}>
-                <tr className={i % 2 === 0 ? "even" : "odd"}>
-                  {showSerial && <td>{item.id}</td>}
-                  <td>{ts.capitalize ? item.name.toUpperCase() : item.name}</td>
-                  {showHSN  && <td className="center">{item.hsn}</td>}
-                  {showMRP  && <td className="center">₹{item.mrp.toFixed(2)}</td>}
-                  {showQty  && <td className="center">{item.qty}</td>}
-                  {showRate && <td className="center">₹{item.rate.toFixed(2)}</td>}
-                  {showDisc && <td className="center">{item.disc != null ? `₹${item.disc.toFixed(2)}` : "—"}</td>}
-                  {activeCols.map((col) => <td key={col} className="center">—</td>)}
-                  {showAmt  && <td className="right">₹{item.amount.toFixed(2)}</td>}
-                </tr>
-                {ts.showDesc && (
-                  <tr className={`desc-row ${i % 2 === 0 ? "even" : "odd"}`}>
-                    {showSerial && <td />}
-                    <td colSpan={[showHSN, showMRP, showQty, showRate, showDisc, showAmt].filter(Boolean).length + activeCols.length}>{item.desc}</td>
-                  </tr>
-                )}
-              </React.Fragment>
-            ))}
-          </tbody>
-        </table>
-
-        {ts.hsnSummary && (
-          <div className="hsn-summary">
-            <div className="hsn-summary-title" style={{ color: tc }}>HSN-wise Tax Summary</div>
-            <table className="inv-table" style={{ marginTop: 6 }}>
-              <thead>
-                <tr style={{ background: tc }}>
-                  <th>HSN</th><th className="right">Taxable Amt</th>
-                  <th className="right">CGST 9%</th><th className="right">SGST 9%</th><th className="right">Total Tax</th>
-                </tr>
-              </thead>
-              <tbody>
-                {Object.entries(hsnGroups).map(([hsn, { taxable, tax }], i) => (
-                  <tr key={hsn} className={i % 2 === 0 ? "even" : "odd"}>
-                    <td>{hsn}</td>
-                    <td className="right">₹{taxable.toFixed(2)}</td>
-                    <td className="right">₹{tax.toFixed(2)}</td>
-                    <td className="right">₹{tax.toFixed(2)}</td>
-                    <td className="right">₹{(tax * 2).toFixed(2)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        <div className="inv-totals">
-          <table className="inv-totals-table">
-            <tbody>
-              {([["Subtotal", `₹${inv.subtotal.toFixed(2)}`], ["CGST (9%)", `₹${inv.cgst.toFixed(2)}`], ["SGST (9%)", `₹${inv.sgst.toFixed(2)}`]] as [string,string][]).map(([k,v]) => (
-                <tr key={k}><td>{k}</td><td>{v}</td></tr>
-              ))}
-              <tr className="grand"><td>Grand Total</td><td style={{ color: tc }}>₹{inv.grandTotal.toFixed(2)}</td></tr>
-            </tbody>
-          </table>
-        </div>
-
-        {misc.amountWords && <p className="inv-amount-words"><b>Amount in Words:</b> Twenty Two Thousand Four Hundred Seventy Three Rupees Only</p>}
-
-        <div className="inv-bank-box" style={{ border: bw }}>
-          <div className="inv-bank-title">Bank Details</div>
-          <div>Account: {inv.bank}</div>
-          <div>IFSC: {inv.ifsc}</div>
-        </div>
-
-        {misc.showNotes && <div className="inv-section-text"><b>Notes</b><br />{inv.notes}</div>}
-        {misc.showTerms && <div className="inv-section-text"><b>Terms &amp; Conditions</b><br />{inv.terms}</div>}
-
-        {print.showFooter && (
-          <div className={`inv-footer${misc.receiverSig ? " dual" : ""}`}>
-            {misc.receiverSig && (
-              <div style={{ textAlign: "center" }}>
-                <span>Receiver's Signature</span>
-              </div>
-            )}
-            <div style={{ textAlign: "center" }}>
-              {misc.signatureUrl && (
-                <img
-                  src={misc.signatureUrl}
-                  alt="Authorized Signature"
-                  style={{
-                    height: 60,
-                    maxWidth: 160,
-                    objectFit: "contain",
-                    display: "block",
-                    margin: "0 auto 4px",
-                  }}
-                />
-              )}
-              <span>Authorized Signatory</span>
-            </div>
-          </div>
-        )}
-
-        <div className="inv-generated">This is a computer generated invoice.</div>
-      </div>
-    </div>
-  );
-};
 
 // ─── BUILDER VIEW ─────────────────────────────────────────────────────────────
 
@@ -1023,17 +1179,20 @@ const BuilderView: React.FC<BuilderProps> = ({ initialStyle, initialTemplate, on
             <div className="sidebar-subtitle">Customize your template</div>
           </div>
           <nav className="sidebar-nav">
-            {NAV_ITEMS.map((item) => (
-              <button key={item.id} className={`nav-item${activeTab === item.id ? " active" : ""}`}
-                onClick={() => setActiveTab(item.id)} type="button">
-                <span className="nav-item-icon">{item.icon}</span>
-                <span>{item.label}</span>
-              </button>
-            ))}
+            {NAV_ITEMS.map((item) => {
+              const Icon = NAV_ICONS[item.id];
+              return (
+                <button key={item.id} className={`nav-item${activeTab === item.id ? " active" : ""}`}
+                  onClick={() => setActiveTab(item.id)} type="button">
+                  <span className="nav-item-icon"><Icon /></span>
+                  <span>{item.label}</span>
+                </button>
+              );
+            })}
           </nav>
           <div className="sidebar-footer">
             <button className="sidebar-save-btn" type="button" onClick={() => setShowSaveDialog(true)}>
-              💾 Save Template
+              <IconSave /> Save Template
             </button>
           </div>
         </aside>
@@ -1068,15 +1227,15 @@ const InvoiceBuilderApp: React.FC = () => {
   const [editingTemplate, setEditingTemplate] = useState<SavedTemplate | null>(null);
   const [starterColor, setStarterColor] = useState<string | null>(null);
 
-  const handleNew = () => {
+  const handleCustomize = (color: string) => {
     setEditingTemplate(null);
-    setStarterColor(null);
+    setStarterColor(color);
     setView("builder");
   };
 
-  const handleStarterUse = (color: string) => {
+  const handleCreateOwn = () => {
     setEditingTemplate(null);
-    setStarterColor(color);
+    setStarterColor(null);
     setView("builder");
   };
 
@@ -1112,10 +1271,10 @@ const InvoiceBuilderApp: React.FC = () => {
   return (
     <HomePage
       savedTemplates={savedTemplates}
-      onNew={handleNew}
+      onCustomize={handleCustomize}
+      onCreateOwn={handleCreateOwn}
       onUse={handleUse}
       onDelete={handleDelete}
-      onStarterUse={handleStarterUse}
     />
   );
 };

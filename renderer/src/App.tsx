@@ -40,12 +40,22 @@ import SMSPromotion from "./components/Admin/Smspromotion/Smspromotion";
 import AccountantSidebar from "./components/Accountant/Sidebar";
 import CashBank from "./components/Accountant/Cashbank/Cashbank";
 import Expenses from "./components/Accountant/Expenses/Expenses";
+import Invoicing from "./components/Accountant/E-Invoicing/Invoicing";
+import Billing from "./components/Cashier/POS Billing/Billing";
+/*import Bills from "./components/Accountant/Automatedbills/Bills";*/
 import PaymentInList from "./components/Cashier/PaymentIn/PaymentInList";
 import PaymentOutList from "./components/Cashier/PaymentOut/PaymentOutList";
+import Reports from "./components/Admin/Reports/Reports";
+import ReceivableAgeingReport from "./components/Admin/Reports/ReceivableAgeingReport";
+/*import PurchaseOrderList from "./components/Cashier/PurchaseOrder/PurchaseOrderList";*/
+import PurchaseOrdersPage from "./components/Cashier/PurchaseOrder/Purchaseorderspage";
+import Parties from "./components/Cashier/Parties/Parties";
+import PartyDetails from "./components/Cashier/Parties/PartyDetails";
+
+
 
 /* Dummy pages (replace later with real pages) */
-import Billing from "./components/Cashier/POS Billing/Billing";
-import Invoicing from "./components/Accountant/E-Invoicing/Invoicing";
+
 import AutomatedBills from "./components/Accountant/Automatedbills/automatedbills";
 /* Dummy Pages */
 const Page = ({ title }: { title: string }) => (
@@ -122,7 +132,10 @@ function App() {
           <Route index element={<Navigate to="create-party" replace />} />
           <Route path="create-party" element={<Createparty />} />
           <Route path="create-item" element={<CreateItem />} />
-          <Route path="POS-Billing" element={<Billing />} />
+          <Route path="POS-billing" element ={<Billing />}/>
+          <Route path="parties" element ={<Parties/>}/>
+          <Route path="party/:id" element={<PartyDetails />} />
+
           <Route path="quotation" element={<CreateQuotation />} />
           <Route path="payment-in" element={<PaymentIn />} />
           <Route path="payment-in-list" element={<PaymentInList/>}/>
@@ -137,39 +150,47 @@ function App() {
           <Route path="purchase-return" element={<CreatePurchaseReturn/>} />
           <Route path="purchase-return" element={<CreatePurchaseReturn />} />
           <Route path="debit-note" element={<CreateDebitNote />} />
-          <Route path="purchase-orders" element={<PurchaseOrder />} />
+           <Route path="purchase-orders-form" element={<PurchaseOrder />} />
+          {/*<Route path="purchase-orders-list" element={<PurchaseOrderList />} /> */}
+          <Route path="purchase-orders" element={<PurchaseOrdersPage />} />
+
           <Route path="create-expense" element={<Createexpense />} />
           <Route path="sales-invoice" element={<Salesinvoice />} />
         </Route>
 
-        {/* 🔒 ADMIN */}
-        <Route
-          path="/admin"
-          element={
-            <ProtectedRoute allowedRole="Admin">
-              <Outlet />
-            </ProtectedRoute>
-          }
-        >
-          <Route element={<AdminMainLayout />}>
-            <Route path="dashboard" element={<AdminDashboard />} />
-            <Route path="manage-users" element={<ManageUsers />} />
-            <Route path="staff-attendence" element={<StaffAttendance />} />
-            <Route path="online-orders" element={<Onlineorders />} />
-            <Route path="sms-marketing" element={<SMSPromotion />} />
+        {/* Admin Routes with Admin Sidebar and Navbar */}
+        {/* ADMIN ROUTES */}
+            <Route path="/admin" element={<Outlet />}>
+
+              {/* 🔹 Normal Admin Section */}
+              <Route element={<AdminMainLayout />}>
+                <Route index element={<Navigate to="/cashier/dashboard" replace />} />
+                <Route path="dashboard" element={<AdminDashboard />} />
+                <Route path="manage-users" element={<ManageUsers />} /> 
+                <Route path="staff-attendence" element={<StaffAttendance />} /> 
+                <Route path="online-orders" element={<Onlineorders />} /> 
+                <Route path="sms-marketing" element={<SMSPromotion />} /> 
+                <Route path="reports" element={<Reports />} />
+                <Route path="receivable-ageing" element={<ReceivableAgeingReport />} />
+              </Route>
+
+              {/* 🔹 Settings Section */}
+              <Route path="settings" element={<AdminSettingsLayout />}>
+                <Route index element={<Navigate to="account" replace />} />
+                <Route path="account" element={<Account />} />
+                <Route path="manage-business" element={<ManageBusiness />} />
+                <Route path="invoice-settings" element={<InvoiceBuilder />} />
+                <Route path="print-settings" element={<PrintSetting />} />
+                <Route path="manage-users" element={<ManageUsers />} />
+                <Route path="reminders" element={<ReminderSetting />} />
+                <Route path="ca-reports" element={<Reportsharing />} />
+                <Route path="pricing" element={<Pricing />} />
+                <Route path="refer-earn" element={<ReferralPage />} />
+              </Route>
+
           </Route>
 
-          <Route path="settings" element={<AdminSettingsLayout />}>
-            <Route path="account" element={<Account />} />
-            <Route path="manage-business" element={<ManageBusiness />} />
-            <Route path="invoice-settings" element={<InvoiceBuilder />} />
-            <Route path="print-settings" element={<PrintSetting />} />
-            <Route path="reminders" element={<ReminderSetting />} />
-            <Route path="ca-reports" element={<Reportsharing />} />
-            <Route path="pricing" element={<Pricing />} />
-            <Route path="refer-earn" element={<ReferralPage />} />
-          </Route>
-        </Route>
+          
 
         {/* 🔒 ACCOUNTANT */}
         <Route
