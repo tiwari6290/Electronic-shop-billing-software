@@ -48,6 +48,8 @@ import QuotationEstimate from "./components/Cashier/Quotationestimate/Quotatione
 // ── NEW: Sales Invoice components ─────────────────────────────────────────────
 import SalesInvoiceList   from "./components/Cashier/Salesinvoices/SalesInvoiceList";
 import CreateSalesInvoice from "./components/Cashier/Salesinvoices/CreateSalesInvoice";
+import Inventory from "./components/Cashier/Inventory/Inventory";
+import Godown from "./components/Cashier/Godown/Godown";
 
 /* Dummy pages */
 const Page = ({ title }: { title: string }) => (
@@ -156,6 +158,13 @@ function App() {
           <Route path="payment-in"               element={<PaymentIn />} />
           <Route path="payment-in-list"          element={<PaymentInList />} />
          <Route path="payment-in-view/:id"      element={<PaymentInView />} /> 
+          <Route path="create-party" element={<Createparty />} />
+          <Route path="create-item" element={<CreateItem />} />
+          <Route path="/cashier/create-item/inventory" element ={<Inventory />} />
+          <Route path="/cashier/create-item/godown" element ={<Godown />} />
+          <Route path="POS-billing" element ={<Billing />}/>
+          <Route path="parties" element ={<Parties/>}/>
+          <Route path="party/:id" element={<PartyDetails />} />
 
           <Route path="sales-return"        element={<SalesReturn />} />
           <Route path="credit-note"         element={<CreateCreditNote />} />
