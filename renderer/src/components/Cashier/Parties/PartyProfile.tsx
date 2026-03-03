@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import "./PartyProfile.css";
+import axios from "axios";
 interface PartyData {
   id: number;
   name: string;
@@ -23,18 +24,40 @@ const PartyProfile: React.FC = () => {
   const { id } = useParams();
   const [party, setParty] = useState<PartyData | null>(null);
 
-  useEffect(() => {
-    const storedParties =
-      JSON.parse(localStorage.getItem("parties") || "[]");
+ useEffect(() => {
+  const fetchParty = async () => {
+    try {
+      const res = await axios.get(
+        `http://localhost:4000/api/parties/${id}`
+      );
 
-    const selectedParty = storedParties.find(
-      (p: PartyData) => p.id === Number(id)
-    );
+      const p = res.data;
 
-    if (selectedParty) {
-      setParty(selectedParty);
+      setParty({
+        id: p.id,
+        name: p.partyName,
+        mobile: p.mobileNumber || "-",
+        category: p.partyCategory || "-",
+        type: p.partyType,
+        balance:
+          p.openingBalanceType === "To_Collect"
+            ? Number(p.openingBalance || 0)
+            : -Number(p.openingBalance || 0),
+        email: p.email,
+        gstin: p.gstin,
+        panNumber: p.panNumber,
+        billingAddress: p.billingAddress,
+        shippingAddress: p.shippingAddress,
+        creditPeriod: p.creditPeriod?.toString(),
+        creditLimit: p.creditLimit?.toString(),
+      });
+    } catch (error) {
+      console.error("Error fetching party:", error);
     }
-  }, [id]);
+  };
+
+  if (id) fetchParty();
+}, [id]);
 
   if (!party) return <div>Loading...</div>;
 
