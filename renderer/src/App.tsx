@@ -53,8 +53,8 @@ import PurchaseOrderList from "./components/Cashier/PurchaseOrder/PurchaseOrderL
 import PurchaseOrdersPage from "./components/Cashier/PurchaseOrder/Purchaseorderspage";
 import Parties from "./components/Cashier/Parties/Parties";
 import PartyDetails from "./components/Cashier/Parties/PartyDetails";
-import PartyLedger from "./components/Cashier/Parties/PartyLedger";
-import QuotationEstimate from "./components/Cashier/Quotationestimate/Quotationestimate";
+//import PartyLedger from "./components/Cashier/Parties/PartyLedger";
+//import QuotationEstimate from "./components/Cashier/Quotationestimate/Quotationestimate";
 import Purchase from "./components/Cashier/Createpurchase/Purchase";
 
 
@@ -142,6 +142,7 @@ function App() {
           <Route path="party/:id" element={<PartyDetails />} />
 
           <Route path="quotation" element={<CreateQuotation />} />
+          
           <Route path="payment-in" element={<PaymentIn />} />
           <Route path="payment-in-list" element={<PaymentInList/>}/>
         
@@ -156,28 +157,22 @@ function App() {
           <Route path="purchase-return" element={<CreatePurchaseReturn />} />
           <Route path="debit-note" element={<CreateDebitNote />} />
            <Route path="purchase-orders-form" element={<PurchaseOrder />} />
-          {/*<Route path="purchase-orders-list" element={<PurchaseOrderList />} /> */}
+          
           <Route path="purchase-orders" element={<PurchaseOrdersPage />} />
-          <Route path="sales-return"        element={<SalesReturn />} />
-          <Route path="credit-note"         element={<CreateCreditNote />} />
-          <Route path="delivery-challan"    element={<DeliveryChallan />} />
-          <Route path="proforma-invoice"    element={<ProformaInvoice />} />
-         {/*  <Route path="purchase"            element={<Purchases />} /> */}
-         <Route path ="/cashier/purchase"   element={<Purchase/>} />
+          
+          
+          
+         <Route path ="purchase"   element={<Purchase/>} />
           <Route path="payment-out"         element={<PaymentOut />} />
           <Route path="payment-out-list"    element={<PaymentOutList />} />
           <Route path="purchase-return"     element={<CreatePurchaseReturn />} />
           <Route path="debit-note"          element={<CreateDebitNote />} />
           <Route path="purchase-orders-form" element={<PurchaseOrder />} />
           <Route path="purchase-orders"     element={<PurchaseOrdersPage />} />
-          <Route path="quotation-estimate"  element={<QuotationEstimate />} />
+          
           <Route path="create-expense"      element={<Createexpense />} />
 
-          {/* ── Sales Invoice — 3 routes ─────────────────────────── */}
-          <Route path="sales-invoicses-list"    element={<SalesInvoiceList />} />
-          <Route path="sales-invoice"           element={<CreateSalesInvoiceNew />} />
-          <Route path="sales-invoice/edit/:id"  element={<EditSalesInvoice />} />
-
+          
           <Route path="create-expense" element={<Createexpense />} />
           <Route path="sales-invoice" element={<Salesinvoice />} />
         </Route>
@@ -188,7 +183,7 @@ function App() {
 
               {/* 🔹 Normal Admin Section */}
               <Route element={<AdminMainLayout />}>
-                <Route index element={<Navigate to="/cashier/dashboard" replace />} />
+                <Route index element={<Navigate to="dashboard" replace />} />
                 <Route path="dashboard" element={<AdminDashboard />} />
                 <Route path="manage-users" element={<ManageUsers />} /> 
                 <Route path="staff-attendence" element={<StaffAttendance />} /> 
