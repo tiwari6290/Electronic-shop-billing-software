@@ -1,267 +1,519 @@
-.paymentinlist-page {
-  padding: 24px;
-  background: #f6f7fb;
+/* ─── PaymentInList ──────────────────────────────────────────────── */
+.pil-page {
+  padding: 24px 28px;
+  background: #f8f9fb;
   min-height: 100vh;
-  font-family: Inter, sans-serif;
-}
-
-/* ================= DATE DROPDOWN MINI TABLE ================= */
-
-.date-filter-wrapper {
-  position: relative;
-}
-
-.date-dropdown-table {
-  position: absolute;
-  top: 45px;
-  left: 0;
-  width: 360px;
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
-  z-index: 100;
-  overflow: hidden;
+  font-family: "Segoe UI", sans-serif;
 }
 
 /* Header */
-.date-dropdown-header {
-  display: grid;
-  grid-template-columns: 1fr 1.2fr;
-  padding: 10px 14px;
-  font-size: 13px;
-  font-weight: 600;
-  background: #f9fafb;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-/* Scrollable body */
-.date-dropdown-body {
-  max-height: 260px;
-  overflow-y: auto;
-}
-
-/* Row */
-.date-dropdown-row {
-  display: grid;
-  grid-template-columns: 1fr 1.2fr;
-  padding: 10px 14px;
-  font-size: 13px;
-  cursor: pointer;
-  transition: background 0.15s ease;
-}
-
-.date-dropdown-row:hover {
-  background: #f3f4f6;
-}
-
-.date-label {
-  font-weight: 500;
-}
-
-.date-range {
-  color: #6b7280;
-  font-size: 12px;
-}
-
-.active-date {
-  background: #eef2ff;
-}
-
-/* ================= SEARCH EXPAND ================= */
-
-.search-wrapper {
-  position: relative;
-}
-
-.search-icon-box {
-  width: 38px;
-  height: 38px;
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
+.pil-header {
   display: flex;
   align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: 0.2s ease;
-}
-
-.search-icon-box:hover {
-  background: #f3f4f6;
-}
-
-.search-input {
-  width: 260px;
-  height: 38px;
-  padding: 0 12px;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  outline: none;
-  font-size: 14px;
-  transition: 0.2s ease;
-}
-
-.search-input:focus {
-  border-color: #4f46e5;
-}
-/* ================= HEADER ================= */
-.paymentinlist-header {
-  display: flex;
   justify-content: space-between;
-  align-items: center;
+  margin-bottom: 20px;
 }
-
-.paymentinlist-header h2 {
-  font-size: 22px;
-  font-weight: 600;
-  margin-bottom: 6px;
+.pil-header h2 {
+  font-size: 20px;
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
 }
-
-.paymentinlist-tab {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: #4f46e5;
-  font-weight: 500;
-  font-size: 14px;
-  border-bottom: 2px solid #4f46e5;
-  padding-bottom: 4px;
-}
-
-.tab-icon {
-  font-size: 14px;
-}
-.edit-btn {
-  background: #eef2ff;
-  border: 1px solid #c7d2fe;
-  padding: 4px 10px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 12px;
-}
-
-.delete-btn {
-  background: #fee2e2;
-  border: 1px solid #fecaca;
-  padding: 4px 10px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 12px;
-}
-/* ================= HEADER ACTIONS ================= */
-.header-actions {
+.pil-header-actions {
   display: flex;
+  align-items: center;
   gap: 10px;
 }
 
-.icon-btn {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  padding: 8px;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: 0.2s ease;
-}
-
-.icon-btn:hover {
-  background: #f3f4f6;
-}
-
-/* ================= TOOLBAR ================= */
-.paymentinlist-toolbar {
-  margin-top: 20px;
+/* Tabs */
+.pil-tabs {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  gap: 0;
+  border-bottom: 2px solid #e5e7eb;
+  margin-bottom: 18px;
 }
-
-.toolbar-left {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.search-box {
-  width: 38px;
-  height: 38px;
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-}
-
-.date-filter {
+.pil-tab {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 12px;
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  font-size: 14px;
-  cursor: pointer;
-}
-
-/* ================= CREATE BUTTON ================= */
-.create-btn {
-  background: #4f46e5;
-  color: white;
-  border: none;
   padding: 10px 18px;
-  border-radius: 8px;
+  font-size: 13px;
   font-weight: 500;
+  color: #6b7280;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
   cursor: pointer;
-  transition: 0.2s ease;
+  margin-bottom: -2px;
+  transition: color 0.15s;
+}
+.pil-tab--active {
+  color: #4f46e5;
+  border-bottom-color: #4f46e5;
+}
+.pil-tab svg {
+  width: 15px;
+  height: 15px;
 }
 
-.create-btn:hover {
-  background: #4338ca;
+/* Toolbar */
+.pil-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  gap: 12px;
+}
+.pil-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
-/* ================= TABLE ================= */
-.paymentinlist-table-wrapper {
-  margin-top: 20px;
-  background: #ffffff;
+/* Icon buttons */
+.pil-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
   border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  min-height: 420px;
+  background: #fff;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #374151;
+}
+.pil-icon-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Search */
+.pil-search-wrap {
+  display: flex;
+  align-items: center;
+  border: 1px solid #4f46e5;
+  border-radius: 8px;
+  background: #fff;
+  padding: 0 10px;
+  height: 36px;
+  gap: 6px;
+  min-width: 260px;
+}
+.pil-search-wrap svg {
+  width: 15px;
+  height: 15px;
+  color: #9ca3af;
+  flex-shrink: 0;
+}
+.pil-search-input {
+  border: none;
+  outline: none;
+  font-size: 13px;
+  color: #111827;
+  flex: 1;
+  background: transparent;
+}
+.pil-search-clear {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #9ca3af;
+  font-size: 14px;
+  padding: 0;
+  line-height: 1;
+}
+
+/* Date dropdown */
+.pil-date-wrap {
   position: relative;
 }
+.pil-date-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 12px;
+  height: 36px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #374151;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.pil-date-btn svg { width: 15px; height: 15px; color: #6b7280; }
+.pil-chev { width: 14px !important; height: 14px !important; color: #9ca3af !important; }
 
-.paymentinlist-table {
+.pil-date-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 200;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+  min-width: 420px;
+  overflow: hidden;
+}
+.pil-date-dropdown-hdr {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  padding: 10px 16px;
+  border-bottom: 1px solid #f3f4f6;
+  font-size: 11px;
+  font-weight: 600;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.pil-date-dropdown-body {
+  max-height: 320px;
+  overflow-y: auto;
+}
+.pil-date-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  padding: 9px 16px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #374151;
+  transition: background 0.1s;
+  border-bottom: 1px solid #f9fafb;
+}
+.pil-date-row:last-child { border-bottom: none; }
+.pil-date-row--active {
+  background: #ede9fe;
+  font-weight: 600;
+  color: #4f46e5;
+}
+.pil-date-range-txt {
+  color: #6b7280;
+  font-size: 12px;
+}
+.pil-date-row--active .pil-date-range-txt {
+  color: #7c3aed;
+}
+
+/* Calendar popup */
+.pil-cal-popup {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 300;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  padding: 16px;
+  min-width: 320px;
+}
+.pil-cal-tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 12px;
+}
+.pil-cal-tab {
+  flex: 1;
+  padding: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #9ca3af;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  margin-bottom: -1px;
+}
+.pil-cal-tab--active { color: #4f46e5; border-bottom-color: #4f46e5; }
+.pil-cal-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+.pil-cal-nav-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #111827;
+}
+.pil-cal-nav-group button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #6b7280;
+  font-size: 16px;
+  line-height: 1;
+  padding: 2px 6px;
+}
+.pil-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  margin-bottom: 12px;
+}
+.pil-cal-dh {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  color: #9ca3af;
+  padding: 4px 0;
+}
+.pil-cal-day {
+  text-align: center;
+  font-size: 12px;
+  padding: 6px 2px;
+  border-radius: 6px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: #374151;
+  transition: background 0.1s;
+}
+.pil-cal-day--sel { background: #4f46e5; color: #fff; }
+.pil-cal-day--range { background: #ede9fe; color: #4f46e5; }
+.pil-cal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+.pil-cal-cancel {
+  background: none;
+  border: none;
+  color: #6b7280;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.pil-cal-ok {
+  background: #4f46e5;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Create button */
+.pil-create-btn {
+  padding: 0 18px;
+  height: 36px;
+  background: #4f46e5;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+/* Table */
+.pil-table-wrap {
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  overflow: visible;
+}
+.pil-table {
   width: 100%;
   border-collapse: collapse;
 }
-
-.paymentinlist-table thead {
-  background: #f3f4f6;
-}
-
-.paymentinlist-table th {
+.pil-th {
+  padding: 11px 16px;
   text-align: left;
-  padding: 14px 16px;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 600;
-  color: #374151;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-/* ================= EMPTY STATE ================= */
-.empty-state {
-  position: absolute;
-  top: 55%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  text-align: center;
   color: #6b7280;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+  white-space: nowrap;
+}
+.pil-th--sortable { cursor: pointer; user-select: none; }
+.pil-th--sortable svg { width: 13px; height: 13px; vertical-align: middle; margin-left: 3px; }
+.pil-td {
+  padding: 13px 16px;
+  font-size: 13px;
+  color: #374151;
+  border-bottom: 1px solid #f3f4f6;
+  vertical-align: middle;
+}
+.pil-tr { cursor: pointer; }
+.pil-tr:last-child .pil-td { border-bottom: none; }
+
+/* Row menu */
+.pil-row-menu { position: relative; }
+.pil-row-menu-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #9ca3af;
+  padding: 4px 8px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.pil-row-dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 100;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+  min-width: 140px;
+  overflow: hidden;
+}
+.pil-row-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  font-size: 13px;
+  color: #374151;
+  background: none;
+  border: none;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+}
+.pil-row-item svg { width: 14px; height: 14px; }
+.pil-row-item--danger { color: #dc2626; }
+
+/* Empty state */
+.pil-empty {
+  text-align: center;
+  padding: 60px 20px;
+  color: #9ca3af;
+  font-size: 13px;
+}
+.pil-empty svg { display: block; margin: 0 auto 12px; }
+
+/* Overlay / Modal */
+.pil-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.pil-modal {
+  background: #fff;
+  border-radius: 14px;
+  width: 480px;
+  max-width: 95vw;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+}
+.pil-modal-hdr {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 24px;
+  border-bottom: 1px solid #f3f4f6;
+  font-size: 15px;
+  font-weight: 700;
+  color: #111827;
+}
+.pil-modal-hdr button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #9ca3af;
+  font-size: 18px;
+  line-height: 1;
+}
+.pil-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 24px;
+  border-top: 1px solid #f3f4f6;
+}
+.pil-btn-cancel {
+  padding: 8px 20px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  color: #374151;
+}
+.pil-btn-primary {
+  padding: 8px 20px;
+  background: #4f46e5;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.pil-btn-danger {
+  padding: 10px 28px;
+  background: #4f46e5;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
 }
 
-.empty-icon {
-  font-size: 40px;
-  margin-bottom: 10px;
-  color: #9ca3af;
+/* ─── Confirm Delete Modal ────────────────────────────────────────── */
+.pil-confirm-modal {
+  background: #fff;
+  border-radius: 16px;
+  width: 480px;
+  max-width: 95vw;
+  padding: 40px 36px 32px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.15);
+  text-align: center;
+}
+.pil-confirm-icon {
+  margin-bottom: 20px;
+}
+.pil-confirm-icon svg {
+  width: 60px;
+  height: 60px;
+}
+.pil-confirm-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 12px;
+  line-height: 1.4;
+}
+.pil-confirm-sub {
+  font-size: 13px;
+  color: #6b7280;
+  line-height: 1.6;
+  margin-bottom: 28px;
+  max-width: 360px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.pil-confirm-btns {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+.pil-confirm-btns .pil-btn-cancel {
+  padding: 10px 28px;
+  font-size: 14px;
+}
+.pil-confirm-btns .pil-btn-danger {
+  padding: 10px 28px;
+  font-size: 14px;
 }

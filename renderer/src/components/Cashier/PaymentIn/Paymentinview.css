@@ -1,0 +1,86 @@
+/* ─── PaymentInView ─────────────────────────────────────────────── */
+.piv-page { padding: 24px 28px; background: #f8f9fb; min-height: 100vh; font-family: "Segoe UI", sans-serif; }
+
+/* Header */
+.piv-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+.piv-header-left { display: flex; align-items: center; gap: 12px; }
+.piv-back-btn { background: none; border: none; cursor: pointer; color: #374151; display: flex; align-items: center; padding: 4px; border-radius: 6px; }
+.piv-back-btn svg { width: 18px; height: 18px; }
+.piv-title { font-size: 18px; font-weight: 700; color: #111827; }
+.piv-header-right { display: flex; align-items: center; gap: 10px; }
+.piv-edit-btn {
+  display: flex; align-items: center; gap: 6px; padding: 7px 14px;
+  border: 1px solid #e5e7eb; background: #fff; border-radius: 8px;
+  font-size: 13px; color: #374151; cursor: pointer; font-weight: 500;
+}
+.piv-edit-btn svg { width: 14px; height: 14px; }
+.piv-delete-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 36px; height: 36px; border: 1px solid #fca5a5; background: #fff;
+  border-radius: 8px; cursor: pointer; color: #dc2626;
+}
+.piv-delete-btn svg { width: 16px; height: 16px; }
+.piv-icon-btn {
+  width: 36px; height: 36px; border: 1px solid #e5e7eb; background: #fff;
+  border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #374151;
+}
+.piv-icon-btn svg { width: 16px; height: 16px; }
+
+/* Action bar */
+.piv-action-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
+.piv-action-btn {
+  display: flex; align-items: center; gap: 7px; padding: 0 14px; height: 36px;
+  border: 1px solid #e5e7eb; background: #fff; border-radius: 8px;
+  font-size: 13px; color: #374151; cursor: pointer; font-weight: 500; white-space: nowrap;
+}
+.piv-action-btn svg { width: 15px; height: 15px; }
+.piv-action-btn--icon { padding: 0; width: 36px; justify-content: center; }
+.piv-action-btn--loading { opacity: 0.7; cursor: not-allowed; }
+.piv-action-btn:disabled { cursor: not-allowed; }
+.piv-spinner {
+  width: 14px; height: 14px; border-radius: 50%;
+  border: 2px solid #d1d5db; border-top-color: #4f46e5;
+  animation: piv-spin 0.6s linear infinite; flex-shrink: 0;
+}
+@keyframes piv-spin { to { transform: rotate(360deg); } }
+
+/* Share */
+.piv-share-wrap { position: relative; }
+.piv-share-dropdown {
+  position: absolute; top: calc(100% + 4px); left: 0; z-index: 100;
+  background: #fff; border: 1px solid #e5e7eb; border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,.1); min-width: 140px; overflow: hidden;
+}
+.piv-share-item { display: block; width: 100%; padding: 10px 16px; font-size: 13px; color: #374151; background: none; border: none; text-align: left; cursor: pointer; }
+.piv-share-item + .piv-share-item { border-top: 1px solid #f3f4f6; }
+
+/* Cards */
+.piv-card { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; overflow: hidden; }
+.piv-card-title { padding: 14px 20px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; font-size: 13px; font-weight: 600; color: #111827; }
+
+/* Details grid */
+.piv-details-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0; padding: 20px; gap: 20px 0; }
+@media (max-width: 900px) { .piv-details-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 500px) { .piv-details-grid { grid-template-columns: 1fr; } }
+.piv-detail-label { font-size: 11px; color: #9ca3af; font-weight: 500; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.3px; }
+.piv-detail-value { font-size: 13px; color: #111827; font-weight: 500; }
+
+/* Settled table */
+.piv-settled-table-wrap { overflow-x: auto; }
+.piv-settled-table { width: 100%; border-collapse: collapse; }
+.piv-sth { padding: 11px 16px; text-align: left; font-size: 12px; font-weight: 600; color: #374151; background: #fff; border-bottom: 1px solid #e5e7eb; white-space: nowrap; }
+.piv-std { padding: 13px 16px; font-size: 13px; color: #374151; border-bottom: 1px solid #f3f4f6; }
+
+/* Delete confirm */
+.piv-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 1000; display: flex; align-items: center; justify-content: center; }
+.piv-confirm-modal {
+  background: #fff; border-radius: 16px; width: 460px; max-width: 95vw;
+  padding: 40px 36px 32px; box-shadow: 0 24px 64px rgba(0,0,0,0.15); text-align: center;
+}
+.piv-confirm-icon { margin-bottom: 20px; }
+.piv-confirm-icon svg { width: 56px; height: 56px; }
+.piv-confirm-title { font-size: 16px; font-weight: 700; color: #111827; margin-bottom: 12px; line-height: 1.4; }
+.piv-confirm-sub { font-size: 13px; color: #6b7280; line-height: 1.6; margin-bottom: 28px; }
+.piv-confirm-btns { display: flex; gap: 12px; justify-content: center; }
+.piv-btn-cancel { padding: 10px 28px; border: 1px solid #e5e7eb; background: #fff; border-radius: 8px; font-size: 14px; cursor: pointer; color: #374151; font-weight: 500; }
+.piv-btn-delete { padding: 10px 28px; background: #4f46e5; color: #fff; border: none; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; }

@@ -47,10 +47,10 @@ const Sidebar: React.FC = () => {
     {
       title: 'SALES TRANSACTIONS',
       items: [
-        { id: 'quotation', label: 'Quotation', icon: <FileEdit size={18} />, path: '/cashier/quotation' },
+        { id: 'sales-invoice', label: 'Sales Invoices', icon: <FileEdit size={18} />, path: '/cashier/sales-invoicses-list' },
+        { id: 'quotation', label: 'Quotation', icon: <FileEdit size={18} />, path: '/cashier/quotation-estimate' },
         { id: 'payment-in', label: 'Payment In', icon: <CreditCard size={18} />, path: '/cashier/payment-in-list' },
         { id: 'sales-return', label: 'Sales Return', icon: <RotateCcw size={18} />, path: '/cashier/sales-return' },
-        { id: 'sales-invoice', label: 'Sales Invoice', icon: <FileEdit size={18} />, path: '/cashier/sales-invoice' },
         { id: 'credit-note', label: 'Credit Note', icon: <FileSpreadsheet size={18} />, path: '/cashier/credit-note' },
         { id: 'delivery-challan', label: 'Delivery Challan', icon: <Truck size={18} />, path: '/cashier/delivery-challan' },
         { id: 'proforma-invoice', label: 'Proforma Invoice', icon: <Receipt size={18} />, path: '/cashier/proforma-invoice' },
