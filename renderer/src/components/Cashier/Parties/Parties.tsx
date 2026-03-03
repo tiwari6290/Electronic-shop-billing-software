@@ -276,7 +276,7 @@ const Parties: React.FC = () => {
 
           <button
             className="primary-btn"
-            onClick={() => navigate("/create-party")}
+            onClick={() => navigate("/cashier/create-party")}
           >
             Create Party
           </button>

@@ -12,7 +12,7 @@ import "./PartyDetails.css";
 import PartyProfile from "./PartyProfile";
 import PartyItemWiseReport from "./PartyItemWiseReport";
 
-import PartyLedger from "./PartyLedger";
+//import PartyLedger from "./PartyLedger";
 import axios from "axios";
 interface Party {
   id: number;
