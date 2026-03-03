@@ -44,6 +44,7 @@ import Parties from "./components/Cashier/Parties/Parties";
 import PartyDetails from "./components/Cashier/Parties/PartyDetails";
 import PartyLedger from "./components/Cashier/Parties/PartyLedger";
 import QuotationEstimate from "./components/Cashier/Quotationestimate/Quotationestimate";
+import Purchase from "./components/Cashier/Createpurchase/Purchase";
 
 // ── NEW: Sales Invoice components ─────────────────────────────────────────────
 import SalesInvoiceList   from "./components/Cashier/Salesinvoices/SalesInvoiceList";
@@ -170,7 +171,8 @@ function App() {
           <Route path="credit-note"         element={<CreateCreditNote />} />
           <Route path="delivery-challan"    element={<DeliveryChallan />} />
           <Route path="proforma-invoice"    element={<ProformaInvoice />} />
-          <Route path="purchase"            element={<Purchases />} />
+         {/*  <Route path="purchase"            element={<Purchases />} /> */}
+         <Route path ="/cashier/purchase"   element={<Purchase/>} />
           <Route path="payment-out"         element={<PaymentOut />} />
           <Route path="payment-out-list"    element={<PaymentOutList />} />
           <Route path="purchase-return"     element={<CreatePurchaseReturn />} />
