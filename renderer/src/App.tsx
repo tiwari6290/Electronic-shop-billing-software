@@ -43,11 +43,13 @@ import Expenses from "./components/Accountant/Expenses/Expenses";
 import Invoicing from "./components/Accountant/E-Invoicing/Invoicing";
 import Billing from "./components/Cashier/POS Billing/Billing";
 import Bills from "./components/Accountant/Automatedbills/Bills";
+/*import Bills from "./components/Accountant/Automatedbills/Bills";*/
 import PaymentInList from "./components/Cashier/PaymentIn/PaymentInList";
 import PaymentOutList from "./components/Cashier/PaymentOut/PaymentOutList";
 import Reports from "./components/Admin/Reports/Reports";
 import ReceivableAgeingReport from "./components/Admin/Reports/ReceivableAgeingReport";
 import PurchaseOrderList from "./components/Cashier/PurchaseOrder/PurchaseOrderList";
+/*import PurchaseOrderList from "./components/Cashier/PurchaseOrder/PurchaseOrderList";*/
 import PurchaseOrdersPage from "./components/Cashier/PurchaseOrder/Purchaseorderspage";
 import Parties from "./components/Cashier/Parties/Parties";
 import PartyDetails from "./components/Cashier/Parties/PartyDetails";
@@ -55,6 +57,9 @@ import PartyDetails from "./components/Cashier/Parties/PartyDetails";
 
 
 /* Dummy pages (replace later with real pages) */
+
+import AutomatedBills from "./components/Accountant/Automatedbills/automatedbills";
+/* Dummy Pages */
 const Page = ({ title }: { title: string }) => (
   <div style={{ padding: 30, fontSize: 22, fontWeight: 600 }}>{title}</div>
 );
@@ -136,7 +141,8 @@ function App() {
           <Route path="quotation" element={<CreateQuotation />} />
           <Route path="payment-in" element={<PaymentIn />} />
           <Route path="payment-in-list" element={<PaymentInList/>}/>
-          <Route path="sales-return" element={<SalesReturn/>} /> 
+        
+          <Route path="sales-return" element={<SalesReturn />} />
           <Route path="credit-note" element={<CreateCreditNote />} />
           <Route path="delivery-challan" element={<DeliveryChallan />} />
           <Route path="proforma-invoice" element={<ProformaInvoice />} />
@@ -144,6 +150,7 @@ function App() {
           <Route path="payment-out" element={<PaymentOut />} />
           <Route path="payment-out-list" element={<PaymentOutList/>}/>
           <Route path="purchase-return" element={<CreatePurchaseReturn/>} />
+          <Route path="purchase-return" element={<CreatePurchaseReturn />} />
           <Route path="debit-note" element={<CreateDebitNote />} />
            <Route path="purchase-orders-form" element={<PurchaseOrder />} />
           {/*<Route path="purchase-orders-list" element={<PurchaseOrderList />} /> */}
@@ -184,6 +191,10 @@ function App() {
               </Route>
 
           </Route>
+
+          
+
+          
 
         {/* 🔒 ACCOUNTANT */}
         <Route

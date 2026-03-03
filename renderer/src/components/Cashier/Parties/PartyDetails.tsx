@@ -12,6 +12,8 @@ import "./PartyDetails.css";
 import PartyProfile from "./PartyProfile";
 import PartyItemWiseReport from "./PartyItemWiseReport";
 
+import PartyLedger from "./PartyLedger";
+import axios from "axios";
 interface Party {
   id: number;
   name: string;
@@ -49,29 +51,35 @@ const PartyDetails: React.FC = () => {
   const [search, setSearch] = useState("");
 
   const [transactions] = useState<Transaction[]>([
-    {
-      id: 1,
-      date: "28-Feb-2026",
-      type: "Payment In",
-      number: 3,
-      amount: 302818,
-      status: "Paid",
-    },
-    {
-      id: 2,
-      date: "28-Feb-2026",
-      type: "Sales Invoice",
-      number: 12,
-      amount: 180000,
-      status: "Partial Paid",
-    },
+
   ]);
 
   // Load all parties
-  useEffect(() => {
-    const storedParties = JSON.parse(localStorage.getItem("parties") || "[]");
-    setParties(storedParties);
-  }, []);
+useEffect(() => {
+  const fetchParties = async () => {
+    try {
+      const res = await axios.get("http://localhost:4000/api/parties");
+
+      const formatted = res.data.data.map((p: any) => ({
+        id: p.id,
+        name: p.partyName,
+        category: p.partyCategory || "-",
+        mobile: p.mobileNumber || "-",
+        type: p.partyType,
+        balance:
+          p.openingBalanceType === "To_Collect"
+            ? Number(p.openingBalance)
+            : -Number(p.openingBalance),
+      }));
+
+      setParties(formatted);
+    } catch (error) {
+      console.error("Error fetching parties:", error);
+    }
+  };
+
+  fetchParties();
+}, []);
 
   // Set selected party
   useEffect(() => {
@@ -101,7 +109,7 @@ const PartyDetails: React.FC = () => {
     return filtered;
   }, [transactions, typeFilter, statusFilter]);
 
-  if (!party) return <div>Loading...</div>;
+ if (!party) return <div style={{ padding: "20px" }}>Loading party...</div>;
 
   return (
     <div className="party-details-layout">
@@ -376,3 +384,4 @@ const PartyDetails: React.FC = () => {
 };
 
 export default PartyDetails;
+

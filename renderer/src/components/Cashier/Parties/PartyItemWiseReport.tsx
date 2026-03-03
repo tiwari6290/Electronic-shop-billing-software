@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import "./PartyItemWiseReport.css";
-
+import axios from "axios";
 interface TransactionItem {
   partyId: number;
   itemName: string;
@@ -33,15 +33,31 @@ const PartyItemWiseReport: React.FC = () => {
 
   // Load transactions
   useEffect(() => {
-    const allTransactions =
-      JSON.parse(localStorage.getItem("transactions") || "[]");
+  const fetchTransactions = async () => {
+    try {
+      const res = await axios.get(
+        `http://localhost:4000/api/transactions/party/${id}`
+      );
 
-    const partyTransactions = allTransactions.filter(
-      (t: TransactionItem) => t.partyId === Number(id)
-    );
+      // Make sure backend returns correct fields
+      const formatted = res.data.data.map((t: any) => ({
+        partyId: t.partyId,
+        itemName: t.itemName,
+        itemCode: t.itemCode,
+        quantity: t.quantity,
+        amount: t.amount,
+        type: t.type, // "Sale" | "Purchase"
+        date: t.date,
+      }));
 
-    setTransactions(partyTransactions);
-  }, [id]);
+      setTransactions(formatted);
+    } catch (error) {
+      console.error("Error fetching transactions:", error);
+    }
+  };
+
+  if (id) fetchTransactions();
+}, [id]);
 
   // 🔹 Date Filtering Logic
   const filteredByDate = useMemo(() => {

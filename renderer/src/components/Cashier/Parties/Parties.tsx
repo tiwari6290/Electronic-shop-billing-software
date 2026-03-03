@@ -10,6 +10,7 @@ import {
   Layers,
 } from "lucide-react";
 import "./Parties.css";
+import axios from "axios";
 
 interface Party {
   id: number;
@@ -20,7 +21,7 @@ interface Party {
   balance: number;
 }
 
-const partyData: Party[] = [
+/*const partyData: Party[] = [
   {
     id: 1,
     name: "anando",
@@ -61,7 +62,7 @@ const partyData: Party[] = [
     type: "Customer",
     balance: 22400,
   },
-];
+];*/
 
 const Parties: React.FC = () => {
   const navigate = useNavigate();
@@ -97,31 +98,30 @@ const Parties: React.FC = () => {
   };
 
   useEffect(() => {
-    const loadData = () => {
-      const storedParties = JSON.parse(localStorage.getItem("parties") || "[]");
-      const storedCategories = JSON.parse(
-        localStorage.getItem("categories") || "[]",
-      );
+  const fetchParties = async () => {
+    try {
+      const res = await axios.get("http://localhost:4000/api/parties");
 
-      if (storedParties.length > 0) {
-        setParties(storedParties);
-      } else {
-        setParties(partyData);
-      }
+      const formatted = res.data.data.map((p: any) => ({
+        id: p.id,
+        name: p.partyName,
+        category: p.partyCategory || "-",
+        mobile: p.mobileNumber || "-",
+        type: p.partyType,
+        balance:
+          p.openingBalanceType === "To_Collect"
+            ? Number(p.openingBalance)
+            : -Number(p.openingBalance),
+      }));
 
-      if (storedCategories.length > 0) {
-        setCategories(storedCategories);
-      }
-    };
+      setParties(formatted);
+    } catch (error) {
+      console.error("Error fetching parties:", error);
+    }
+  };
 
-    loadData();
-    window.addEventListener("storage", loadData);
-
-    return () => {
-      window.removeEventListener("storage", loadData);
-    };
-  }, []);
-
+  fetchParties();
+}, []);
   // Filter Logic
   const filteredParties = useMemo(() => {
     let filtered = parties;
@@ -387,14 +387,21 @@ const Parties: React.FC = () => {
               </button>
               <button
                 className="abc delete-btn"
-                onClick={() => {
-                  const updated = parties.filter((p) => p.id !== deletePartyId);
+                onClick={async () => {
+                try {
+               await axios.delete(
+                `http://localhost:5000/api/parties/${deletePartyId}`
+               );
 
-                  setParties(updated);
-                  localStorage.setItem("parties", JSON.stringify(updated));
+              setParties((prev) =>
+              prev.filter((p) => p.id !== deletePartyId)
+                  );
 
                   setDeletePartyId(null);
-                }}
+                } catch (error) {
+                  console.error("Error deleting party:", error);
+                }
+              }}    
               >
                 Delete
               </button>

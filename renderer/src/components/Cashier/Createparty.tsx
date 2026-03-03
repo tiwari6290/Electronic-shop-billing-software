@@ -5,6 +5,9 @@ import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { useParams } from "react-router-dom";
 
+import { createParty } from "../../services/partyService";
+import type { CreatePartyPayload } from "../../services/partyService";
+
 const CreateParty: React.FC = () => {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -16,15 +19,15 @@ const [newCategoryName, setNewCategoryName] = useState("");
     mobileNumber: '',
     email: '',
     openingBalance: '0',
-    balanceType: 'To Collect',
+    openingBalanceType: 'To_Collect' as "To_Collect" | "To_Pay",
     gstin: '',
     panNumber: '',
-    partyType: 'Customer',
+     partyType: 'Customer' as "Customer" | "Supplier",
     partyCategory: '',
     billingAddress: '',
     shippingAddress: '',
     sameAsBilling: false,
-    creditPeriod: '30',
+    creditPeriod: '0',
     creditLimit: '0',
     contactPersonName: '',
     dateOfBirth: ''
@@ -102,77 +105,41 @@ useEffect(() => {
     console.log('Fetching GSTIN details...');
   };
 
-const handleSave = () => {
-  if (!formData.partyName.trim()) {
-    alert("Party Name is required");
-    return;
+const handleSave = async () => {
+  try {
+    if (!formData.partyName.trim()) {
+      alert("Party Name is required");
+      return;
+    }
+
+    const payload = {
+      partyName: formData.partyName,
+      mobileNumber: formData.mobileNumber,
+      email: formData.email,
+      gstin: formData.gstin,
+      panNumber: formData.panNumber,
+      partyType: formData.partyType,
+      partyCategory: formData.partyCategory,
+      billingAddress: formData.billingAddress,
+      shippingAddress: formData.shippingAddress,
+      creditPeriod: Number(formData.creditPeriod),
+      creditLimit: Number(formData.creditLimit),
+      openingBalance: Number(formData.openingBalance),
+      openingBalanceType: formData.openingBalanceType
+    };
+
+    console.log("Sending to backend:", payload);
+
+    await createParty(payload);
+
+    alert("Party created successfully ✅");
+
+    navigate("/cashier/parties");
+
+  } catch (error: any) {
+    console.error("Save error:", error);
+    alert(error.response?.data?.message || "Something went wrong ❌");
   }
-
-  const existingParties =
-    JSON.parse(localStorage.getItem("parties") || "[]");
-
-  const existingCategories =
-    JSON.parse(localStorage.getItem("categories") || "[]");
-
-  const categoryValue =
-    formData.partyCategory?.trim() || "-";
-
-    
-
-  // ✅ If category is new, add it to categories list
-  if (
-    categoryValue !== "-" &&
-    !existingCategories.includes(categoryValue)
-  ) {
-    const updatedCategories = [
-      ...existingCategories,
-      categoryValue,
-    ];
-
-    localStorage.setItem(
-      "categories",
-      JSON.stringify(updatedCategories)
-    );
-  }
-
-const newParty = {
-  id: id ? Number(id) : Date.now(),
-  name: formData.partyName,
-  category: categoryValue,
-  mobile: formData.mobileNumber || "-",
-  type: formData.partyType,
-  balance:
-    formData.balanceType === "To Collect"
-      ? Number(formData.openingBalance || 0)
-      : -Number(formData.openingBalance || 0),
-
-  // 🔥 extra fields
-  email: formData.email,
-  gstin: formData.gstin,
-  panNumber: formData.panNumber,
-  billingAddress: formData.billingAddress,
-  shippingAddress: formData.shippingAddress,
-  creditPeriod: formData.creditPeriod,
-  creditLimit: formData.creditLimit,
-};
-
-  const updatedParties = [...existingParties, newParty];
-
-  localStorage.setItem(
-    "parties",
-    JSON.stringify(updatedParties)
-  );
-
-  navigate("/cashier/parties");
-  if (id) {
-  const updatedParties = existingParties.map((p: any) =>
-    p.id === Number(id) ? newParty : p
-  );
-
-  localStorage.setItem("parties", JSON.stringify(updatedParties));
-} else {
-  localStorage.setItem("parties", JSON.stringify(updatedParties));
-}
 };
 
   const handleSaveAndNew = () => {
@@ -328,7 +295,7 @@ const newParty = {
                   </div>
                   <select
                     name="balanceType"
-                    value={formData.balanceType}
+                    value={formData.openingBalanceType}
                     onChange={handleInputChange}
                     style={{
                       padding: '8px 12px',
@@ -341,8 +308,8 @@ const newParty = {
                       minWidth: '120px'
                     }}
                   >
-                    <option>To Collect</option>
-                    <option>To Pay</option>
+                    <option value="To_Collect">To Collect</option>
+                  <option value="To_Pay">To Pay</option>
                   </select>
                 </div>
               </div>
