@@ -53,6 +53,9 @@ import PurchaseOrderList from "./components/Cashier/PurchaseOrder/PurchaseOrderL
 import PurchaseOrdersPage from "./components/Cashier/PurchaseOrder/Purchaseorderspage";
 import Parties from "./components/Cashier/Parties/Parties";
 import PartyDetails from "./components/Cashier/Parties/PartyDetails";
+import PartyLedger from "./components/Cashier/Parties/PartyLedger";
+import QuotationEstimate from "./components/Cashier/Quotationestimate/Quotationestimate";
+import Purchase from "./components/Cashier/Createpurchase/Purchase";
 
 
 
@@ -155,6 +158,25 @@ function App() {
            <Route path="purchase-orders-form" element={<PurchaseOrder />} />
           {/*<Route path="purchase-orders-list" element={<PurchaseOrderList />} /> */}
           <Route path="purchase-orders" element={<PurchaseOrdersPage />} />
+          <Route path="sales-return"        element={<SalesReturn />} />
+          <Route path="credit-note"         element={<CreateCreditNote />} />
+          <Route path="delivery-challan"    element={<DeliveryChallan />} />
+          <Route path="proforma-invoice"    element={<ProformaInvoice />} />
+         {/*  <Route path="purchase"            element={<Purchases />} /> */}
+         <Route path ="/cashier/purchase"   element={<Purchase/>} />
+          <Route path="payment-out"         element={<PaymentOut />} />
+          <Route path="payment-out-list"    element={<PaymentOutList />} />
+          <Route path="purchase-return"     element={<CreatePurchaseReturn />} />
+          <Route path="debit-note"          element={<CreateDebitNote />} />
+          <Route path="purchase-orders-form" element={<PurchaseOrder />} />
+          <Route path="purchase-orders"     element={<PurchaseOrdersPage />} />
+          <Route path="quotation-estimate"  element={<QuotationEstimate />} />
+          <Route path="create-expense"      element={<Createexpense />} />
+
+          {/* ── Sales Invoice — 3 routes ─────────────────────────── */}
+          <Route path="sales-invoicses-list"    element={<SalesInvoiceList />} />
+          <Route path="sales-invoice"           element={<CreateSalesInvoiceNew />} />
+          <Route path="sales-invoice/edit/:id"  element={<EditSalesInvoice />} />
 
           <Route path="create-expense" element={<Createexpense />} />
           <Route path="sales-invoice" element={<Salesinvoice />} />
