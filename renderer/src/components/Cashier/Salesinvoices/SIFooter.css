@@ -1,0 +1,13 @@
+.si-footer { padding: 16px; }
+.si-footer-link { background: none; border: none; color: #3b82f6; font-size: 13.5px; font-weight: 500; cursor: pointer; padding: 0; font-family: inherit; display: block; margin-bottom: 12px; }
+.si-footer-link:hover { text-decoration: underline; }
+.si-notes-section, .si-terms-section, .si-bank-section { margin-bottom: 16px; }
+.si-notes-hdr, .si-terms-hdr { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 14px; font-weight: 600; color: #374151; }
+.si-section-close { background: none; border: none; cursor: pointer; color: #9ca3af; font-size: 16px; padding: 2px; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; }
+.si-section-close:hover { background: #fee2e2; color: #ef4444; }
+.si-notes-ta, .si-terms-ta { width: 100%; padding: 10px 12px; border: 1.5px solid #e5e7eb; border-radius: 7px; font-size: 13.5px; color: #374151; outline: none; resize: vertical; font-family: inherit; box-sizing: border-box; background: #f9fafb; }
+.si-notes-ta:focus, .si-terms-ta:focus { border-color: #a5b4fc; background: #fff; }
+.si-bank-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.si-bank-grid label { display: block; font-size: 12px; color: #6b7280; margin-bottom: 3px; }
+.si-bank-input { width: 100%; padding: 7px 10px; border: 1.5px solid #e5e7eb; border-radius: 6px; font-size: 13px; outline: none; font-family: inherit; box-sizing: border-box; }
+.si-bank-input:focus { border-color: #a5b4fc; }
