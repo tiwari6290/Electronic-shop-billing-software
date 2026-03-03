@@ -10,7 +10,6 @@ import {
   Receipt,
   Tags,
   Layers,
-  Search,
 } from "lucide-react";
 import "./CreateItem.css";
 
@@ -139,9 +138,7 @@ const CreateItem = () => {
                     className="ci-category-input"
                     onClick={() => setCategoryOpen(!categoryOpen)}
                   >
-                   <span className="ci-category-icon">
-                        <Search size={16} />
-                      </span>
+                    <span className="ci-category-icon">🔍</span>
                     <span className="ci-category-placeholder">
                       {selectedCategory}
                     </span>

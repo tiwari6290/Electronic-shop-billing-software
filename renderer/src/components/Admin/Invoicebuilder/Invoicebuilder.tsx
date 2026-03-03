@@ -210,35 +210,6 @@ const DEFAULT_MISC: MiscState = {
   signatureUrl: "",
 };
 
-// ─── LOCALSTORAGE HELPERS ─────────────────────────────────────────────────────
-
-const LS_TEMPLATES = "savedInvoiceTemplates";
-const LS_ACTIVE    = "activeInvoiceTemplate";
-
-function loadTemplates(): SavedTemplate[] {
-  try { return JSON.parse(localStorage.getItem(LS_TEMPLATES) || "[]"); }
-  catch { return []; }
-}
-
-function persistTemplates(list: SavedTemplate[], active: SavedTemplate) {
-  try {
-    localStorage.setItem(LS_TEMPLATES, JSON.stringify(list));
-    localStorage.setItem(LS_ACTIVE,    JSON.stringify(active));
-  } catch { /* quota exceeded — silently ignore */ }
-}
-
-function removeFromStorage(list: SavedTemplate[]) {
-  try {
-    localStorage.setItem(LS_TEMPLATES, JSON.stringify(list));
-    // If list is empty, clear active; otherwise keep the first one as active
-    if (list.length === 0) {
-      localStorage.removeItem(LS_ACTIVE);
-    } else {
-      localStorage.setItem(LS_ACTIVE, JSON.stringify(list[0]));
-    }
-  } catch { /* ignore */ }
-}
-
 // ─── NAV SVG ICONS ───────────────────────────────────────────────────────────
 
 const IconStyle: React.FC = () => (
@@ -249,6 +220,7 @@ const IconStyle: React.FC = () => (
     <path d="M2 12a10 10 0 1 0 10-10"/>
   </svg>
 );
+
 const IconPrint: React.FC = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
     <polyline points="6 9 6 2 18 2 18 9"/>
@@ -256,22 +228,27 @@ const IconPrint: React.FC = () => (
     <rect x="6" y="14" width="12" height="8"/>
   </svg>
 );
+
 const IconBusiness: React.FC = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
     <rect x="2" y="7" width="20" height="14" rx="2"/>
     <path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>
-    <line x1="12" y1="12" x2="12" y2="12"/><path d="M12 12h.01"/>
+    <line x1="12" y1="12" x2="12" y2="12"/>
+    <path d="M12 12h.01"/>
     <path d="M2 12a20.3 20.3 0 0 0 20 0"/>
   </svg>
 );
+
 const IconInvoice: React.FC = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
     <polyline points="14 2 14 8 20 8"/>
-    <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+    <line x1="16" y1="13" x2="8" y2="13"/>
+    <line x1="16" y1="17" x2="8" y2="17"/>
     <polyline points="10 9 9 9 8 9"/>
   </svg>
 );
+
 const IconParty: React.FC = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
     <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
@@ -280,12 +257,16 @@ const IconParty: React.FC = () => (
     <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
   </svg>
 );
+
 const IconItems: React.FC = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
     <rect x="3" y="3" width="18" height="18" rx="2"/>
-    <path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/>
+    <path d="M3 9h18"/>
+    <path d="M3 15h18"/>
+    <path d="M9 3v18"/>
   </svg>
 );
+
 const IconMisc: React.FC = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="12" cy="12" r="3"/>
@@ -294,6 +275,7 @@ const IconMisc: React.FC = () => (
     <path d="m4.93 4.93 1.41 1.41M17.66 17.66l1.41 1.41M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/>
   </svg>
 );
+
 const IconSave: React.FC = () => (
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
@@ -303,8 +285,13 @@ const IconSave: React.FC = () => (
 );
 
 const NAV_ICONS: Record<string, React.FC> = {
-  style: IconStyle, print: IconPrint, business: IconBusiness,
-  invoice: IconInvoice, party: IconParty, items: IconItems, misc: IconMisc,
+  style:    IconStyle,
+  print:    IconPrint,
+  business: IconBusiness,
+  invoice:  IconInvoice,
+  party:    IconParty,
+  items:    IconItems,
+  misc:     IconMisc,
 };
 
 const NAV_ITEMS = [
@@ -322,15 +309,42 @@ type NavId = (typeof NAV_ITEMS)[number]["id"];
 // ─── HOME PAGE THEME DEFINITIONS ─────────────────────────────────────────────
 
 interface HomeTheme {
-  id: string; name: string; description: string;
-  color: string; style: Partial<StyleState>;
+  id: string;
+  name: string;
+  description: string;
+  color: string;
+  style: Partial<StyleState>;
 }
 
 const HOME_THEMES: HomeTheme[] = [
-  { id: "modern-blue",  name: "Modern Blue",   description: "Clean professional look",  color: "#3b5bdb", style: { themeColor: "#3b5bdb", font: "Inter",   borderColor: "#dee2e6" } },
-  { id: "classic-dark", name: "Classic Dark",  description: "Bold authoritative style", color: "#1a1d23", style: { themeColor: "#1a1d23", font: "Georgia", borderColor: "#adb5bd" } },
-  { id: "minimal",      name: "Minimal",       description: "Clean and understated",    color: "#212529", style: { themeColor: "#212529", font: "Inter",   borderColor: "#e9ecef" } },
-  { id: "elegant-gold", name: "Elegant Gold",  description: "Premium warm tones",       color: "#c07000", style: { themeColor: "#c07000", font: "Georgia", borderColor: "#e9c46a" } },
+  {
+    id: "modern-blue",
+    name: "Modern Blue",
+    description: "Clean professional look",
+    color: "#3b5bdb",
+    style: { themeColor: "#3b5bdb", font: "Inter", borderColor: "#dee2e6" },
+  },
+  {
+    id: "classic-dark",
+    name: "Classic Dark",
+    description: "Bold authoritative style",
+    color: "#1a1d23",
+    style: { themeColor: "#1a1d23", font: "Georgia", borderColor: "#adb5bd" },
+  },
+  {
+    id: "minimal",
+    name: "Minimal",
+    description: "Clean and understated",
+    color: "#212529",
+    style: { themeColor: "#212529", font: "Inter", borderColor: "#e9ecef" },
+  },
+  {
+    id: "elegant-gold",
+    name: "Elegant Gold",
+    description: "Premium warm tones",
+    color: "#c07000",
+    style: { themeColor: "#c07000", font: "Georgia", borderColor: "#e9c46a" },
+  },
 ];
 
 // ─── SHARED UI ATOMS ──────────────────────────────────────────────────────────
@@ -370,9 +384,11 @@ const IBSelect: React.FC<{ value: string; onChange: (v: string) => void; options
 // ─── SAVE DIALOG ─────────────────────────────────────────────────────────────
 
 const SaveDialog: React.FC<{
-  defaultName: string; themeColor: string;
-  onSave: (name: string) => void; onCancel: () => void;
-}> = ({ defaultName, onSave, onCancel }) => {
+  defaultName: string;
+  themeColor: string;
+  onSave: (name: string) => void;
+  onCancel: () => void;
+}> = ({ defaultName, themeColor, onSave, onCancel }) => {
   const [name, setName] = useState(defaultName);
   return (
     <div className="dialog-overlay" onClick={onCancel}>
@@ -389,7 +405,7 @@ const SaveDialog: React.FC<{
   );
 };
 
-// ─── INVOICE PREVIEW ─────────────────────────────────────────────────────────
+// ─── INVOICE PREVIEW (shared between home and builder) ───────────────────────
 
 interface PreviewProps {
   inv: InvoiceData; style: StyleState; print: PrintState;
@@ -417,10 +433,33 @@ const InvoicePreview: React.FC<PreviewProps> = ({ inv, style, print, ts, misc, v
   }, {});
 
   return (
-    <div className="invoice-preview" style={{ fontFamily: style.font, fontSize: style.textSize, padding: `${print.top}px ${print.right}px ${print.bottom}px ${print.left}px`, position: "relative", overflow: "hidden" }}>
+    <div
+      className="invoice-preview"
+      style={{
+        fontFamily: style.font,
+        fontSize: style.textSize,
+        padding: `${print.top}px ${print.right}px ${print.bottom}px ${print.left}px`,
+        position: "relative",
+        overflow: "hidden",
+      }}
+    >
       {ts.backgroundUrl && (
-        <div aria-hidden="true" style={{ position: "absolute", inset: 0, backgroundImage: `url(${ts.backgroundUrl})`, backgroundSize: "cover", backgroundPosition: "center", backgroundRepeat: "no-repeat", opacity: ts.backgroundOpacity / 100, pointerEvents: "none", zIndex: 0 }} />
+        <div
+          aria-hidden="true"
+          style={{
+            position: "absolute",
+            inset: 0,
+            backgroundImage: `url(${ts.backgroundUrl})`,
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            backgroundRepeat: "no-repeat",
+            opacity: ts.backgroundOpacity / 100,
+            pointerEvents: "none",
+            zIndex: 0,
+          }}
+        />
       )}
+
       <div style={{ position: "relative", zIndex: 1 }}>
         {print.showHeader && (
           <div className="inv-header">
@@ -436,8 +475,10 @@ const InvoicePreview: React.FC<PreviewProps> = ({ inv, style, print, ts, misc, v
             </div>
           </div>
         )}
+
         <hr className="inv-divider" style={{ borderColor: tc }} />
         <p className="inv-title" style={{ color: tc }}>TAX INVOICE</p>
+
         <div className="inv-info-grid">
           <span><b>Invoice No:</b> {inv.invoiceNo}</span>
           <span className="inv-info-right"><b>Due Date:</b> {inv.dueDate}</span>
@@ -448,6 +489,7 @@ const InvoicePreview: React.FC<PreviewProps> = ({ inv, style, print, ts, misc, v
           {det.showVehicle && det.vehicleNo && <span><b>Vehicle No:</b> {det.vehicleNo}</span>}
           {det.customFields.map((f, i) => f.label && f.value && <span key={i}><b>{f.label}:</b> {f.value}</span>)}
         </div>
+
         <div className="inv-party-grid">
           <div className="inv-party-box" style={{ border: bw }}>
             <div className="inv-party-label" style={{ color: tc }}>BILL TO</div>
@@ -466,6 +508,7 @@ const InvoicePreview: React.FC<PreviewProps> = ({ inv, style, print, ts, misc, v
             {pv.shipCustomFields.map((f, i) => f.label && <div key={i}><b>{f.label}:</b> {f.value}</div>)}
           </div>
         </div>
+
         <table className="inv-table">
           <thead>
             <tr style={{ background: tc }}>
@@ -504,6 +547,7 @@ const InvoicePreview: React.FC<PreviewProps> = ({ inv, style, print, ts, misc, v
             ))}
           </tbody>
         </table>
+
         {ts.hsnSummary && (
           <div className="hsn-summary">
             <div className="hsn-summary-title" style={{ color: tc }}>HSN-wise Tax Summary</div>
@@ -528,6 +572,7 @@ const InvoicePreview: React.FC<PreviewProps> = ({ inv, style, print, ts, misc, v
             </table>
           </div>
         )}
+
         <div className="inv-totals">
           <table className="inv-totals-table">
             <tbody>
@@ -538,23 +583,44 @@ const InvoicePreview: React.FC<PreviewProps> = ({ inv, style, print, ts, misc, v
             </tbody>
           </table>
         </div>
+
         {misc.amountWords && <p className="inv-amount-words"><b>Amount in Words:</b> Twenty Two Thousand Four Hundred Seventy Three Rupees Only</p>}
+
         <div className="inv-bank-box" style={{ border: bw }}>
           <div className="inv-bank-title">Bank Details</div>
           <div>Account: {inv.bank}</div>
           <div>IFSC: {inv.ifsc}</div>
         </div>
+
         {misc.showNotes && <div className="inv-section-text"><b>Notes</b><br />{inv.notes}</div>}
         {misc.showTerms && <div className="inv-section-text"><b>Terms &amp; Conditions</b><br />{inv.terms}</div>}
+
         {print.showFooter && (
           <div className={`inv-footer${misc.receiverSig ? " dual" : ""}`}>
-            {misc.receiverSig && <div style={{ textAlign: "center" }}><span>Receiver's Signature</span></div>}
+            {misc.receiverSig && (
+              <div style={{ textAlign: "center" }}>
+                <span>Receiver's Signature</span>
+              </div>
+            )}
             <div style={{ textAlign: "center" }}>
-              {misc.signatureUrl && <img src={misc.signatureUrl} alt="Authorized Signature" style={{ height: 60, maxWidth: 160, objectFit: "contain", display: "block", margin: "0 auto 4px" }} />}
+              {misc.signatureUrl && (
+                <img
+                  src={misc.signatureUrl}
+                  alt="Authorized Signature"
+                  style={{
+                    height: 60,
+                    maxWidth: 160,
+                    objectFit: "contain",
+                    display: "block",
+                    margin: "0 auto 4px",
+                  }}
+                />
+              )}
               <span>Authorized Signatory</span>
             </div>
           </div>
         )}
+
         <div className="inv-generated">This is a computer generated invoice.</div>
       </div>
     </div>
@@ -564,7 +630,10 @@ const InvoicePreview: React.FC<PreviewProps> = ({ inv, style, print, ts, misc, v
 // ─── THEME MINI CARD ──────────────────────────────────────────────────────────
 
 const ThemeMiniCard: React.FC<{ theme: HomeTheme; selected: boolean; onClick: () => void }> = ({ theme, selected, onClick }) => (
-  <div className={`theme-mini-card${selected ? " selected" : ""}`} onClick={onClick}>
+  <div
+    className={`theme-mini-card${selected ? " selected" : ""}`}
+    onClick={onClick}
+  >
     {selected && (
       <div className="theme-check">
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -579,7 +648,8 @@ const ThemeMiniCard: React.FC<{ theme: HomeTheme; selected: boolean; onClick: ()
         <div className="theme-mini-line long" />
         <div className="theme-mini-line med" />
         <div className="theme-mini-row">
-          <div className="theme-mini-col" /><div className="theme-mini-col" />
+          <div className="theme-mini-col" />
+          <div className="theme-mini-col" />
         </div>
         <div className="theme-mini-table-head" style={{ background: theme.color }} />
         {[0,1,2].map(i => (
@@ -604,7 +674,7 @@ const ThemeMiniCard: React.FC<{ theme: HomeTheme; selected: boolean; onClick: ()
 
 interface HomePageProps {
   savedTemplates: SavedTemplate[];
-  onCustomize: (color: string) => void;
+  onCustomize: (themeId: string) => void;
   onCreateOwn: () => void;
   onUse: (t: SavedTemplate) => void;
   onDelete: (id: string) => void;
@@ -612,15 +682,29 @@ interface HomePageProps {
 
 const HomePage: React.FC<HomePageProps> = ({ savedTemplates, onCustomize, onCreateOwn, onUse, onDelete }) => {
   const [selectedThemeId, setSelectedThemeId] = useState("modern-blue");
+
   const selectedTheme = HOME_THEMES.find(t => t.id === selectedThemeId) ?? HOME_THEMES[0];
+
+  // Build a full style/state based on selected theme for the live preview
   const previewStyle: StyleState = { ...DEFAULT_STYLE, ...selectedTheme.style };
+  const previewPrint: PrintState = DEFAULT_PRINT;
 
   return (
     <div className="home-page-new">
+      {/* ── LEFT: Live Preview ── */}
       <div className="home-left">
         <div className="home-left-inner">
           <div className="home-preview-wrapper">
-            <InvoicePreview inv={DEFAULT_INVOICE} style={previewStyle} print={DEFAULT_PRINT} ts={DEFAULT_TS} misc={DEFAULT_MISC} vis={DEFAULT_VIS} det={DEFAULT_DET} pv={DEFAULT_PV} />
+            <InvoicePreview
+              inv={DEFAULT_INVOICE}
+              style={previewStyle}
+              print={previewPrint}
+              ts={DEFAULT_TS}
+              misc={DEFAULT_MISC}
+              vis={DEFAULT_VIS}
+              det={DEFAULT_DET}
+              pv={DEFAULT_PV}
+            />
           </div>
           <div className="home-preview-label">
             <span className="home-preview-dot" style={{ background: selectedTheme.color }} />
@@ -628,6 +712,8 @@ const HomePage: React.FC<HomePageProps> = ({ savedTemplates, onCustomize, onCrea
             <span className="home-preview-desc">— {selectedTheme.description}</span>
           </div>
         </div>
+
+        {/* Saved templates at the bottom of left panel */}
         {savedTemplates.length > 0 && (
           <div className="home-saved-section">
             <div className="home-saved-title">Your Saved Templates</div>
@@ -649,21 +735,39 @@ const HomePage: React.FC<HomePageProps> = ({ savedTemplates, onCustomize, onCrea
           </div>
         )}
       </div>
+
+      {/* ── RIGHT: Theme Selector + Actions ── */}
       <div className="home-right">
         <div className="home-right-header">
           <h1 className="home-right-title">Invoice Builder</h1>
           <p className="home-right-subtitle">Choose a template to get started</p>
         </div>
+
         <div className="theme-card-grid">
           {HOME_THEMES.map(theme => (
-            <ThemeMiniCard key={theme.id} theme={theme} selected={selectedThemeId === theme.id} onClick={() => setSelectedThemeId(theme.id)} />
+            <ThemeMiniCard
+              key={theme.id}
+              theme={theme}
+              selected={selectedThemeId === theme.id}
+              onClick={() => setSelectedThemeId(theme.id)}
+            />
           ))}
         </div>
+
         <div className="home-right-actions">
-          <button className="home-customize-btn" type="button" onClick={() => onCustomize(selectedTheme.color)} style={{ background: selectedTheme.color }}>
+          <button
+            className="home-customize-btn"
+            type="button"
+            onClick={() => onCustomize(selectedTheme.color)}
+            style={{ background: selectedTheme.color }}
+          >
             Customize "{selectedTheme.name}"
           </button>
-          <button className="home-create-own-btn" type="button" onClick={onCreateOwn}>
+          <button
+            className="home-create-own-btn"
+            type="button"
+            onClick={onCreateOwn}
+          >
             <span>+</span> Create Own Theme
           </button>
         </div>
@@ -682,13 +786,15 @@ const StylePanel: React.FC<{ style: StyleState; setStyle: React.Dispatch<React.S
     <IBSelect value={style.textSize} onChange={(v) => setStyle((s) => ({ ...s, textSize: v }))} options={TEXT_SIZES} />
     <SL>THEME COLOR</SL>
     <div className="color-row">
-      <input type="color" className="color-swatch" value={style.themeColor} onChange={(e) => setStyle((s) => ({ ...s, themeColor: e.target.value }))} />
+      <input type="color" className="color-swatch" value={style.themeColor}
+        onChange={(e) => setStyle((s) => ({ ...s, themeColor: e.target.value }))} />
       <IBInput value={style.themeColor} onChange={(v) => setStyle((s) => ({ ...s, themeColor: v }))} />
     </div>
     <SL>THEME PRESETS</SL>
     <div className="preset-grid">
       {Object.entries(THEME_PRESETS).map(([name, color]) => (
-        <button key={name} className={`preset-btn${style.themeColor === color ? " active" : ""}`} onClick={() => setStyle((s) => ({ ...s, themeColor: color }))} type="button">{name}</button>
+        <button key={name} className={`preset-btn${style.themeColor === color ? " active" : ""}`}
+          onClick={() => setStyle((s) => ({ ...s, themeColor: color }))} type="button">{name}</button>
       ))}
     </div>
     <SL>BORDER COLOR</SL>
@@ -699,7 +805,11 @@ const StylePanel: React.FC<{ style: StyleState; setStyle: React.Dispatch<React.S
     <SL>BORDER WIDTH (PX)</SL>
     <IBInput value={style.borderWidth} onChange={(v) => setStyle((s) => ({ ...s, borderWidth: v }))} />
     <SL>UPLOAD LOGO</SL>
-    <input type="file" className="file-input" accept="image/*" onChange={(e) => { const file = e.target.files?.[0]; if (file) { const url = URL.createObjectURL(file); setStyle((s) => ({ ...s, logoUrl: url, showLogo: true })); } }} />
+    <input type="file" className="file-input" accept="image/*"
+      onChange={(e) => {
+        const file = e.target.files?.[0];
+        if (file) { const url = URL.createObjectURL(file); setStyle((s) => ({ ...s, logoUrl: url, showLogo: true })); }
+      }} />
     {style.logoUrl && (
       <div className="logo-preview-row">
         <img src={style.logoUrl} alt="Logo" className="logo-thumb" />
@@ -729,13 +839,17 @@ const PrintPanel: React.FC<{ print: PrintState; setPrint: React.Dispatch<React.S
       <>
         <SL>WATERMARK IMAGE</SL><input type="file" className="file-input" />
         <SL>OPACITY ({print.watermarkOpacity}%)</SL>
-        <input type="range" min={5} max={80} value={print.watermarkOpacity} style={{ width: "100%" }} onChange={(e) => setPrint((p) => ({ ...p, watermarkOpacity: Number(e.target.value) }))} />
+        <input type="range" min={5} max={80} value={print.watermarkOpacity} style={{ width: "100%" }}
+          onChange={(e) => setPrint((p) => ({ ...p, watermarkOpacity: Number(e.target.value) }))} />
       </>
     )}
   </div>
 );
 
-const BusinessPanel: React.FC<{ inv: InvoiceData; setInv: React.Dispatch<React.SetStateAction<InvoiceData>>; vis: BusinessVisibility; setVis: React.Dispatch<React.SetStateAction<BusinessVisibility>> }> = ({ inv, setInv, vis, setVis }) => (
+const BusinessPanel: React.FC<{
+  inv: InvoiceData; setInv: React.Dispatch<React.SetStateAction<InvoiceData>>;
+  vis: BusinessVisibility; setVis: React.Dispatch<React.SetStateAction<BusinessVisibility>>;
+}> = ({ inv, setInv, vis, setVis }) => (
   <div>
     <SL>LAYOUT</SL>
     <IBSelect value="Layout 1 - Standard" onChange={() => {}} options={["Layout 1 - Standard", "Layout 2 - Modern", "Layout 3 - Compact"]} />
@@ -746,7 +860,15 @@ const BusinessPanel: React.FC<{ inv: InvoiceData; setInv: React.Dispatch<React.S
       {vis.slogan && <IBInput value={inv.slogan} onChange={(v) => setInv((i) => ({ ...i, slogan: v }))} />}
     </SettingRow>
     <SettingRow label="Address" checked={vis.address} onChange={(v) => setVis((s) => ({ ...s, address: v }))}>
-      {vis.address && (<><IBInput value={inv.address} onChange={(v) => setInv((i) => ({ ...i, address: v }))} /><div className="input-grid-2" style={{ marginTop: 8 }}><div><div className="input-grid-label">STATE</div><IBInput value={inv.state} onChange={(v) => setInv((i) => ({ ...i, state: v }))} /></div><div><div className="input-grid-label">CITY</div><IBInput value={inv.city} onChange={(v) => setInv((i) => ({ ...i, city: v }))} /></div></div></>)}
+      {vis.address && (
+        <>
+          <IBInput value={inv.address} onChange={(v) => setInv((i) => ({ ...i, address: v }))} />
+          <div className="input-grid-2" style={{ marginTop: 8 }}>
+            <div><div className="input-grid-label">STATE</div><IBInput value={inv.state} onChange={(v) => setInv((i) => ({ ...i, state: v }))} /></div>
+            <div><div className="input-grid-label">CITY</div><IBInput value={inv.city} onChange={(v) => setInv((i) => ({ ...i, city: v }))} /></div>
+          </div>
+        </>
+      )}
     </SettingRow>
     <SettingRow label="GSTIN" checked={vis.gstin} onChange={(v) => setVis((s) => ({ ...s, gstin: v }))}>
       {vis.gstin && <IBInput value={inv.gstin} onChange={(v) => setInv((i) => ({ ...i, gstin: v }))} />}
@@ -763,10 +885,14 @@ const BusinessPanel: React.FC<{ inv: InvoiceData; setInv: React.Dispatch<React.S
   </div>
 );
 
-const InvoiceDetPanel: React.FC<{ inv: InvoiceData; setInv: React.Dispatch<React.SetStateAction<InvoiceData>>; det: InvoiceDetailsState; setDet: React.Dispatch<React.SetStateAction<InvoiceDetailsState>> }> = ({ inv, setInv, det, setDet }) => (
+const InvoiceDetPanel: React.FC<{
+  inv: InvoiceData; setInv: React.Dispatch<React.SetStateAction<InvoiceData>>;
+  det: InvoiceDetailsState; setDet: React.Dispatch<React.SetStateAction<InvoiceDetailsState>>;
+}> = ({ inv, setInv, det, setDet }) => (
   <div>
     <SL>INDUSTRY TYPE</SL>
-    <IBSelect value={det.industryType} onChange={(v) => setDet((d) => ({ ...d, industryType: v }))} options={["General", "Manufacturing", "Retail", "Services", "Construction"]} />
+    <IBSelect value={det.industryType} onChange={(v) => setDet((d) => ({ ...d, industryType: v }))}
+      options={["General", "Manufacturing", "Retail", "Services", "Construction"]} />
     <SL>LAYOUT</SL>
     <IBSelect value={det.layout} onChange={(v) => setDet((d) => ({ ...d, layout: v }))} options={["Layout 1", "Layout 2", "Layout 3"]} />
     <SettingRow label="PO Number" checked={det.showPO} onChange={(v) => setDet((d) => ({ ...d, showPO: v }))}>
@@ -790,7 +916,10 @@ const InvoiceDetPanel: React.FC<{ inv: InvoiceData; setInv: React.Dispatch<React
   </div>
 );
 
-const PartyPanel: React.FC<{ inv: InvoiceData; setInv: React.Dispatch<React.SetStateAction<InvoiceData>>; pv: PartyVisibility; setPv: React.Dispatch<React.SetStateAction<PartyVisibility>> }> = ({ inv, setInv, pv, setPv }) => (
+const PartyPanel: React.FC<{
+  inv: InvoiceData; setInv: React.Dispatch<React.SetStateAction<InvoiceData>>;
+  pv: PartyVisibility; setPv: React.Dispatch<React.SetStateAction<PartyVisibility>>;
+}> = ({ inv, setInv, pv, setPv }) => (
   <div>
     <SL>BILL TO</SL>
     <SettingRow label="Company Name" checked={pv.billCompany} onChange={(v) => setPv((p) => ({ ...p, billCompany: v }))}>
@@ -813,7 +942,9 @@ const PartyPanel: React.FC<{ inv: InvoiceData; setInv: React.Dispatch<React.SetS
         <button className="remove-btn" type="button" onClick={() => setPv((p) => ({ ...p, billCustomFields: p.billCustomFields.filter((_, j) => j !== i) }))}>×</button>
       </div>
     ))}
-    <button className="add-btn" style={{ marginBottom: 20 }} type="button" onClick={() => setPv((p) => ({ ...p, billCustomFields: [...p.billCustomFields, { label: "Field", value: "" }] }))}>+ Add Field</button>
+    <button className="add-btn" style={{ marginBottom: 20 }} type="button"
+      onClick={() => setPv((p) => ({ ...p, billCustomFields: [...p.billCustomFields, { label: "Field", value: "" }] }))}>+ Add Field</button>
+
     <SL>SHIP TO</SL>
     <SettingRow label="Company Name" checked={pv.shipCompany} onChange={(v) => setPv((p) => ({ ...p, shipCompany: v }))}>
       {pv.shipCompany && <IBInput value={inv.shipTo.name} onChange={(v) => setInv((i) => ({ ...i, shipTo: { ...i.shipTo, name: v } }))} />}
@@ -835,7 +966,8 @@ const PartyPanel: React.FC<{ inv: InvoiceData; setInv: React.Dispatch<React.SetS
         <button className="remove-btn" type="button" onClick={() => setPv((p) => ({ ...p, shipCustomFields: p.shipCustomFields.filter((_, j) => j !== i) }))}>×</button>
       </div>
     ))}
-    <button className="add-btn" type="button" onClick={() => setPv((p) => ({ ...p, shipCustomFields: [...p.shipCustomFields, { label: "Field", value: "" }] }))}>+ Add Field</button>
+    <button className="add-btn" type="button"
+      onClick={() => setPv((p) => ({ ...p, shipCustomFields: [...p.shipCustomFields, { label: "Field", value: "" }] }))}>+ Add Field</button>
   </div>
 );
 
@@ -851,7 +983,9 @@ const ItemPanel: React.FC<{ ts: TableSettings; setTs: React.Dispatch<React.SetSt
       <SL>SUMMARY QUANTITY MODE</SL>
       <IBSelect value={ts.quantityMode} onChange={(v) => setTs((t) => ({ ...t, quantityMode: v }))} options={["Total", "Net", "Gross"]} />
       <SL>TABLE COLUMNS</SL>
-      {TABLE_COLUMNS.map((col) => (<SettingRow key={col} label={col} checked={ts.cols[col] !== false} onChange={() => toggleCol(col)} />))}
+      {TABLE_COLUMNS.map((col) => (
+        <SettingRow key={col} label={col} checked={ts.cols[col] !== false} onChange={() => toggleCol(col)} />
+      ))}
       <SL>CUSTOM COLUMNS</SL>
       {ts.customCols.map((col, i) => (
         <div className="custom-col-row" key={i}>
@@ -860,27 +994,86 @@ const ItemPanel: React.FC<{ ts: TableSettings; setTs: React.Dispatch<React.SetSt
         </div>
       ))}
       <button className="add-btn" onClick={() => setTs((t) => ({ ...t, customCols: [...t.customCols, ""] }))} type="button">+ Add Column</button>
+
       <SL>BACKGROUND IMAGE</SL>
-      <p style={{ fontSize: 11, color: "#868e96", marginBottom: 8, lineHeight: 1.5 }}>Upload an image to use as the full-page background of the invoice bill.</p>
-      <input type="file" className="file-input" accept="image/*" onChange={(e) => { const file = e.target.files?.[0]; if (file) { const url = URL.createObjectURL(file); setTs((t) => ({ ...t, backgroundUrl: url })); } }} />
+      <p style={{ fontSize: 11, color: "#868e96", marginBottom: 8, lineHeight: 1.5 }}>
+        Upload an image to use as the full-page background of the invoice bill.
+      </p>
+      <input
+        type="file"
+        className="file-input"
+        accept="image/*"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) {
+            const url = URL.createObjectURL(file);
+            setTs((t) => ({ ...t, backgroundUrl: url }));
+          }
+        }}
+      />
       {ts.backgroundUrl && (
         <>
-          <div style={{ marginTop: 10, borderRadius: 8, overflow: "hidden", border: "1px solid #dee2e6", position: "relative", height: 90, background: `url(${ts.backgroundUrl}) center/cover no-repeat` }}>
-            <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.25)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 12, fontWeight: 600, letterSpacing: 0.5 }}>Background Preview</div>
+          <div
+            style={{
+              marginTop: 10,
+              borderRadius: 8,
+              overflow: "hidden",
+              border: "1px solid #dee2e6",
+              position: "relative",
+              height: 90,
+              background: `url(${ts.backgroundUrl}) center/cover no-repeat`,
+            }}
+          >
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                background: "rgba(0,0,0,0.25)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#fff",
+                fontSize: 12,
+                fontWeight: 600,
+                letterSpacing: 0.5,
+              }}
+            >
+              Background Preview
+            </div>
           </div>
           <div style={{ marginTop: 12 }}>
             <div className="section-label">OPACITY ({ts.backgroundOpacity}%)</div>
-            <input type="range" min={5} max={60} value={ts.backgroundOpacity} style={{ width: "100%" }} onChange={(e) => setTs((t) => ({ ...t, backgroundOpacity: Number(e.target.value) }))} />
-            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "#adb5bd", marginTop: 2 }}><span>5% (Subtle)</span><span>60% (Bold)</span></div>
+            <input
+              type="range"
+              min={5}
+              max={60}
+              value={ts.backgroundOpacity}
+              style={{ width: "100%" }}
+              onChange={(e) => setTs((t) => ({ ...t, backgroundOpacity: Number(e.target.value) }))}
+            />
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "#adb5bd", marginTop: 2 }}>
+              <span>5% (Subtle)</span>
+              <span>60% (Bold)</span>
+            </div>
           </div>
-          <button className="remove-btn" type="button" style={{ marginTop: 10 }} onClick={() => setTs((t) => ({ ...t, backgroundUrl: "", backgroundOpacity: 15 }))}>× Remove Background</button>
+          <button
+            className="remove-btn"
+            type="button"
+            style={{ marginTop: 10 }}
+            onClick={() => setTs((t) => ({ ...t, backgroundUrl: "", backgroundOpacity: 15 }))}
+          >
+            × Remove Background
+          </button>
         </>
       )}
     </div>
   );
 };
 
-const MiscPanel: React.FC<{ inv: InvoiceData; setInv: React.Dispatch<React.SetStateAction<InvoiceData>>; misc: MiscState; setMisc: React.Dispatch<React.SetStateAction<MiscState>> }> = ({ inv, setInv, misc, setMisc }) => (
+const MiscPanel: React.FC<{
+  inv: InvoiceData; setInv: React.Dispatch<React.SetStateAction<InvoiceData>>;
+  misc: MiscState; setMisc: React.Dispatch<React.SetStateAction<MiscState>>;
+}> = ({ inv, setInv, misc, setMisc }) => (
   <div>
     <SettingRow label="Notes" checked={misc.showNotes} onChange={(v) => setMisc((m) => ({ ...m, showNotes: v }))}>
       {misc.showNotes && <textarea className="ib-textarea" value={inv.notes} onChange={(e) => setInv((i) => ({ ...i, notes: e.target.value }))} />}
@@ -891,14 +1084,38 @@ const MiscPanel: React.FC<{ inv: InvoiceData; setInv: React.Dispatch<React.SetSt
     </SettingRow>
     <SL>BANK ACCOUNT</SL>
     <IBSelect value={inv.bank} onChange={(v) => setInv((i) => ({ ...i, bank: v }))} options={["SBI - 1234567890", "HDFC - 9876543210"]} />
-    <div style={{ marginTop: 8 }}><IBInput value={inv.ifsc} onChange={(v) => setInv((i) => ({ ...i, ifsc: v }))} placeholder="IFSC Code" /></div>
+    <div style={{ marginTop: 8 }}>
+      <IBInput value={inv.ifsc} onChange={(v) => setInv((i) => ({ ...i, ifsc: v }))} placeholder="IFSC Code" />
+    </div>
     <div style={{ marginTop: 16 }}>
       <SL>UPLOAD SIGNATURE</SL>
-      <input type="file" className="file-input" accept="image/*" onChange={(e) => { const file = e.target.files?.[0]; if (file) { const url = URL.createObjectURL(file); setMisc((m) => ({ ...m, signatureUrl: url })); } }} />
+      <input
+        type="file"
+        className="file-input"
+        accept="image/*"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) {
+            const url = URL.createObjectURL(file);
+            setMisc((m) => ({ ...m, signatureUrl: url }));
+          }
+        }}
+      />
       {misc.signatureUrl && (
         <div className="logo-preview-row">
-          <img src={misc.signatureUrl} alt="Signature Preview" className="logo-thumb" style={{ maxHeight: 60, objectFit: "contain" }} />
-          <button className="remove-btn" type="button" onClick={() => setMisc((m) => ({ ...m, signatureUrl: "" }))}>× Remove</button>
+          <img
+            src={misc.signatureUrl}
+            alt="Signature Preview"
+            className="logo-thumb"
+            style={{ maxHeight: 60, objectFit: "contain" }}
+          />
+          <button
+            className="remove-btn"
+            type="button"
+            onClick={() => setMisc((m) => ({ ...m, signatureUrl: "" }))}
+          >
+            × Remove
+          </button>
         </div>
       )}
     </div>
@@ -919,16 +1136,17 @@ const BuilderView: React.FC<BuilderProps> = ({ initialStyle, initialTemplate, on
   const [activeTab, setActiveTab] = useState<NavId>("style");
   const [showSaveDialog, setShowSaveDialog] = useState(false);
 
-  const [inv, setInv]     = useState<InvoiceData>(initialTemplate?.inv ?? DEFAULT_INVOICE);
+  const [inv, setInv]   = useState<InvoiceData>(initialTemplate?.inv ?? DEFAULT_INVOICE);
   const [style, setStyle] = useState<StyleState>(initialTemplate?.style ?? { ...DEFAULT_STYLE, ...(initialStyle ?? {}) });
   const [print, setPrint] = useState<PrintState>(DEFAULT_PRINT);
-  const [vis, setVis]     = useState<BusinessVisibility>(initialTemplate?.vis ?? DEFAULT_VIS);
-  const [det, setDet]     = useState<InvoiceDetailsState>(initialTemplate?.det ?? DEFAULT_DET);
-  const [pv, setPv]       = useState<PartyVisibility>(initialTemplate?.pv ?? DEFAULT_PV);
-  const [ts, setTs]       = useState<TableSettings>(initialTemplate?.ts ?? DEFAULT_TS);
-  const [misc, setMisc]   = useState<MiscState>(initialTemplate?.misc ?? DEFAULT_MISC);
+  const [vis, setVis]   = useState<BusinessVisibility>(initialTemplate?.vis ?? DEFAULT_VIS);
+  const [det, setDet]   = useState<InvoiceDetailsState>(initialTemplate?.det ?? DEFAULT_DET);
+  const [pv, setPv]     = useState<PartyVisibility>(initialTemplate?.pv ?? DEFAULT_PV);
+  const [ts, setTs]     = useState<TableSettings>(initialTemplate?.ts ?? DEFAULT_TS);
+  const [misc, setMisc] = useState<MiscState>(initialTemplate?.misc ?? DEFAULT_MISC);
 
   const activeLabel = NAV_ITEMS.find((n) => n.id === activeTab)?.label ?? "";
+
   const panels: Record<NavId, React.ReactNode> = {
     style:    <StylePanel style={style} setStyle={setStyle} />,
     print:    <PrintPanel print={print} setPrint={setPrint} />,
@@ -964,7 +1182,8 @@ const BuilderView: React.FC<BuilderProps> = ({ initialStyle, initialTemplate, on
             {NAV_ITEMS.map((item) => {
               const Icon = NAV_ICONS[item.id];
               return (
-                <button key={item.id} className={`nav-item${activeTab === item.id ? " active" : ""}`} onClick={() => setActiveTab(item.id)} type="button">
+                <button key={item.id} className={`nav-item${activeTab === item.id ? " active" : ""}`}
+                  onClick={() => setActiveTab(item.id)} type="button">
                   <span className="nav-item-icon"><Icon /></span>
                   <span>{item.label}</span>
                 </button>
@@ -977,16 +1196,24 @@ const BuilderView: React.FC<BuilderProps> = ({ initialStyle, initialTemplate, on
             </button>
           </div>
         </aside>
+
         <main className="preview-area">
           <InvoicePreview inv={inv} style={style} print={print} ts={ts} misc={misc} vis={vis} det={det} pv={pv} />
         </main>
+
         <aside className="settings-panel">
           <h2 className="settings-panel-title">{activeLabel}</h2>
           {panels[activeTab]}
         </aside>
       </div>
+
       {showSaveDialog && (
-        <SaveDialog defaultName={initialTemplate?.name ?? `${inv.companyName} Template`} themeColor={style.themeColor} onSave={handleSave} onCancel={() => setShowSaveDialog(false)} />
+        <SaveDialog
+          defaultName={initialTemplate?.name ?? `${inv.companyName} Template`}
+          themeColor={style.themeColor}
+          onSave={handleSave}
+          onCancel={() => setShowSaveDialog(false)}
+        />
       )}
     </>
   );
@@ -996,10 +1223,7 @@ const BuilderView: React.FC<BuilderProps> = ({ initialStyle, initialTemplate, on
 
 const InvoiceBuilderApp: React.FC = () => {
   const [view, setView] = useState<View>("home");
-
-  // ✅ FIX 1: Load saved templates from localStorage on mount (survives logout/refresh)
-  const [savedTemplates, setSavedTemplates] = useState<SavedTemplate[]>(loadTemplates);
-
+  const [savedTemplates, setSavedTemplates] = useState<SavedTemplate[]>([]);
   const [editingTemplate, setEditingTemplate] = useState<SavedTemplate | null>(null);
   const [starterColor, setStarterColor] = useState<string | null>(null);
 
@@ -1021,23 +1245,14 @@ const InvoiceBuilderApp: React.FC = () => {
     setView("builder");
   };
 
-  // ✅ FIX 2: Persist to localStorage on delete so changes survive logout
   const handleDelete = (id: string) => {
-    setSavedTemplates((prev) => {
-      const updated = prev.filter((t) => t.id !== id);
-      removeFromStorage(updated);
-      return updated;
-    });
+    setSavedTemplates((ts) => ts.filter((t) => t.id !== id));
   };
 
-  // ✅ FIX 3: Persist to localStorage on save — both full list AND activeInvoiceTemplate
-  // SalesInvoiceList reads "activeInvoiceTemplate" to render invoices with this template
   const handleSaved = (t: SavedTemplate) => {
     setSavedTemplates((prev) => {
       const exists = prev.find((x) => x.id === t.id);
-      const updated = exists ? prev.map((x) => (x.id === t.id ? t : x)) : [t, ...prev];
-      persistTemplates(updated, t);   // ← writes localStorage("savedInvoiceTemplates") + localStorage("activeInvoiceTemplate")
-      return updated;
+      return exists ? prev.map((x) => (x.id === t.id ? t : x)) : [t, ...prev];
     });
     setView("home");
   };
