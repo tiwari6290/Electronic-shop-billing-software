@@ -1,6 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate, Outlet } from "react-router-dom";
-import ProtectedRoute from "./components/ProtectedRoute";
-
+import { BrowserRouter, Routes, Route, Navigate, Outlet, useNavigate, useParams, useLocation } from "react-router-dom";
 import Login from "@/components/Login/Login";
 
 /* --- Your existing imports remain SAME --- */
@@ -8,7 +6,6 @@ import Sidebar from "./components/Cashier/Sidebar";
 import AdminSidebar from "./components/Admin/AdminSidebar/AdminSidebar";
 import Navbar from "./components/Cashier/Navbar";
 import Createparty from "./components/Cashier/Createparty";
-import CreateQuotation from "./components/Cashier/CreateQuotation";
 import CreateItem from "./components/Cashier/CreateItem/CreateItem";
 import SalesReturn from "./components/Cashier/SalesReturn";
 import ProformaInvoice from "./components/Cashier/ProformaInvoice";
@@ -17,12 +14,12 @@ import CreateDebitNote from "./components/Cashier/CreateDebitNote/CreateDebitNot
 import CreatePurchaseReturn from "./components/Cashier/CreatePurchaseReturn/CreatePurchaseReturn";
 import PaymentOut from "./components/Cashier/PaymentOut/PaymentOut";
 import PaymentIn from "./components/Cashier/PaymentIn/PaymentIn";
+import PaymentInView from "./components/Cashier/PaymentIn/Paymentinview";
 import CreateCreditNote from "./components/Cashier/CreateCreditNote/CreateCreditNote";
 import DeliveryChallan from "./components/Cashier/DeliveryChallan/DeliveryChallan";
 import PurchaseOrder from "./components/Cashier/PurchaseOrder/PurchaseOrder";
 import Createexpense from "./components/Cashier/Createexpense";
-import Salesinvoice from "./components/Cashier/Salesinvoice";
-
+// NOTE: Old Salesinvoice import REMOVED — replaced by new components below
 import AdminSettingSidebar from "./components/Admin/AdminSettingSidebar";
 import ManageBusiness from "./components/Admin/ManageBuisness";
 import Account from "./components/Admin/Account/Account";
@@ -40,42 +37,71 @@ import SMSPromotion from "./components/Admin/Smspromotion/Smspromotion";
 import AccountantSidebar from "./components/Accountant/Sidebar";
 import CashBank from "./components/Accountant/Cashbank/Cashbank";
 import Expenses from "./components/Accountant/Expenses/Expenses";
-import Invoicing from "./components/Accountant/E-Invoicing/Invoicing";
 import Billing from "./components/Cashier/POS Billing/Billing";
-/*import Bills from "./components/Accountant/Automatedbills/Bills";*/
 import PaymentInList from "./components/Cashier/PaymentIn/PaymentInList";
 import PaymentOutList from "./components/Cashier/PaymentOut/PaymentOutList";
 import Reports from "./components/Admin/Reports/Reports";
 import ReceivableAgeingReport from "./components/Admin/Reports/ReceivableAgeingReport";
-/*import PurchaseOrderList from "./components/Cashier/PurchaseOrder/PurchaseOrderList";*/
 import PurchaseOrdersPage from "./components/Cashier/PurchaseOrder/Purchaseorderspage";
 import Parties from "./components/Cashier/Parties/Parties";
 import PartyDetails from "./components/Cashier/Parties/PartyDetails";
+import PartyLedger from "./components/Cashier/Parties/PartyLedger";
+import QuotationEstimate from "./components/Cashier/Quotationestimate/Quotationestimate";
 
+// ── NEW: Sales Invoice components ─────────────────────────────────────────────
+import SalesInvoiceList   from "./components/Cashier/Salesinvoices/SalesInvoiceList";
+import CreateSalesInvoice from "./components/Cashier/Salesinvoices/CreateSalesInvoice";
+import Inventory from "./components/Cashier/Inventory/Inventory";
+import Godown from "./components/Cashier/Godown/Godown";
 
-
-/* Dummy pages (replace later with real pages) */
-
-import AutomatedBills from "./components/Accountant/Automatedbills/automatedbills";
-/* Dummy Pages */
+/* Dummy pages */
 const Page = ({ title }: { title: string }) => (
   <div style={{ padding: 30, fontSize: 22, fontWeight: 600 }}>{title}</div>
 );
-
 const AdminDashboard = () => (
   <div style={{ padding: 30 }}>
-    <h1>Admin Dashboard</h1>
+    <h1 style={{ fontSize: 28, fontWeight: 600, marginBottom: 20 }}>Admin Dashboard</h1>
+    <p style={{ fontSize: 16, color: "#6b7280" }}>Welcome to Admin Panel</p>
   </div>
 );
 
 const AccountantDashboard = () => (
   <div style={{ padding: 30 }}>
-    <h1>Accountant Dashboard</h1>
+    <h1 style={{ fontSize: 28, fontWeight: 600, marginBottom: 20 }}>Accountant Dashboard</h1>
+    <p style={{ fontSize: 16, color: "#6b7280" }}>Welcome to Accountant Panel</p>
   </div>
 );
 
-/* Layouts */
+// ── Wrappers: inject useNavigate + useParams into CreateSalesInvoice ──────────
 
+/** Route: /cashier/sales-invoice  →  Create new invoice (optionally pre-filled from quotation) */
+function CreateSalesInvoiceNew() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const fromQuotation = location.state?.fromQuotation ?? null;
+  return (
+    <CreateSalesInvoice
+      fromQuotation={fromQuotation}
+      onBack={() => navigate("/cashier/sales-invoicses-list")}
+      onSaveAndNew={() => navigate("/cashier/sales-invoice")}
+    />
+  );
+}
+
+/** Route: /cashier/sales-invoice/edit/:id  →  Edit existing invoice */
+function EditSalesInvoice() {
+  const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
+  return (
+    <CreateSalesInvoice
+      editId={id}
+      onBack={() => navigate("/cashier/sales-invoicses-list")}
+      onSaveAndNew={() => navigate("/cashier/sales-invoice")}
+    />
+  );
+}
+
+/* ── Layouts ─────────────────────────────────────────────────────────────────── */
 const CashierLayout = () => (
   <div style={{ display: "flex", height: "100vh" }}>
     <Sidebar />
@@ -112,6 +138,7 @@ const AccountantLayout = () => (
   </div>
 );
 
+/* ── App ─────────────────────────────────────────────────────────────────────── */
 function App() {
   return (
     <BrowserRouter>
@@ -120,95 +147,92 @@ function App() {
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<Login />} />
 
-        {/* 🔒 CASHIER */}
-        <Route
-          path="/cashier"
-          element={
-            <ProtectedRoute allowedRole="Cashier">
-              <CashierLayout />
-            </ProtectedRoute>
-          }
-        >
-          <Route index element={<Navigate to="create-party" replace />} />
+        {/* ── Cashier ─────────────────────────────────────────────── */}
+        <Route path="/cashier" element={<CashierLayout />}>
+          <Route index element={<Navigate to="/cashier/create-party" replace />} />
+          <Route path="navbar"              element={<Navbar title="Dashboard" />} />
+          <Route path="create-party"        element={<Createparty />} />
+          <Route path="create-item"         element={<CreateItem />} />
+          <Route path="POS-billing"         element={<Billing />} />
+          <Route path="parties"             element={<Parties />} />
+          <Route path="party/:id"           element={<PartyDetails />} />
+          <Route path="party-ledger/:id"    element={<PartyLedger />} />
+
+          {/* ── Payment In — 3 routes ────────────────────────────── */}
+          <Route path="payment-in"               element={<PaymentIn />} />
+          <Route path="payment-in-list"          element={<PaymentInList />} />
+         <Route path="payment-in-view/:id"      element={<PaymentInView />} /> 
           <Route path="create-party" element={<Createparty />} />
           <Route path="create-item" element={<CreateItem />} />
+          <Route path="/cashier/create-item/inventory" element ={<Inventory />} />
+          <Route path="/cashier/create-item/godown" element ={<Godown />} />
           <Route path="POS-billing" element ={<Billing />}/>
           <Route path="parties" element ={<Parties/>}/>
           <Route path="party/:id" element={<PartyDetails />} />
 
-          <Route path="quotation" element={<CreateQuotation />} />
-          <Route path="payment-in" element={<PaymentIn />} />
-          <Route path="payment-in-list" element={<PaymentInList/>}/>
-          <Route path="sales-return" element={<SalesReturn/>} /> 
-          <Route path="sales-return" element={<SalesReturn />} />
-          <Route path="credit-note" element={<CreateCreditNote />} />
-          <Route path="delivery-challan" element={<DeliveryChallan />} />
-          <Route path="proforma-invoice" element={<ProformaInvoice />} />
-          <Route path="purchase" element={<Purchases />} />
-          <Route path="payment-out" element={<PaymentOut />} />
-          <Route path="payment-out-list" element={<PaymentOutList/>}/>
-          <Route path="purchase-return" element={<CreatePurchaseReturn/>} />
-          <Route path="purchase-return" element={<CreatePurchaseReturn />} />
-          <Route path="debit-note" element={<CreateDebitNote />} />
-           <Route path="purchase-orders-form" element={<PurchaseOrder />} />
-          {/*<Route path="purchase-orders-list" element={<PurchaseOrderList />} /> */}
-          <Route path="purchase-orders" element={<PurchaseOrdersPage />} />
+          <Route path="sales-return"        element={<SalesReturn />} />
+          <Route path="credit-note"         element={<CreateCreditNote />} />
+          <Route path="delivery-challan"    element={<DeliveryChallan />} />
+          <Route path="proforma-invoice"    element={<ProformaInvoice />} />
+          <Route path="purchase"            element={<Purchases />} />
+          <Route path="payment-out"         element={<PaymentOut />} />
+          <Route path="payment-out-list"    element={<PaymentOutList />} />
+          <Route path="purchase-return"     element={<CreatePurchaseReturn />} />
+          <Route path="debit-note"          element={<CreateDebitNote />} />
+          <Route path="purchase-orders-form" element={<PurchaseOrder />} />
+          <Route path="purchase-orders"     element={<PurchaseOrdersPage />} />
+          <Route path="quotation-estimate"  element={<QuotationEstimate />} />
+          <Route path="create-expense"      element={<Createexpense />} />
 
-          <Route path="create-expense" element={<Createexpense />} />
-          <Route path="sales-invoice" element={<Salesinvoice />} />
+          {/* ── Sales Invoice — 3 routes ─────────────────────────── */}
+          <Route path="sales-invoicses-list"    element={<SalesInvoiceList />} />
+          <Route path="sales-invoice"           element={<CreateSalesInvoiceNew />} />
+          <Route path="sales-invoice/edit/:id"  element={<EditSalesInvoice />} />
+
         </Route>
 
-        {/* Admin Routes with Admin Sidebar and Navbar */}
-        {/* ADMIN ROUTES */}
-            <Route path="/admin" element={<Outlet />}>
-
-              {/* 🔹 Normal Admin Section */}
-              <Route element={<AdminMainLayout />}>
-                <Route index element={<Navigate to="/cashier/dashboard" replace />} />
-                <Route path="dashboard" element={<AdminDashboard />} />
-                <Route path="manage-users" element={<ManageUsers />} /> 
-                <Route path="staff-attendence" element={<StaffAttendance />} /> 
-                <Route path="online-orders" element={<Onlineorders />} /> 
-                <Route path="sms-marketing" element={<SMSPromotion />} /> 
-                <Route path="reports" element={<Reports />} />
-                <Route path="receivable-ageing" element={<ReceivableAgeingReport />} />
-              </Route>
-
-              {/* 🔹 Settings Section */}
-              <Route path="settings" element={<AdminSettingsLayout />}>
-                <Route index element={<Navigate to="account" replace />} />
-                <Route path="account" element={<Account />} />
-                <Route path="manage-business" element={<ManageBusiness />} />
-                <Route path="invoice-settings" element={<InvoiceBuilder />} />
-                <Route path="print-settings" element={<PrintSetting />} />
-                <Route path="manage-users" element={<ManageUsers />} />
-                <Route path="reminders" element={<ReminderSetting />} />
-                <Route path="ca-reports" element={<Reportsharing />} />
-                <Route path="pricing" element={<Pricing />} />
-                <Route path="refer-earn" element={<ReferralPage />} />
-              </Route>
-
+        {/* ── Admin ─────────────────────────────────────────────────── */}
+        <Route path="/admin" element={<Outlet />}>
+          <Route element={<AdminMainLayout />}>
+            <Route index element={<Navigate to="/cashier/dashboard" replace />} />
+            <Route path="dashboard"         element={<AdminDashboard />} />
+            <Route path="manage-users"      element={<ManageUsers />} />
+            <Route path="staff-attendence"  element={<StaffAttendance />} />
+            <Route path="online-orders"     element={<Onlineorders />} />
+            <Route path="sms-marketing"     element={<SMSPromotion />} />
+            <Route path="reports"           element={<Reports />} />
+            <Route path="receivable-ageing" element={<ReceivableAgeingReport />} />
           </Route>
-
-          
-
-        {/* 🔒 ACCOUNTANT */}
-        <Route
-          path="/accountant"
-          element={
-            <ProtectedRoute allowedRole="Accountant">
-              <AccountantLayout />
-            </ProtectedRoute>
-          }
-        >
-          <Route index element={<Navigate to="dashboard" replace />} />
-          <Route path="dashboard" element={<AccountantDashboard />} />
-          <Route path="cash-bank" element={<CashBank />} />
-          <Route path="e-invoicing" element={<Invoicing />} />
-          <Route path="automated-bills" element={<AutomatedBills />} />
-          <Route path="expenses" element={<Expenses />} />
+          <Route path="settings" element={<AdminSettingsLayout />}>
+            <Route index element={<Navigate to="account" replace />} />
+            <Route path="account"           element={<Account />} />
+            <Route path="manage-business"   element={<ManageBusiness />} />
+            <Route path="invoice-settings"  element={<InvoiceBuilder />} />
+            <Route path="print-settings"    element={<PrintSetting />} />
+            <Route path="manage-users"      element={<ManageUsers />} />
+            <Route path="reminders"         element={<ReminderSetting />} />
+            <Route path="ca-reports"        element={<Reportsharing />} />
+            <Route path="pricing"           element={<Pricing />} />
+            <Route path="refer-earn"        element={<ReferralPage />} />
+          </Route>
         </Route>
 
+        {/* ── Accountant ─────────────────────────────────────────────── */}
+        <Route path="/accountant" element={<AccountantLayout />}>
+          <Route index element={<Navigate to="/accountant/dashboard" replace />} />
+          <Route path="dashboard"       element={<AccountantDashboard />} />
+          <Route path="cash-bank"       element={<CashBank />} />
+          <Route path="e-invoicing"     element={<Page title="E-Invoicing" />} />
+          <Route path="automated-bills" element={<Page title="Automated Bills" />} />
+          <Route path="expenses"        element={<Expenses />} />
+        </Route>
+
+        {/* Legacy redirects */}
+        <Route path="/dashboard"    element={<Navigate to="/cashier/dashboard" replace />} />
+        <Route path="/create-party" element={<Navigate to="/cashier/create-party" replace />} />
+        <Route path="/create-item"  element={<Navigate to="/cashier/create-item" replace />} />
+
+        {/* Catch-all → login */}
         <Route path="*" element={<Navigate to="/login" replace />} />
 
       </Routes>

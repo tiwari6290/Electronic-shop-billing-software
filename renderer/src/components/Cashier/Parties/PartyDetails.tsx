@@ -11,6 +11,7 @@ import {
 import "./PartyDetails.css";
 import PartyProfile from "./PartyProfile";
 import PartyItemWiseReport from "./PartyItemWiseReport";
+import PartyLedger from "./PartyLedger";
 import axios from "axios";
 interface Party {
   id: number;
@@ -226,155 +227,172 @@ useEffect(() => {
             Profile
           </div>
 
-          <div>Ledger (Statement)</div>
           <div
-  className={activeTab === "ItemWise" ? "active-tab" : ""}
-  onClick={() => setActiveTab("ItemWise")}
->
-  Item Wise Report
-</div>
+            className={activeTab === "Ledger" ? "active-tab" : ""}
+            onClick={() => setActiveTab("Ledger")}
+          >
+            Ledger (Statement)
+          </div>
+          <div
+            className={activeTab === "ItemWise" ? "active-tab" : ""}
+            onClick={() => setActiveTab("ItemWise")}
+          >
+            Item Wise Report
+          </div>
         </div>
 
         {/* Filters */}
         {/* Filters - ONLY for Transactions */}
-{activeTab === "Transactions" && (
-  <div className="filter-row">
-    {/* DATE FILTER */}
-    <div className="filter-dropdown">
-      <button onClick={() => setShowDateDropdown(!showDateDropdown)}>
-        {dateFilter} <ChevronDown size={16} />
-      </button>
+        {activeTab === "Transactions" && (
+          <div className="filter-row">
+            {/* DATE FILTER */}
+            <div className="filter-dropdown">
+              <button onClick={() => setShowDateDropdown(!showDateDropdown)}>
+                {dateFilter} <ChevronDown size={16} />
+              </button>
 
-      {showDateDropdown && (
-        <div className="dropdown-menu">
-          {[
-            "Today",
-            "Yesterday",
-            "This Week",
-            "Last Week",
-            "Last 7 Days",
-            "This Month",
-            "Previous Month",
-            "Last 30 Days",
-            "This Quarter",
-            "Previous Quarter",
-            "Current Fiscal Year",
-            "Previous Fiscal Year",
-            "Last 365 Days",
-          ].map((item) => (
-            <div
-              key={item}
-              onClick={() => {
-                setDateFilter(item);
-                setShowDateDropdown(false);
-              }}
-            >
-              {item}
+              {showDateDropdown && (
+                <div className="dropdown-menu">
+                  {[
+                    "Today",
+                    "Yesterday",
+                    "This Week",
+                    "Last Week",
+                    "Last 7 Days",
+                    "This Month",
+                    "Previous Month",
+                    "Last 30 Days",
+                    "This Quarter",
+                    "Previous Quarter",
+                    "Current Fiscal Year",
+                    "Previous Fiscal Year",
+                    "Last 365 Days",
+                  ].map((item) => (
+                    <div
+                      key={item}
+                      onClick={() => {
+                        setDateFilter(item);
+                        setShowDateDropdown(false);
+                      }}
+                    >
+                      {item}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-          ))}
-        </div>
-      )}
-    </div>
 
-    {/* TYPE FILTER */}
-    <div className="filter-dropdown">
-      <button onClick={() => setShowTypeDropdown(!showTypeDropdown)}>
-        {typeFilter} <ChevronDown size={16} />
-      </button>
+            {/* TYPE FILTER */}
+            <div className="filter-dropdown">
+              <button onClick={() => setShowTypeDropdown(!showTypeDropdown)}>
+                {typeFilter} <ChevronDown size={16} />
+              </button>
 
-      {showTypeDropdown && (
-        <div className="dropdown-menu">
-          {[
-            "All Transactions",
-            "Purchase",
-            "Payment In",
-            "Payment Out",
-            "Quotation",
-            "Sales Return",
-            "Purchase Return",
-            "Credit Note",
-            "Debit Note",
-          ].map((item) => (
-            <div
-              key={item}
-              onClick={() => {
-                setTypeFilter(item);
-                setShowTypeDropdown(false);
-              }}
-            >
-              {item}
+              {showTypeDropdown && (
+                <div className="dropdown-menu">
+                  {[
+                    "All Transactions",
+                    "Purchase",
+                    "Payment In",
+                    "Payment Out",
+                    "Quotation",
+                    "Sales Return",
+                    "Purchase Return",
+                    "Credit Note",
+                    "Debit Note",
+                  ].map((item) => (
+                    <div
+                      key={item}
+                      onClick={() => {
+                        setTypeFilter(item);
+                        setShowTypeDropdown(false);
+                      }}
+                    >
+                      {item}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-          ))}
-        </div>
-      )}
-    </div>
 
-    {/* STATUS FILTER */}
-    <div className="filter-dropdown">
-      <button onClick={() => setShowStatusDropdown(!showStatusDropdown)}>
-        {statusFilter} <ChevronDown size={16} />
-      </button>
+            {/* STATUS FILTER */}
+            <div className="filter-dropdown">
+              <button
+                onClick={() => setShowStatusDropdown(!showStatusDropdown)}
+              >
+                {statusFilter} <ChevronDown size={16} />
+              </button>
 
-      {showStatusDropdown && (
-        <div className="dropdown-menu">
-          {["All", "Paid", "Unpaid", "Overdue", "Cancelled"].map((item) => (
-            <div
-              key={item}
-              onClick={() => {
-                setStatusFilter(item);
-                setShowStatusDropdown(false);
-              }}
-            >
-              {item}
+              {showStatusDropdown && (
+                <div className="dropdown-menu">
+                  {["All", "Paid", "Unpaid", "Overdue", "Cancelled"].map(
+                    (item) => (
+                      <div
+                        key={item}
+                        onClick={() => {
+                          setStatusFilter(item);
+                          setShowStatusDropdown(false);
+                        }}
+                      >
+                        {item}
+                      </div>
+                    ),
+                  )}
+                </div>
+              )}
             </div>
-          ))}
-        </div>
-      )}
-    </div>
-  </div>
-)}
+          </div>
+        )}
 
         {/* Table */}
+        {/* Transactions */}
         {activeTab === "Transactions" && (
-        <div className="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Transaction Type</th>
-                <th>Transaction Number</th>
-                <th>Amount</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {filteredTransactions.map((txn) => (
-                <tr key={txn.id}>
-                  <td>{txn.date}</td>
-                  <td>{txn.type}</td>
-                  <td>{txn.number}</td>
-                  <td>₹ {txn.amount.toLocaleString()}</td>
-                  <td>
-                    <span
-                      className={
-                        txn.status === "Paid"
-                          ? "status-paid"
-                          : txn.status === "Partial Paid"
-                            ? "status-partial"
-                            : "status-unpaid"
-                      }
-                    >
-                      {txn.status}
-                    </span>
-                  </td>
+          <div className="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Transaction Type</th>
+                  <th>Transaction Number</th>
+                  <th>Amount</th>
+                  <th>Status</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+
+              <tbody>
+                {filteredTransactions.map((txn) => (
+                  <tr key={txn.id}>
+                    <td>{txn.date}</td>
+                    <td>{txn.type}</td>
+                    <td>{txn.number}</td>
+                    <td>₹ {txn.amount.toLocaleString()}</td>
+                    <td>
+                      <span
+                        className={
+                          txn.status === "Paid"
+                            ? "status-paid"
+                            : txn.status === "Partial Paid"
+                              ? "status-partial"
+                              : "status-unpaid"
+                        }
+                      >
+                        {txn.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
+
+        {/* Profile */}
         {activeTab === "Profile" && <PartyProfile />}
+
+        {/* Ledger */}
+        {activeTab === "Ledger" && <PartyLedger />}
+
+        {/* Item Wise */}
         {activeTab === "ItemWise" && <PartyItemWiseReport />}
       </div>
     </div>
