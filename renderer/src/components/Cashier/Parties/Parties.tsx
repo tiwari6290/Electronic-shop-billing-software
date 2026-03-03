@@ -304,15 +304,7 @@ const Parties: React.FC = () => {
                 onClick={() => navigate(`/cashier/party/${party.id}`)}
                 style={{ cursor: "pointer" }}
               >
-                <td
-  style={{ color: "#4f46e5", fontWeight: 500 }}
-  onClick={(e) => {
-    e.stopPropagation(); // 👈 THIS WAS MISSING
-    navigate(`/cashier/party-ledger/${party.id}`);
-  }}
->
-  {party.name}
-</td>
+                <td>{party.name}</td>
                 <td>{party.category}</td>
                 <td>{party.mobile}</td>
                 <td>{party.type}</td>
