@@ -1,66 +1,191 @@
 .ledger-container {
-  padding: 24px;
+  padding: 20px;
   background: #f8f9fb;
-  min-height: 100vh;
+  min-height: 100%;
+  font-family: "Inter", sans-serif;
 }
 
+/* ── Top Bar ──────────────────────────── */
 .ledger-top {
   display: flex;
+  justify-content: space-between;
   align-items: center;
   gap: 12px;
   margin-bottom: 20px;
 }
 
-.back-btn {
-  background: none;
-  border: none;
-  font-size: 20px;
+.ledger-left-controls { display: flex; align-items: center; gap: 10px; }
+.ledger-right-controls { display: flex; align-items: center; gap: 10px; }
+
+.ledger-date-wrap { position: relative; }
+
+.ledger-date-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: #ffffff;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #374151;
   cursor: pointer;
+  transition: border-color 0.15s;
+  min-width: 180px;
+  justify-content: space-between;
+}
+.ledger-date-btn:hover { border-color: #4f46e5; }
+
+.ledger-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 220px;
+  background: #ffffff;
+  border-radius: 8px;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.10);
+  border: 1px solid #e4e7ec;
+  max-height: 280px;
+  overflow-y: auto;
+  z-index: 200;
+}
+.ledger-dropdown div {
+  padding: 10px 14px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #374151;
+  transition: background 0.12s;
+}
+.ledger-dropdown div:hover { background: #f3f4f6; }
+.ledger-dropdown div.selected { background: #f0eeff; color: #4f46e5; font-weight: 600; }
+
+.share-dropdown { right: 0; left: auto; }
+
+.ledger-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 14px;
+  background: #ffffff;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.ledger-action-btn:hover { background: #f3f4f6; }
+.ledger-action-btn.primary {
+  background: #4f46e5;
+  color: #ffffff;
+  border-color: #4f46e5;
+}
+.ledger-action-btn.primary:hover { background: #4338ca; }
+
+/* ── Ledger Card (Document) ───────────── */
+.ledger-card {
+  background: #ffffff;
+  border-radius: 10px;
+  border: 1px solid #e4e7ec;
+  overflow: hidden;
 }
 
 .ledger-summary {
   display: flex;
   justify-content: space-between;
-  background: white;
-  padding: 20px;
-  border-radius: 8px;
-  margin-bottom: 20px;
+  align-items: flex-start;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e4e7ec;
 }
 
-.ledger-company {
-  font-weight: 600;
-  font-size: 18px;
-}
+.ledger-company { font-weight: 600; font-size: 18px; }
+.ledger-company p { margin: 0 0 4px 0; }
+.ledger-company .company-name { font-size: 17px; font-weight: 700; color: #111827; }
+.ledger-company .company-phone { font-size: 13px; color: #667085; font-weight: 400; }
 
-.ledger-total-box {
-  text-align: right;
-  border: 1px solid #e5e7eb;
-  padding: 12px 20px;
+.ledger-title-box {
+  font-size: 16px;
+  font-weight: 700;
+  color: #374151;
+  padding: 8px 16px;
+  border: 1px solid #e4e7ec;
   border-radius: 6px;
 }
 
-.ledger-total-box h3 {
-  margin-top: 6px;
+.ledger-doc-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid #f0f0f0;
 }
 
-.ledger-table-wrapper {
-  background: white;
+.ledger-company-info .company-name  { font-size: 17px; font-weight: 700; color: #111827; margin: 0 0 3px 0; }
+.ledger-company-info .company-phone { font-size: 13px; color: #667085; margin: 0; }
+
+.ledger-party-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 16px 24px 20px;
+  border-bottom: 1px solid #e4e7ec;
+}
+
+.ledger-to .to-label { font-size: 13px; color: #9ca3af; margin: 0 0 3px 0; }
+.ledger-to .to-name  { font-size: 16px; font-weight: 600; color: #111827; margin: 0 0 2px 0; }
+.ledger-to .to-phone { font-size: 13px; color: #667085; margin: 0; }
+
+.ledger-summary-box {
+  border: 1px solid #e4e7ec;
   border-radius: 8px;
-  overflow: hidden;
+  padding: 12px 18px;
+  min-width: 220px;
+  text-align: right;
 }
+.summary-date-range { font-size: 13px; color: #667085; margin-bottom: 8px; }
+.summary-divider { border-top: 1px solid #e4e7ec; margin: 8px 0; }
+.summary-total-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+}
+.summary-total-value { color: #4f46e5; }
 
-.ledger-table {
-  width: 100%;
-  border-collapse: collapse;
-}
+/* ── Ledger Table ─────────────────────── */
+.ledger-table-wrapper { overflow-x: auto; }
+
+.ledger-table { width: 100%; border-collapse: collapse; }
 
 .ledger-table th {
-  background: #f1f3f5;
-  padding: 12px;
+  background: #f2f4f7;
+  padding: 12px 14px;
   text-align: left;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #344054;
+  border-bottom: 1px solid #eaecf0;
 }
 
 .ledger-table td {
-  padding: 12px;
-  border-bottom: 1px solid #eee;
+  padding: 12px 14px;
+  font-size: 13.5px;
+  color: #374151;
+  border-bottom: 1px solid #eaecf0;
+}
+
+.ledger-table .opening-row td,
+.ledger-table .closing-row td {
+  background: #f9fafb;
+  font-weight: 600;
+  color: #111827;
+}
+
+.no-ledger { text-align: center; padding: 40px; color: #9ca3af; font-size: 14px; }
+
+/* Print */
+@media print {
+  .ledger-top { display: none; }
 }

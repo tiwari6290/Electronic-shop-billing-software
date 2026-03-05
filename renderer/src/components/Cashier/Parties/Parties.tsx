@@ -1,13 +1,9 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useEffect } from "react";
 import {
-  Search,
-  ChevronDown,
-  Settings,
-  MoreVertical,
-  FileText,
-  Layers,
+  Search, ChevronDown, Settings, MoreVertical, FileText,
+  Layers, Users, TrendingDown, TrendingUp, Edit2, Trash2,
+  Link2, MessageSquare, X,
 } from "lucide-react";
 import "./Parties.css";
 import axios from "axios";
@@ -21,245 +17,163 @@ interface Party {
   balance: number;
 }
 
-/*const partyData: Party[] = [
-  {
-    id: 1,
-    name: "anando",
-    category: "-",
-    mobile: "0987643211",
-    type: "Customer",
-    balance: 82000,
-  },
-  {
-    id: 2,
-    name: "Cash Sale",
-    category: "-",
-    mobile: "9555780835",
-    type: "Customer",
-    balance: 0,
-  },
-  {
-    id: 3,
-    name: "eghwh",
-    category: "Appliance",
-    mobile: "7621583903",
-    type: "Supplier",
-    balance: -15000,
-  },
-  {
-    id: 4,
-    name: "MONDAL ELECTRONIC",
-    category: "-",
-    mobile: "7003236738",
-    type: "Customer",
-    balance: 0,
-  },
-  {
-    id: 5,
-    name: "ranjan",
-    category: "-",
-    mobile: "-",
-    type: "Customer",
-    balance: 22400,
-  },
-];*/
-
 const Parties: React.FC = () => {
   const navigate = useNavigate();
   const [filter, setFilter] = useState<"all" | "collect" | "pay">("all");
   const [parties, setParties] = useState<Party[]>([]);
   const [activeMenu, setActiveMenu] = useState<number | null>(null);
   const [deletePartyId, setDeletePartyId] = useState<number | null>(null);
-  const [categories, setCategories] = useState<string[]>(["Appliance"]);
-
+  const [categories, setCategories] = useState<string[]>(() => {
+    const saved = localStorage.getItem("categories");
+    return saved ? JSON.parse(saved) : ["Appliance"];
+  });
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
-
   const [showDropdown, setShowDropdown] = useState(false);
-
-  const [showModal, setShowModal] = useState(false);
-
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [newCategory, setNewCategory] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const categoryCount = (cat: string) =>
-    parties.filter((p) => p.category === cat).length;
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node))
+        setShowDropdown(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  useEffect(() => {
+    const handler = () => setActiveMenu(null);
+    document.addEventListener("click", handler);
+    return () => document.removeEventListener("click", handler);
+  }, []);
+
+  const categoryCount = (cat: string) => parties.filter((p) => p.category === cat).length;
+
   const handleAddCategory = () => {
     if (!newCategory.trim()) return;
-
     if (!categories.includes(newCategory)) {
       const updated = [...categories, newCategory];
-
       setCategories(updated);
       localStorage.setItem("categories", JSON.stringify(updated));
     }
-
     setNewCategory("");
-    setShowModal(false);
+    setShowCategoryModal(false);
+  };
+
+  const handleDeleteParty = async () => {
+    if (!deletePartyId) return;
+    try {
+      await axios.delete(`http://localhost:4000/api/parties/${deletePartyId}`);
+      setParties((prev) => prev.filter((p) => p.id !== deletePartyId));
+      setDeletePartyId(null);
+      setShowDeleteModal(false);
+    } catch (error) {
+      console.error("Error deleting party:", error);
+    }
   };
 
   useEffect(() => {
-  const fetchParties = async () => {
-    try {
-      const res = await axios.get("http://localhost:4000/api/parties");
+    const fetchParties = async () => {
+      try {
+        const res = await axios.get("http://localhost:4000/api/parties");
+        const formatted = res.data.data.map((p: any) => ({
+          id: p.id,
+          name: p.partyName,
+          category: p.partyCategory || "-",
+          mobile: p.mobileNumber || "-",
+          type: p.partyType,
+          balance:
+            p.openingBalanceType === "To_Collect"
+              ? Number(p.openingBalance)
+              : -Number(p.openingBalance),
+        }));
+        setParties(formatted);
+      } catch (error) {
+        console.error("Error fetching parties:", error);
+      }
+    };
+    fetchParties();
+  }, []);
 
-      const formatted = res.data.data.map((p: any) => ({
-        id: p.id,
-        name: p.partyName,
-        category: p.partyCategory || "-",
-        mobile: p.mobileNumber || "-",
-        type: p.partyType,
-        balance:
-          p.openingBalanceType === "To_Collect"
-            ? Number(p.openingBalance)
-            : -Number(p.openingBalance),
-      }));
-
-      setParties(formatted);
-    } catch (error) {
-      console.error("Error fetching parties:", error);
-    }
-  };
-
-  fetchParties();
-}, []);
-  // Filter Logic
   const filteredParties = useMemo(() => {
-    let filtered = parties;
-
-    // Balance Filter
-    if (filter === "collect") {
-      filtered = filtered.filter((p) => p.balance > 0);
-    } else if (filter === "pay") {
-      filtered = filtered.filter((p) => p.balance < 0);
-    }
-
-    // Category Filter
-    if (selectedCategory !== "All") {
-      filtered = filtered.filter((p) => p.category === selectedCategory);
-    }
-    // Search by Name
-    if (searchTerm.trim() !== "") {
-      filtered = filtered.filter((p) =>
-        p.name.toLowerCase().includes(searchTerm.toLowerCase()),
-      );
-    }
-
-    return filtered;
+    let f = parties;
+    if (filter === "collect") f = f.filter((p) => p.balance > 0);
+    else if (filter === "pay") f = f.filter((p) => p.balance < 0);
+    if (selectedCategory !== "All") f = f.filter((p) => p.category === selectedCategory);
+    if (searchTerm.trim()) f = f.filter((p) => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
+    return f;
   }, [filter, selectedCategory, searchTerm, parties]);
 
-  // Calculate Totals
-  const totalCollect = parties
-    .filter((p) => p.balance > 0)
-    .reduce((acc, curr) => acc + curr.balance, 0);
-
-  const totalPay = parties
-    .filter((p) => p.balance < 0)
-    .reduce((acc, curr) => acc + Math.abs(curr.balance), 0);
+  const totalCollect = parties.filter((p) => p.balance > 0).reduce((a, c) => a + c.balance, 0);
+  const totalPay = parties.filter((p) => p.balance < 0).reduce((a, c) => a + Math.abs(c.balance), 0);
 
   return (
     <div className="parties-container">
+
       {/* Header */}
       <div className="parties-header">
         <h2>Parties</h2>
-
         <div className="header-right">
           <button className="outline-btn">
-            <FileText size={16} />
-            Reports
-            <ChevronDown size={16} />
+            <Link2 size={15} /> SharedLedger Portal
           </button>
-
-          <button className="icon-btn">
-            <Settings size={18} />
+          <button className="outline-btn">
+            <FileText size={15} /> Reports <ChevronDown size={14} />
           </button>
+          <button className="icon-btn"><Settings size={16} /></button>
+          <button className="icon-btn"><MessageSquare size={16} /></button>
         </div>
       </div>
 
       {/* Summary Cards */}
       <div className="summary-cards">
-        <div
-          className={`card ${filter === "all" ? "active-card" : ""}`}
-          onClick={() => setFilter("all")}
-        >
-          <p>All Parties</p>
+        <div className={`card ${filter === "all" ? "active-card" : ""}`} onClick={() => setFilter("all")}>
+          <p><Users size={15} /> All Parties</p>
           <h3>{parties.length}</h3>
         </div>
-
-        <div
-          className={`card ${filter === "collect" ? "active-card" : ""}`}
-          onClick={() => setFilter("collect")}
-        >
-          <p className="green-text">To Collect</p>
-          <h3>₹ {totalCollect.toLocaleString()}</h3>
+        <div className={`card ${filter === "collect" ? "active-card" : ""}`} onClick={() => setFilter("collect")}>
+          <p><TrendingDown size={15} className="green-text" /> To Collect</p>
+          <h3 className="green-text">&#8377; {totalCollect.toLocaleString("en-IN")}</h3>
         </div>
-
-        <div
-          className={`card ${filter === "pay" ? "active-card" : ""}`}
-          onClick={() => setFilter("pay")}
-        >
-          <p className="red-text">To Pay</p>
-          <h3>₹ {totalPay.toLocaleString()}</h3>
+        <div className={`card ${filter === "pay" ? "active-card" : ""}`} onClick={() => setFilter("pay")}>
+          <p><TrendingUp size={15} className="red-text" /> To Pay</p>
+          <h3 className="red-text">&#8377; {totalPay.toLocaleString("en-IN")}</h3>
         </div>
       </div>
 
-      {/* Search + Actions */}
+      {/* Actions Bar */}
       <div className="actions-bar">
         <div className="left-actions">
-          {/* 🔎 Search Party */}
-          <div className="search-partyy">
+          <div className="search-box">
+            <Search size={15} color="#9ca3af" />
             <input
               type="text"
               placeholder="Search Party"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
-            <Search className="aa" size={16} />
           </div>
-          <div className="category-wrapper">
-            <div
-              className="search-box"
-              onClick={() => setShowDropdown(!showDropdown)}
-            >
-              <span>
-                {selectedCategory === "All"
-                  ? "Search Categories"
-                  : selectedCategory}
-              </span>
-              <ChevronDown size={16} />
-            </div>
 
+          <div className="category-wrapper" ref={dropdownRef}>
+            <div className="category-trigger" onClick={() => setShowDropdown(!showDropdown)}>
+              <span>{selectedCategory === "All" ? "Search Categories" : selectedCategory}</span>
+              <ChevronDown size={14} />
+            </div>
             {showDropdown && (
               <div className="dropdown">
-                <div
-                  className="dropdown-item"
-                  onClick={() => {
-                    setSelectedCategory("All");
-                    setShowDropdown(false);
-                  }}
-                >
+                <div className="dropdown-item" onClick={() => { setSelectedCategory("All"); setShowDropdown(false); }}>
                   All ({parties.length})
                 </div>
-
                 {categories.map((cat) => (
-                  <div
-                    key={cat}
-                    className="dropdown-item"
-                    onClick={() => {
-                      setSelectedCategory(cat);
-                      setShowDropdown(false);
-                    }}
-                  >
-                    {cat} ({categoryCount(cat)})
+                  <div key={cat} className="dropdown-item" onClick={() => { setSelectedCategory(cat); setShowDropdown(false); }}>
+                    <span>{cat} ({categoryCount(cat)})</span>
+                    <Edit2 size={13} className="edit-cat-icon" />
                   </div>
                 ))}
-
-                <div
-                  className="create-category"
-                  onClick={() => {
-                    setShowModal(true);
-                    setShowDropdown(false);
-                  }}
-                >
+                <div className="create-category" onClick={() => { setShowCategoryModal(true); setShowDropdown(false); }}>
                   + Create Category
                 </div>
               </div>
@@ -269,15 +183,9 @@ const Parties: React.FC = () => {
 
         <div className="right-actions">
           <button className="outline-btn">
-            <Layers size={16} />
-            Bulk Action
-            <ChevronDown size={16} />
+            <Layers size={15} /> Bulk Action <ChevronDown size={14} />
           </button>
-
-          <button
-            className="primary-btn"
-            onClick={() => navigate("/create-party")}
-          >
+          <button className="primary-btn" onClick={() => navigate("/cashier/create-party")}>
             Create Party
           </button>
         </div>
@@ -288,134 +196,94 @@ const Parties: React.FC = () => {
         <table className="party-table">
           <thead>
             <tr>
-              <th>Party Name</th>
+              <th>Party Name &#8693;</th>
               <th>Category</th>
               <th>Mobile Number</th>
-              <th>Party Type</th>
-              <th>Balance</th>
+              <th>Party type</th>
+              <th>Balance &#8693;</th>
               <th></th>
             </tr>
           </thead>
-
           <tbody>
-            {filteredParties.map((party) => (
-              <tr
-                key={party.id}
-                onClick={() => navigate(`/cashier/party/${party.id}`)}
-                style={{ cursor: "pointer" }}
-              >
-                <td
-  style={{ color: "#4f46e5", fontWeight: 500 }}
-  onClick={(e) => {
-    e.stopPropagation(); // 👈 THIS WAS MISSING
-    navigate(`/cashier/party-ledger/${party.id}`);
-  }}
->
-  {party.name}
-</td>
-                <td>{party.category}</td>
-                <td>{party.mobile}</td>
-                <td>{party.type}</td>
-                <td>
-                  {party.balance > 0 && (
-                    <span className="balance-positive">
-                      ↓ ₹ {party.balance.toLocaleString()}
-                    </span>
-                  )}
-                  {party.balance < 0 && (
-                    <span className="balance-negative">
-                      ↑ ₹ {Math.abs(party.balance).toLocaleString()}
-                    </span>
-                  )}
-                  {party.balance === 0 && "₹ 0"}
-                </td>
-                <td style={{ position: "relative" }}>
-                  <MoreVertical
-                    size={18}
-                    className="menu-icon"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setActiveMenu(activeMenu === party.id ? null : party.id);
-                    }}
-                  />
-
-                  {activeMenu === party.id && (
-                    <div className="action-menu">
-                      <div
-                        className="action-item"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/cashier/create-party/${party.id}`);
-                        }}
-                      >
-                        Edit
+            {filteredParties.length === 0 ? (
+              <tr><td colSpan={6} className="no-data">No parties found</td></tr>
+            ) : (
+              filteredParties.map((party) => (
+                <tr key={party.id} className="party-row" onClick={() => navigate(`/cashier/party/${party.id}`)}>
+                  <td className="party-name-cell">{party.name}</td>
+                  <td>{party.category}</td>
+                  <td>{party.mobile}</td>
+                  <td>{party.type}</td>
+                  <td>
+                    {party.balance > 0 && (
+                      <span className="balance-positive">
+                        <TrendingDown size={13} /> &#8377; {party.balance.toLocaleString("en-IN")}
+                      </span>
+                    )}
+                    {party.balance < 0 && (
+                      <span className="balance-negative">
+                        <TrendingUp size={13} /> &#8377; {Math.abs(party.balance).toLocaleString("en-IN")}
+                      </span>
+                    )}
+                    {party.balance === 0 && <span>&#8377; 0</span>}
+                  </td>
+                  <td className="action-cell" onClick={(e) => e.stopPropagation()}>
+                    <MoreVertical size={17} className="menu-icon"
+                      onClick={(e) => { e.stopPropagation(); setActiveMenu(activeMenu === party.id ? null : party.id); }} />
+                    {activeMenu === party.id && (
+                      <div className="action-menu">
+                        <div className="action-item" onClick={() => navigate(`/cashier/create-party/${party.id}`)}>
+                          <Edit2 size={13} /> Edit
+                        </div>
+                        <div className="action-item delete" onClick={() => { setDeletePartyId(party.id); setShowDeleteModal(true); setActiveMenu(null); }}>
+                          <Trash2 size={13} /> Delete
+                        </div>
                       </div>
-
-                      <div
-                        className="action-item delete"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setDeletePartyId(party.id);
-                          setActiveMenu(null);
-                        }}
-                      >
-                        Delete
-                      </div>
-                    </div>
-                  )}
-                </td>
-              </tr>
-            ))}
+                    )}
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
-      {showModal && (
-        <div className="modal-overlay">
-          <div className="modal">
+
+      {/* Category Modal */}
+      {showCategoryModal && (
+        <div className="modal-overlay" onClick={() => setShowCategoryModal(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Create New Category</h3>
-              <button className="abcd" onClick={() => setShowModal(false)}>
-                X
-              </button>
+              <button className="modal-close" onClick={() => setShowCategoryModal(false)}><X size={16} /></button>
             </div>
-
             <div className="modal-body">
               <label>Category Name</label>
-              <input
-                type="text"
-                placeholder="Ex: Snacks"
-                value={newCategory}
+              <input type="text" placeholder="Ex: Snacks" value={newCategory}
                 onChange={(e) => setNewCategory(e.target.value)}
-              />
+                onKeyDown={(e) => e.key === "Enter" && handleAddCategory()} autoFocus />
             </div>
-
             <div className="modal-footer">
-              <button className="abc" onClick={() => setShowModal(false)}>
-                Cancel
-              </button>
-              <button
-                className="abc delete-btn"
-                onClick={async () => {
-                try {
-               await axios.delete(
-                `http://localhost:5000/api/parties/${deletePartyId}`
-               );
+              <button className="abcd" onClick={() => setShowCategoryModal(false)}>Cancel</button>
+              <button className="abc" onClick={handleAddCategory}>Add</button>
+            </div>
+          </div>
+        </div>
+      )}
 
-              setParties((prev) =>
-              prev.filter((p) => p.id !== deletePartyId)
-                  );
-
-                  setDeletePartyId(null);
-                } catch (error) {
-                  console.error("Error deleting party:", error);
-                }
-              }}    
-              >
-                Delete
-              </button>
-              <button className="abc" onClick={handleAddCategory}>
-                Add
-              </button>
+      {/* Delete Modal */}
+      {showDeleteModal && (
+        <div className="modal-overlay" onClick={() => setShowDeleteModal(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h3>Delete Party</h3>
+              <button className="modal-close" onClick={() => setShowDeleteModal(false)}><X size={16} /></button>
+            </div>
+            <div className="modal-body">
+              <p>Are you sure you want to delete this party? This action cannot be undone.</p>
+            </div>
+            <div className="modal-footer">
+              <button className="abcd" onClick={() => setShowDeleteModal(false)}>Cancel</button>
+              <button className="delete-btn" onClick={handleDeleteParty}>Delete</button>
             </div>
           </div>
         </div>

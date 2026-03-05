@@ -4,6 +4,7 @@ import { X, MessageSquare, FileText } from 'lucide-react';
 import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { useParams } from "react-router-dom";
+import axios from "axios";
 
 import { createParty } from "../../services/partyService";
 import type { CreatePartyPayload } from "../../services/partyService";
@@ -39,7 +40,7 @@ const [newCategoryName, setNewCategoryName] = useState("");
   const [showCustomFieldsView, setShowCustomFieldsView] = useState(false);
   const [showCreateCustomFieldModal, setShowCreateCustomFieldModal] = useState(false);
 
-  // Bank account data
+  // Bank account form (for modal)
   const [bankAccount, setBankAccount] = useState({
     accountNumber: '',
     reEnterAccountNumber: '',
@@ -48,6 +49,28 @@ const [newCategoryName, setNewCategoryName] = useState("");
     accountHolderName: '',
     upiId: ''
   });
+
+  // Bank accounts list (added/saved)
+  const [bankAccounts, setBankAccountsList] = useState<Array<{
+    id: number;
+    accountNumber: string;
+    ifscCode: string;
+    bankBranchName: string;
+    accountHolderName: string;
+    upiId: string;
+  }>>([]);
+  const [editingBankId, setEditingBankId] = useState<number | null>(null);
+
+  // Custom fields list
+  const [customFields, setCustomFields] = useState<Array<{
+    id: number;
+    fieldName: string;
+    fieldType: string;
+    value: string;
+  }>>([]);
+  const [cfFieldName, setCfFieldName] = useState('');
+  const [cfFieldType, setCfFieldType] = useState('Text');
+  const [cfRequired, setCfRequired]   = useState(false);
 
   // Smart greetings data
   const [invoiceMilestone, setInvoiceMilestone] = useState(true);
@@ -77,25 +100,34 @@ const [newCategoryName, setNewCategoryName] = useState("");
 useEffect(() => {
   if (!id) return;
 
-  const storedParties =
-    JSON.parse(localStorage.getItem("parties") || "[]");
+  const fetchParty = async () => {
+    try {
+      const res = await axios.get(`http://localhost:4000/api/parties/${id}`);
+      const party = res.data;
+      setFormData((prev) => ({
+        ...prev,
+        partyName: party.partyName || "",
+        mobileNumber: party.mobileNumber || "",
+        email: party.email || "",
+        gstin: party.gstin || "",
+        panNumber: party.panNumber || "",
+        partyType: party.partyType || "Customer",
+        partyCategory: party.partyCategory || "",
+        billingAddress: party.billingAddress || "",
+        shippingAddress: party.shippingAddress || "",
+        openingBalance: party.openingBalance?.toString() || "0",
+        openingBalanceType: party.openingBalanceType || "To_Collect",
+        creditPeriod: party.creditPeriod?.toString() || "0",
+        creditLimit: party.creditLimit?.toString() || "0",
+        contactPersonName: party.contactPersonName || "",
+        dateOfBirth: party.dateOfBirth || "",
+      }));
+    } catch (error) {
+      console.error("Error fetching party:", error);
+    }
+  };
 
-  const partyToEdit = storedParties.find(
-    (p: any) => p.id === Number(id)
-  );
-
-  if (partyToEdit) {
-    setFormData((prev) => ({
-      ...prev,
-      partyName: partyToEdit.name,
-      mobileNumber: partyToEdit.mobile,
-      partyCategory: partyToEdit.category,
-      partyType: partyToEdit.type,
-      openingBalance: Math.abs(partyToEdit.balance).toString(),
-      balanceType:
-        partyToEdit.balance >= 0 ? "To Collect" : "To Pay",
-    }));
-  }
+  fetchParty();
 }, [id]);
 
 
@@ -125,17 +157,20 @@ const handleSave = async () => {
       creditPeriod: Number(formData.creditPeriod),
       creditLimit: Number(formData.creditLimit),
       openingBalance: Number(formData.openingBalance),
-      openingBalanceType: formData.openingBalanceType
+      openingBalanceType: formData.openingBalanceType,
     };
 
-    console.log("Sending to backend:", payload);
-
-    await createParty(payload);
-
-    alert("Party created successfully ✅");
+    if (id) {
+      // EDIT PARTY
+      await axios.put(`http://localhost:4000/api/parties/${id}`, payload);
+      alert("Party updated successfully ✅");
+    } else {
+      // CREATE PARTY
+      await createParty(payload);
+      alert("Party created successfully ✅");
+    }
 
     navigate("/cashier/parties");
-
   } catch (error: any) {
     console.error("Save error:", error);
     alert(error.response?.data?.message || "Something went wrong ❌");
@@ -151,9 +186,54 @@ const handleSave = async () => {
 };
 
   const handleSubmitBankAccount = () => {
-    console.log('Bank account submitted:', bankAccount);
+    if (!bankAccount.accountNumber.trim()) { alert('Account number is required'); return; }
+    if (!editingBankId && bankAccount.accountNumber !== bankAccount.reEnterAccountNumber) {
+      alert('Account numbers do not match'); return;
+    }
+    if (editingBankId) {
+      setBankAccountsList(prev => prev.map(b =>
+        b.id === editingBankId
+          ? { ...b, accountNumber: bankAccount.accountNumber, ifscCode: bankAccount.ifscCode, bankBranchName: bankAccount.bankBranchName, accountHolderName: bankAccount.accountHolderName, upiId: bankAccount.upiId }
+          : b
+      ));
+    } else {
+      setBankAccountsList(prev => [...prev, {
+        id: Date.now(),
+        accountNumber: bankAccount.accountNumber,
+        ifscCode: bankAccount.ifscCode,
+        bankBranchName: bankAccount.bankBranchName,
+        accountHolderName: bankAccount.accountHolderName,
+        upiId: bankAccount.upiId,
+      }]);
+    }
+    setBankAccount({ accountNumber: '', reEnterAccountNumber: '', ifscCode: '', bankBranchName: '', accountHolderName: '', upiId: '' });
+    setEditingBankId(null);
     setShowBankAccountModal(false);
-    alert('Bank account added successfully!');
+  };
+
+  const handleEditBank = (bank: typeof bankAccounts[0]) => {
+    setBankAccount({ accountNumber: bank.accountNumber, reEnterAccountNumber: bank.accountNumber, ifscCode: bank.ifscCode, bankBranchName: bank.bankBranchName, accountHolderName: bank.accountHolderName, upiId: bank.upiId });
+    setEditingBankId(bank.id);
+    setShowBankAccountModal(true);
+  };
+
+  const handleDeleteBank = (bankId: number) => {
+    if (!window.confirm('Delete this bank account?')) return;
+    setBankAccountsList(prev => prev.filter(b => b.id !== bankId));
+  };
+
+  const maskAccount = (acc: string) => acc.length > 4 ? 'x' + acc.slice(-4) : acc;
+
+  const handleCreateCustomField = () => {
+    if (!cfFieldName.trim()) { alert('Field name is required'); return; }
+    setCustomFields(prev => [...prev, { id: Date.now(), fieldName: cfFieldName, fieldType: cfFieldType, value: '' }]);
+    setCfFieldName(''); setCfFieldType('Text'); setCfRequired(false);
+    setShowCreateCustomFieldModal(false);
+  };
+
+  const handleDeleteCf = (cfId: number) => {
+    if (!window.confirm('Delete this custom field?')) return;
+    setCustomFields(prev => prev.filter(f => f.id !== cfId));
   };
 
   const handleSavePartySettings = () => {
@@ -164,7 +244,7 @@ const handleSave = async () => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', backgroundColor: '#f9fafb' }}>
       <Navbar 
-        title="Create Party"
+        title={id ? "Edit Party" : "Create Party"}
         showBackButton={true}
         backPath="/dashboard"
         showSettings={true}
@@ -725,55 +805,92 @@ const handleSave = async () => {
           <div style={{ marginTop: '40px', marginBottom: '24px' }}>
             <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#374151', marginBottom: '12px' }}>Party Bank Account</h3>
 
-            <div style={{
-              border: '1px dashed #d1d5db',
-              borderRadius: '8px',
-              padding: '40px',
-              textAlign: 'center'
-            }}>
-              <p style={{ color: '#6b7280', marginBottom: '10px', marginTop: 0 }}>
-                Add party bank information to manage transactions
-              </p>
-
-              <button
-                onClick={() => setShowBankAccountModal(true)}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: '#6366f1',
-                  cursor: 'pointer',
-                  fontWeight: '500',
-                  fontSize: '14px'
-                }}
-              >
-                + Add Bank Account
-              </button>
-            </div>
+            {bankAccounts.length === 0 ? (
+              <div style={{ border: '1px dashed #d1d5db', borderRadius: '8px', padding: '32px', textAlign: 'center' }}>
+                <p style={{ color: '#6b7280', marginBottom: '10px', marginTop: 0 }}>
+                  Add party bank information to manage transactions
+                </p>
+                <button
+                  onClick={() => { setEditingBankId(null); setBankAccount({ accountNumber: '', reEnterAccountNumber: '', ifscCode: '', bankBranchName: '', accountHolderName: '', upiId: '' }); setShowBankAccountModal(true); }}
+                  style={{ background: 'transparent', border: 'none', color: '#6366f1', cursor: 'pointer', fontWeight: '500', fontSize: '14px' }}
+                >
+                  + Add Bank Account
+                </button>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {bankAccounts.map(bank => (
+                  <div key={bank.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', border: '1px solid #e5e7eb', borderRadius: '8px', background: '#f9fafb' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                      <div style={{ width: '34px', height: '34px', borderRadius: '7px', background: '#e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6b7280', fontSize: '16px' }}>&#127963;</div>
+                      <div>
+                        <div style={{ fontSize: '13px', fontWeight: '600', color: '#374151' }}>{maskAccount(bank.accountNumber)}</div>
+                        <div style={{ fontSize: '12px', color: '#6b7280' }}>{bank.accountNumber}</div>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <button onClick={() => handleEditBank(bank)} style={{ display: 'flex', alignItems: 'center', gap: '4px', background: 'none', border: 'none', color: '#4f46e5', fontSize: '13px', fontWeight: '500', cursor: 'pointer', padding: '4px 8px', borderRadius: '5px' }}>
+                        &#9998; Edit
+                      </button>
+                      <button onClick={() => handleDeleteBank(bank.id)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '4px 6px', borderRadius: '5px', display: 'flex', alignItems: 'center' }}>
+                        &#128465;
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                <button
+                  onClick={() => { setEditingBankId(null); setBankAccount({ accountNumber: '', reEnterAccountNumber: '', ifscCode: '', bankBranchName: '', accountHolderName: '', upiId: '' }); setShowBankAccountModal(true); }}
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', background: 'none', border: '1px dashed #d0d5dd', color: '#4f46e5', fontSize: '13px', fontWeight: '500', cursor: 'pointer', padding: '8px', borderRadius: '7px', width: '100%' }}
+                >
+                  + Add Another Account
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Custom Field */}
-          <div style={{ marginTop: '40px', textAlign: 'center', marginBottom: '40px' }}>
-            <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#374151', marginBottom: '10px' }}>Custom Field</h3>
+          <div style={{ marginTop: '40px', marginBottom: '40px' }}>
+            <h3 style={{ fontSize: '16px', fontWeight: '600', color: '#374151', marginBottom: '12px' }}>Custom Field</h3>
 
-            <p style={{ color: '#6b7280', marginTop: '10px', marginBottom: '12px' }}>
-              Store more information about your parties by adding custom fields from Party Settings
-            </p>
-
-            <button
-              onClick={() => setShowPartySettingsModal(true)}
-              style={{
-                background: '#6366f1',
-                color: '#fff',
-                border: 'none',
-                borderRadius: '6px',
-                padding: '8px 24px',
-                cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: '500'
-              }}
-            >
-              Add Custom Fields
-            </button>
+            {customFields.length === 0 ? (
+              <div style={{ textAlign: 'center' }}>
+                <p style={{ color: '#6b7280', marginTop: '0', marginBottom: '12px' }}>
+                  Store more information about your parties by adding custom fields from Party Settings
+                </p>
+                <button
+                  onClick={() => { setShowPartySettingsModal(true); setShowCustomFieldsView(true); }}
+                  style={{ background: '#6366f1', color: '#fff', border: 'none', borderRadius: '6px', padding: '8px 24px', cursor: 'pointer', fontSize: '14px', fontWeight: '500' }}
+                >
+                  Add Custom Fields
+                </button>
+              </div>
+            ) : (
+              <div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+                  {customFields.map(cf => (
+                    <div key={cf.id}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                        <label style={{ fontSize: '12.5px', color: '#6b7280', fontWeight: '500' }}>{cf.fieldName}</label>
+                        <button onClick={() => handleDeleteCf(cf.id)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '2px', fontSize: '12px' }}>&#10005;</button>
+                      </div>
+                      <input
+                        type={cf.fieldType === 'Number' ? 'number' : cf.fieldType === 'Date' ? 'date' : 'text'}
+                        placeholder="Custom Value"
+                        value={cf.value}
+                        onChange={e => setCustomFields(prev => prev.map(f => f.id === cf.id ? { ...f, value: e.target.value } : f))}
+                        style={{ width: '100%', padding: '8px 10px', border: '1px solid #d0d5dd', borderRadius: '6px', fontSize: '13.5px', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                  ))}
+                </div>
+                <button
+                  onClick={() => { setShowPartySettingsModal(true); setShowCustomFieldsView(true); }}
+                  style={{ background: 'none', border: '1px dashed #d0d5dd', color: '#4f46e5', fontSize: '13px', fontWeight: '500', cursor: 'pointer', padding: '7px 14px', borderRadius: '7px' }}
+                >
+                  + Add More Fields
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -783,7 +900,7 @@ const handleSave = async () => {
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0, 0, 0, 0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50 }}>
           <div style={{ backgroundColor: '#ffffff', borderRadius: '8px', width: '500px', maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ padding: '20px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#111827', margin: 0 }}>Add Bank Account</h3>
+              <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#111827', margin: 0 }}>{editingBankId ? 'Edit Bank Account' : 'Add Bank Account'}</h3>
               <button onClick={() => setShowBankAccountModal(false)} style={{ color: '#6b7280', background: 'none', border: 'none', cursor: 'pointer' }}>
                 <X size={20} />
               </button>
@@ -1233,6 +1350,8 @@ const handleSave = async () => {
                 <input
                   type="text"
                   placeholder="Enter field name"
+                  value={cfFieldName}
+                  onChange={e => setCfFieldName(e.target.value)}
                   style={{ width: '100%', padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '14px', boxSizing: 'border-box' }}
                 />
               </div>
@@ -1242,6 +1361,8 @@ const handleSave = async () => {
                   Field Type <span style={{ color: '#ef4444' }}>*</span>
                 </label>
                 <select
+                  value={cfFieldType}
+                  onChange={e => setCfFieldType(e.target.value)}
                   style={{ width: '100%', padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '14px', boxSizing: 'border-box' }}
                 >
                   <option>Text</option>
@@ -1253,7 +1374,7 @@ const handleSave = async () => {
 
               <div>
                 <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
-                  <input type="checkbox" style={{ width: '16px', height: '16px', cursor: 'pointer' }} />
+                  <input type="checkbox" checked={cfRequired} onChange={e => setCfRequired(e.target.checked)} style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#4f46e5' }} />
                   <span style={{ fontSize: '14px', color: '#374151' }}>Required field</span>
                 </label>
               </div>
@@ -1267,10 +1388,7 @@ const handleSave = async () => {
                 Cancel
               </button>
               <button 
-                onClick={() => {
-                  alert('Custom field created!');
-                  setShowCreateCustomFieldModal(false);
-                }}
+                onClick={handleCreateCustomField}
                 style={{ padding: '8px 20px', backgroundColor: '#6366f1', color: '#ffffff', fontSize: '14px', fontWeight: '500', borderRadius: '6px', border: 'none', cursor: 'pointer' }}
               >
                 Create Field
