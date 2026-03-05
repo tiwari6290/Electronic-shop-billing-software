@@ -89,7 +89,7 @@ const AddItemsToBill: React.FC = () => {
 
         <button
           className="primary-btn"
-          onClick={() => navigate("/create-item")}
+          onClick={() => navigate("/cashier/create-item")}
         >
           Create New Item
         </button>

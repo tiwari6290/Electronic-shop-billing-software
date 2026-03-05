@@ -268,7 +268,7 @@ function POSPage() {
       // Always-active shortcuts
       if (e.ctrlKey && e.key === "i") {
         e.preventDefault();
-        navigate("/create-item");
+        navigate("/cashier/create-item");
         return;
       }
 

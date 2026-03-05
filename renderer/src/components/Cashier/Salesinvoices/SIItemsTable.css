@@ -1,0 +1,71 @@
+.si-items { border-top: 1px solid #e5e7eb; }
+.si-items-scroll { overflow-x: auto; }
+.si-items-table { width: 100%; border-collapse: collapse; }
+.si-th { background: #f9fafb; padding: 10px 10px; text-align: left; font-size: 11.5px; font-weight: 700; color: #6b7280; border-bottom: 1px solid #e5e7eb; white-space: nowrap; text-transform: uppercase; letter-spacing: .02em; }
+.si-th--no { width: 40px; }
+.si-th--item { width: 35%; }
+.si-th--amt { text-align: right; }
+.si-th--del { width: 40px; }
+.si-items-row { border-bottom: 1px solid #f3f4f6; }
+.si-items-row:hover { background: #fafaff; }
+.si-td { padding: 8px 10px; vertical-align: top; }
+.si-td--no { color: #6b7280; font-size: 13px; padding-top: 12px; }
+.si-td--item {}
+.si-td--amt { text-align: right; padding-top: 12px; }
+.si-td--del { padding-top: 10px; }
+.si-item-name { font-size: 13.5px; font-weight: 600; color: #111827; margin-bottom: 4px; }
+.si-desc-input { width: 100%; border: 1px solid #e5e7eb; border-radius: 5px; padding: 5px 8px; font-size: 12.5px; color: #6b7280; outline: none; background: #f9fafb; font-family: inherit; }
+.si-desc-input:focus { border-color: #a5b4fc; background: #fff; }
+.si-cell-input { width: 80px; border: 1.5px solid #e5e7eb; border-radius: 5px; padding: 5px 8px; font-size: 13px; outline: none; background: #f9fafb; font-family: inherit; }
+.si-cell-input:focus { border-color: #a5b4fc; background: #fff; }
+.si-qty-wrap { display: flex; align-items: center; gap: 4px; }
+.si-qty-input { width: 50px; border: 1.5px solid #e5e7eb; border-radius: 5px; padding: 5px 6px; font-size: 13px; outline: none; background: #f9fafb; font-family: inherit; text-align: center; }
+.si-qty-input:focus { border-color: #a5b4fc; background: #fff; }
+.si-unit { font-size: 12px; color: #6b7280; }
+.si-price-input { width: 80px; border: 1.5px solid #e5e7eb; border-radius: 5px; padding: 5px 8px; font-size: 13px; outline: none; background: #f9fafb; font-family: inherit; text-align: right; }
+.si-price-input:focus { border-color: #a5b4fc; background: #fff; }
+.si-disc-wrap { display: flex; flex-direction: column; gap: 4px; }
+.si-disc-row { display: flex; align-items: center; gap: 4px; }
+.si-disc-pct-label, .si-disc-rs-label { font-size: 12px; color: #6b7280; width: 14px; }
+.si-disc-input { width: 55px; border: 1.5px solid #e5e7eb; border-radius: 5px; padding: 4px 6px; font-size: 13px; outline: none; background: #f9fafb; font-family: inherit; text-align: right; }
+.si-disc-input:focus { border-color: #a5b4fc; background: #fff; }
+.si-tax-select { width: 110px; border: 1.5px solid #e5e7eb; border-radius: 5px; padding: 5px 6px; font-size: 12.5px; outline: none; background: #f9fafb; font-family: inherit; }
+.si-tax-select:focus { border-color: #a5b4fc; }
+.si-tax-amt { font-size: 12px; color: #6b7280; margin-top: 3px; }
+.si-rs { color: #6b7280; font-size: 13px; margin-right: 3px; }
+.si-del-btn { background: none; border: none; cursor: pointer; color: #d1d5db; padding: 4px; border-radius: 4px; }
+.si-del-btn:hover { color: #ef4444; background: #fee2e2; }
+.si-del-btn svg { width: 16px; height: 16px; display: block; }
+
+/* Add row */
+.si-add-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-bottom: 1px solid #e5e7eb; }
+.si-add-item-btn {
+  flex: 1; border: 1.5px dashed #93c5fd; border-radius: 7px; padding: 12px;
+  text-align: center; color: #3b82f6; font-size: 14px; font-weight: 500;
+  background: none; cursor: pointer; font-family: inherit; position: relative; display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.si-add-item-btn:hover { background: #eff6ff; }
+.si-shortcut-tip {
+  display: flex; align-items: center; gap: 3px; background: #1f2937;
+  border-radius: 5px; padding: 3px 7px; position: absolute; bottom: -28px; left: 50%; transform: translateX(-50%);
+  white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity .15s;
+}
+.si-add-item-btn:hover .si-shortcut-tip { opacity: 1; }
+.si-shortcut-tip kbd { background: #374151; color: #fff; font-size: 11px; padding: 1px 6px; border-radius: 3px; font-family: monospace; }
+.si-shortcut-tip span { color: #9ca3af; font-size: 11px; }
+.si-scan-btn {
+  display: flex; align-items: center; gap: 10px; padding: 10px 20px;
+  border: 1.5px solid #e5e7eb; border-radius: 7px; background: #fff;
+  font-size: 14px; font-weight: 500; color: #374151; cursor: pointer; font-family: inherit;
+  white-space: nowrap; min-width: 160px; justify-content: center;
+}
+.si-scan-btn:hover { background: #f9fafb; border-color: #d1d5db; }
+
+/* Subtotal */
+.si-subtotal-row {
+  display: flex; justify-content: flex-end; align-items: center; gap: 60px;
+  padding: 10px 16px; background: #f9fafb; border-bottom: 1px solid #e5e7eb;
+  font-size: 13px; font-weight: 600; color: #374151;
+}
+.si-subtotal-label { margin-right: auto; }
+.si-subtotal-val { min-width: 80px; text-align: right; }

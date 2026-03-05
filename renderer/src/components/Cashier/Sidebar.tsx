@@ -1,3 +1,4 @@
+import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   
@@ -17,13 +18,15 @@ import {
   DollarSign,
   LogOut,
   Handshake,
+  ChevronDown,
 } from 'lucide-react';
 
 interface NavItem {
   id: string;
   label: string;
   icon: React.ReactNode;
-  path: string;
+  path?: string;   // ✅ optional karo
+  children?: NavItem[];
 }
 
 interface NavSection {
@@ -32,6 +35,7 @@ interface NavSection {
 }
 
 const Sidebar: React.FC = () => {
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const navigate = useNavigate();
   const location = useLocation();
   const navSections: NavSection[] = [
@@ -39,18 +43,37 @@ const Sidebar: React.FC = () => {
       title: 'GENERAL',
       items: [
         { id: 'create-party', label: 'Create Party', icon: <Users size={18} />, path: '/cashier/create-party' },
-        { id: 'create-item', label: 'Create Item', icon: <Package size={18} />, path: '/cashier/create-item' },
+        { 
+      id: 'create-item', 
+      label: 'Create Item', 
+      icon: <Package size={18} />,
+      children: [
+        { 
+          id: 'inventory', 
+          label: 'Inventory', 
+          icon: <Package size={16} />, 
+          path: '/cashier/create-item/inventory' 
+        },
+        { 
+          id: 'godown', 
+          label: 'Godown', 
+          icon: <Package size={16} />, 
+          path: '/cashier/create-item/godown' 
+        }
+      ]
+    },
         { id: 'Parties', label: 'Parties', icon: <Handshake size={18} />, path: '/cashier/parties' },
         { id: 'POS-billing', label: 'POS Billing', icon: <Users size={18} />, path: '/cashier/POS-billing' },
+        { id: 'reports', label: 'Reports', icon: <FileSpreadsheet size={18} />, path: '/cashier/reports' },
       ]
     },
     {
       title: 'SALES TRANSACTIONS',
       items: [
-        { id: 'quotation', label: 'Quotation', icon: <FileEdit size={18} />, path: '/cashier/quotation' },
+        { id: 'sales-invoice', label: 'Sales Invoices', icon: <FileEdit size={18} />, path: '/cashier/sales-invoicses-list' },
+        { id: 'quotation', label: 'Quotation', icon: <FileEdit size={18} />, path: '/cashier/quotation-estimate' },
         { id: 'payment-in', label: 'Payment In', icon: <CreditCard size={18} />, path: '/cashier/payment-in-list' },
         { id: 'sales-return', label: 'Sales Return', icon: <RotateCcw size={18} />, path: '/cashier/sales-return' },
-        { id: 'sales-invoice', label: 'Sales Invoice', icon: <FileEdit size={18} />, path: '/cashier/sales-invoice' },
         { id: 'credit-note', label: 'Credit Note', icon: <FileSpreadsheet size={18} />, path: '/cashier/credit-note' },
         { id: 'delivery-challan', label: 'Delivery Challan', icon: <Truck size={18} />, path: '/cashier/delivery-challan' },
         { id: 'proforma-invoice', label: 'Proforma Invoice', icon: <Receipt size={18} />, path: '/cashier/proforma-invoice' },
@@ -141,46 +164,71 @@ const handleLogout = () => {
                 {section.title}
               </h3>
               <nav style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                {section.items.map((item) => (
-                  <button
-                    key={item.id}
-                    onClick={() => handleItemClick(item.path)}
-                    className="w-full flex items-center rounded-lg"
-                    style={{
-                      gap: '12px',
-                      padding: '10px',
-                      backgroundColor: isActive(item.path) ? '#3b5a8f' : 'transparent',
-                      color: isActive(item.path) ? '#ffffff' : '#b8c5d6',
-                      border: 'none',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s',
-                      fontSize: '14px',
-                      fontWeight: '500',
-                      textAlign: 'left'
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!isActive(item.path)) {
-                        e.currentTarget.style.backgroundColor = 'rgba(59, 90, 143, 0.4)';
-                        e.currentTarget.style.color = '#ffffff';
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (!isActive(item.path)) {
-                        e.currentTarget.style.backgroundColor = 'transparent';
-                        e.currentTarget.style.color = '#b8c5d6';
-                      }
-                    }}
-                  >
-                    <span style={{ 
-                      color: isActive(item.path) ? '#a5b4fc' : '#8796a8',
-                      display: 'flex',
-                      alignItems: 'center'
-                    }}>
-                      {item.icon}
-                    </span>
-                    <span>{item.label}</span>
-                  </button>
-                ))}
+               {section.items.map((item) => (
+  <div key={item.id}>
+    
+    <button
+      onClick={() => {
+        if (item.children) {
+          setOpenDropdown(openDropdown === item.id ? null : item.id);
+        } else if (item.path) {
+          handleItemClick(item.path);
+        }
+      }}
+      className="w-full flex items-center rounded-lg"
+      style={{
+        gap: '12px',
+        padding: '10px',
+        backgroundColor: isActive(item.path || "") ? '#3b5a8f' : 'transparent',
+        color: '#b8c5d6',
+        border: 'none',
+        cursor: 'pointer',
+        fontSize: '14px',
+        fontWeight: '500',
+        textAlign: 'left'
+      }}
+    >
+      <span>{item.icon}</span>
+      <span style={{ flex: 1 }}>{item.label}</span>
+
+{item.children && (
+  <ChevronDown
+    size={16}
+    style={{
+      transition: 'transform 0.2s ease',
+      transform: openDropdown === item.id ? 'rotate(180deg)' : 'rotate(0deg)'
+    }}
+  />
+)}
+    </button>
+
+    {/* Sub Items */}
+    {item.children && openDropdown === item.id && (
+      <div style={{ marginLeft: '32px', marginTop: '4px' }}>
+        {item.children.map((sub) => (
+          <button
+            key={sub.id}
+            onClick={() => sub.path && handleItemClick(sub.path)}
+            className="w-full flex items-center rounded-lg"
+            style={{
+              gap: '10px',
+              padding: '8px',
+              backgroundColor: isActive(sub.path || "") ? '#3b5a8f' : 'transparent',
+              color: '#b8c5d6',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: '13px',
+              textAlign: 'left'
+            }}
+          >
+            <span>{sub.icon}</span>
+            <span>{sub.label}</span>
+          </button>
+        ))}
+      </div>
+    )}
+  </div>
+))}
               </nav>
             </div>
             
