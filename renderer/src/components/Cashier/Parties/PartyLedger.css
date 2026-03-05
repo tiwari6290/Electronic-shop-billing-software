@@ -1,0 +1,66 @@
+.ledger-container {
+  padding: 24px;
+  background: #f8f9fb;
+  min-height: 100vh;
+}
+
+.ledger-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.back-btn {
+  background: none;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.ledger-summary {
+  display: flex;
+  justify-content: space-between;
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.ledger-company {
+  font-weight: 600;
+  font-size: 18px;
+}
+
+.ledger-total-box {
+  text-align: right;
+  border: 1px solid #e5e7eb;
+  padding: 12px 20px;
+  border-radius: 6px;
+}
+
+.ledger-total-box h3 {
+  margin-top: 6px;
+}
+
+.ledger-table-wrapper {
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.ledger-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.ledger-table th {
+  background: #f1f3f5;
+  padding: 12px;
+  text-align: left;
+}
+
+.ledger-table td {
+  padding: 12px;
+  border-bottom: 1px solid #eee;
+}
