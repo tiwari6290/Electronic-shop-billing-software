@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { Search } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import "./Billing.css";
 
@@ -161,75 +162,455 @@ function CreateItemPage({ prefillName, onBack }: { prefillName: string; onBack: 
   );
 }
 
+// ─── MODALS ───────────────────────────────────────────────────────────────────
+function Modal({
+  title,
+  onClose,
+  children,
+}: {
+  title: string;
+  onClose: () => void;
+  children: React.ReactNode;
+}) {
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [onClose]);
+
+  return (
+    <div
+      style={{
+        position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)",
+        display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000,
+      }}
+      onClick={onClose}
+    >
+      <div
+        style={{
+          background: "#fff", borderRadius: 12, padding: 28, minWidth: 340,
+          boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
+          <h3 style={{ margin: 0, fontSize: 17, fontWeight: 700 }}>{title}</h3>
+          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "#6b7280" }}>×</button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 // ─── POS PAGE ─────────────────────────────────────────────────────────────────
 function POSPage() {
   const [searchVal, setSearchVal] = useState("");
   const navigate = useNavigate();
-  const [items, setItems] = useState<BillItem[]>([]);
+  const [bills, setBills] = useState<{ id: number; items: BillItem[] }[]>([
+    { id: 1, items: [] }
+  ]);
+  const [activeBillId, setActiveBillId] = useState(1);
   const [showDropdown, setShowDropdown] = useState(false);
-  const searchRef = useRef<HTMLInputElement>(null);
+  const [selectedRow, setSelectedRow] = useState<number | null>(null); // tracks selected item index
 
-  const inventory: string[] = []; // Add item names here to populate inventory
+  // Modal states
+  const [showPriceModal, setShowPriceModal] = useState(false);
+  const [showQtyModal, setShowQtyModal] = useState(false);
+  const [showDiscountModal, setShowDiscountModal] = useState(false);
+  const [showChargeModal, setShowChargeModal] = useState(false);
+
+  // Modal input values
+  const [newPrice, setNewPrice] = useState("");
+  const [newQty, setNewQty] = useState("");
+  const [discount, setDiscount] = useState("");
+  const [discountType, setDiscountType] = useState<"flat" | "percent">("flat");
+  const [additionalCharge, setAdditionalCharge] = useState("");
+  const [additionalChargeLabel, setAdditionalChargeLabel] = useState("Packaging");
+
+  const searchRef = useRef<HTMLInputElement>(null);
+  const receivedRef = useRef<HTMLInputElement>(null);
+
+  const inventory: string[] = [];
   const filtered = inventory.filter((i) =>
     i.toLowerCase().includes(searchVal.toLowerCase())
   );
 
- useEffect(() => {
-  const handler = (e: KeyboardEvent) => {
-    if (e.ctrlKey && e.key === "i") {
-      navigate("/create-item");
-    }
+  const activeBill = bills.find((b) => b.id === activeBillId);
+  const items = activeBill?.items || [];
 
-    if (e.key === "F1") {
-      searchRef.current?.focus();
-    }
-
-    if (e.key === "Escape") {
-      setShowDropdown(false);
-    }
+  // ── helpers to mutate active bill's items ──
+  const setItems = (updater: (prev: BillItem[]) => BillItem[]) => {
+    setBills((prev) =>
+      prev.map((b) =>
+        b.id === activeBillId ? { ...b, items: updater(b.items) } : b
+      )
+    );
   };
 
-  window.addEventListener("keydown", handler);
-  return () => window.removeEventListener("keydown", handler);
-}, [navigate]);
+  const selectedItem = selectedRow !== null ? items[selectedRow] : null;
+
+  // ── discount & charge state (per bill, stored simply here) ──
+  const [appliedDiscount, setAppliedDiscount] = useState(0);
+  const [appliedCharge, setAppliedCharge] = useState(0);
 
   const subTotal = items.reduce((a, i) => a + i.amount, 0);
+  const totalAmount = subTotal - appliedDiscount + appliedCharge;
+
+  // ── SHORTCUT HANDLER ──
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement).tagName;
+      const isTyping = tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT";
+
+      // Always-active shortcuts
+      if (e.ctrlKey && e.key === "i") {
+        e.preventDefault();
+        navigate("/create-item");
+        return;
+      }
+
+      if (e.key === "F1") {
+        e.preventDefault();
+        searchRef.current?.focus();
+        setShowDropdown(true);
+        return;
+      }
+
+      if (e.key === "Escape") {
+        setShowDropdown(false);
+        setShowPriceModal(false);
+        setShowQtyModal(false);
+        setShowDiscountModal(false);
+        setShowChargeModal(false);
+        return;
+      }
+
+      // Shortcuts that should not fire when typing in an input (except F-keys)
+      if (e.key === "F2") {
+        e.preventDefault();
+        setShowDiscountModal(true);
+        return;
+      }
+
+      if (e.key === "F3") {
+        e.preventDefault();
+        setShowChargeModal(true);
+        return;
+      }
+
+      if (e.key === "F4") {
+        e.preventDefault();
+        receivedRef.current?.focus();
+        return;
+      }
+
+      if (e.key === "F6") {
+        e.preventDefault();
+        handleSavePrint();
+        return;
+      }
+
+      if (e.key === "F7") {
+        e.preventDefault();
+        handleSaveBill();
+        return;
+      }
+
+      // These fire only when NOT typing in an input
+      if (isTyping) return;
+
+      if (e.key === "p" || e.key === "P") {
+        e.preventDefault();
+        if (selectedItem) setShowPriceModal(true);
+        else alert("Please select an item row first.");
+        return;
+      }
+
+      if (e.key === "q" || e.key === "Q") {
+        e.preventDefault();
+        if (selectedItem) setShowQtyModal(true);
+        else alert("Please select an item row first.");
+        return;
+      }
+
+      if (e.key === "Delete") {
+        e.preventDefault();
+        if (selectedItem !== null && selectedRow !== null) {
+          setItems((prev) =>
+            prev
+              .filter((_, idx) => idx !== selectedRow)
+              .map((item, idx) => ({ ...item, no: idx + 1 }))
+          );
+          setSelectedRow(null);
+        }
+        return;
+      }
+    };
+
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [navigate, selectedItem, selectedRow]);
+
+  // ── Modal action handlers ──
+  const applyPriceChange = () => {
+    if (selectedRow === null) return;
+    const price = parseFloat(newPrice);
+    if (isNaN(price) || price < 0) return;
+    setItems((prev) =>
+      prev.map((item, idx) =>
+        idx === selectedRow
+          ? { ...item, sp: price, amount: price * item.quantity }
+          : item
+      )
+    );
+    setNewPrice("");
+    setShowPriceModal(false);
+  };
+
+  const applyQtyChange = () => {
+    if (selectedRow === null) return;
+    const qty = parseFloat(newQty);
+    if (isNaN(qty) || qty <= 0) return;
+    setItems((prev) =>
+      prev.map((item, idx) =>
+        idx === selectedRow
+          ? { ...item, quantity: qty, amount: item.sp * qty }
+          : item
+      )
+    );
+    setNewQty("");
+    setShowQtyModal(false);
+  };
+
+  const applyDiscount = () => {
+    const val = parseFloat(discount);
+    if (isNaN(val) || val < 0) return;
+    if (discountType === "flat") {
+      setAppliedDiscount(val);
+    } else {
+      setAppliedDiscount((subTotal * val) / 100);
+    }
+    setDiscount("");
+    setShowDiscountModal(false);
+  };
+
+  const applyCharge = () => {
+    const val = parseFloat(additionalCharge);
+    if (isNaN(val) || val < 0) return;
+    setAppliedCharge(val);
+    setAdditionalCharge("");
+    setShowChargeModal(false);
+  };
+
+  const handleSavePrint = () => {
+    alert("Bill saved & sent to printer! 🖨️");
+  };
+
+  const handleSaveBill = () => {
+    alert("Bill saved successfully! ✅");
+  };
 
   return (
     <div className="page">
+      {/* ── Modals ── */}
+      {showPriceModal && (
+        <Modal title={`Change Price — ${selectedItem?.name}`} onClose={() => setShowPriceModal(false)}>
+          <p style={{ color: "#6b7280", marginBottom: 12, fontSize: 14 }}>
+            Current SP: ₹{selectedItem?.sp}
+          </p>
+          <input
+            autoFocus
+            className="form-input"
+            type="number"
+            placeholder="Enter new selling price"
+            value={newPrice}
+            onChange={(e) => setNewPrice(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && applyPriceChange()}
+            style={{ width: "100%", marginBottom: 16 }}
+          />
+          <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+            <button className="btn--cancel" onClick={() => setShowPriceModal(false)}>Cancel</button>
+            <button className="btn--save" onClick={applyPriceChange}>Apply [Enter]</button>
+          </div>
+        </Modal>
+      )}
+
+      {showQtyModal && (
+        <Modal title={`Change Quantity — ${selectedItem?.name}`} onClose={() => setShowQtyModal(false)}>
+          <p style={{ color: "#6b7280", marginBottom: 12, fontSize: 14 }}>
+            Current Qty: {selectedItem?.quantity}
+          </p>
+          <input
+            autoFocus
+            className="form-input"
+            type="number"
+            placeholder="Enter new quantity"
+            value={newQty}
+            onChange={(e) => setNewQty(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && applyQtyChange()}
+            style={{ width: "100%", marginBottom: 16 }}
+          />
+          <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+            <button className="btn--cancel" onClick={() => setShowQtyModal(false)}>Cancel</button>
+            <button className="btn--save" onClick={applyQtyChange}>Apply [Enter]</button>
+          </div>
+        </Modal>
+      )}
+
+      {showDiscountModal && (
+        <Modal title="Add Discount" onClose={() => setShowDiscountModal(false)}>
+          <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+            <button
+              onClick={() => setDiscountType("flat")}
+              style={{
+                flex: 1, padding: "8px 0", borderRadius: 8, border: "1.5px solid",
+                borderColor: discountType === "flat" ? "#6366f1" : "#e5e7eb",
+                background: discountType === "flat" ? "#ede9fe" : "#fff",
+                color: discountType === "flat" ? "#4f46e5" : "#374151",
+                cursor: "pointer", fontWeight: 600,
+              }}
+            >
+              Flat (₹)
+            </button>
+            <button
+              onClick={() => setDiscountType("percent")}
+              style={{
+                flex: 1, padding: "8px 0", borderRadius: 8, border: "1.5px solid",
+                borderColor: discountType === "percent" ? "#6366f1" : "#e5e7eb",
+                background: discountType === "percent" ? "#ede9fe" : "#fff",
+                color: discountType === "percent" ? "#4f46e5" : "#374151",
+                cursor: "pointer", fontWeight: 600,
+              }}
+            >
+              Percent (%)
+            </button>
+          </div>
+          <input
+            autoFocus
+            className="form-input"
+            type="number"
+            placeholder={discountType === "flat" ? "Enter discount in ₹" : "Enter discount %"}
+            value={discount}
+            onChange={(e) => setDiscount(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && applyDiscount()}
+            style={{ width: "100%", marginBottom: 16 }}
+          />
+          <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+            <button className="btn--cancel" onClick={() => setShowDiscountModal(false)}>Cancel</button>
+            <button className="btn--save" onClick={applyDiscount}>Apply [Enter]</button>
+          </div>
+        </Modal>
+      )}
+
+      {showChargeModal && (
+        <Modal title="Add Additional Charge" onClose={() => setShowChargeModal(false)}>
+          <div style={{ marginBottom: 12 }}>
+            <label className="form-label">Charge Label</label>
+            <input
+              className="form-input"
+              type="text"
+              value={additionalChargeLabel}
+              onChange={(e) => setAdditionalChargeLabel(e.target.value)}
+              style={{ width: "100%", marginBottom: 10 }}
+            />
+            <label className="form-label">Amount (₹)</label>
+            <input
+              autoFocus
+              className="form-input"
+              type="number"
+              placeholder="Enter charge amount"
+              value={additionalCharge}
+              onChange={(e) => setAdditionalCharge(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && applyCharge()}
+              style={{ width: "100%" }}
+            />
+          </div>
+          <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+            <button className="btn--cancel" onClick={() => setShowChargeModal(false)}>Cancel</button>
+            <button className="btn--save" onClick={applyCharge}>Apply [Enter]</button>
+          </div>
+        </Modal>
+      )}
+
       {/* Top Bar */}
       <div className="top-bar">
         <button className="btn btn--ghost">← Exit POS</button>
         <h2 className="page-title">POS Billing</h2>
         <div className="top-bar__right">
           <button className="btn btn--outline-primary">▶ Watch how to use POS Billing</button>
-          <button className="btn btn--ghost">Settings [CTRL + S]</button>
+          <button className="btn btn--ghost">Settings</button>
         </div>
       </div>
 
       {/* Tab Bar */}
       <div className="tab-bar">
-  <div className="tab--active">
-    Billing Screen 1
-  </div>
-
-  <div
-    className="tab--add"
-    onClick={() => setItems([])}
-  >
-    + Hold Bill & Create Another
-  </div>
-</div>
+        {bills.map((bill) => (
+          <div
+            key={bill.id}
+            className={bill.id === activeBillId ? "tab--active" : "tab"}
+            onClick={() => setActiveBillId(bill.id)}
+          >
+            Billing Screen {bill.id}
+          </div>
+        ))}
+        <div
+          className="tab tab--add"
+          onClick={() => {
+            const newId = bills.length + 1;
+            setBills([...bills, { id: newId, items: [] }]);
+            setActiveBillId(newId);
+          }}
+        >
+          + Hold Bill &amp; Create Another
+        </div>
+      </div>
 
       <div className="main-layout">
         {/* Left Panel */}
         <div className="left-panel">
           {/* Action Buttons */}
           <div className="action-row">
-           <button className="action-btn" onClick={() => navigate("/create-item")}>+ New Item [CTRL+I]</button>
-            <button className="action-btn">Change Price [P]</button>
-            <button className="action-btn">Change QTY [Q]</button>
-            <button className="action-btn action-btn--danger">Delete Item [DEL]</button>
+            <button className="action-btn" onClick={() => navigate("/create-item")}>
+              + New Item [CTRL+I]
+            </button>
+            <button
+              className="action-btn"
+              onClick={() => {
+                if (selectedItem) setShowPriceModal(true);
+                else alert("Please select an item row first.");
+              }}
+            >
+              Change Price [P]
+            </button>
+            <button
+              className="action-btn"
+              onClick={() => {
+                if (selectedItem) setShowQtyModal(true);
+                else alert("Please select an item row first.");
+              }}
+            >
+              Change QTY [Q]
+            </button>
+            <button
+              className="action-btn action-btn--danger"
+              onClick={() => {
+                if (selectedRow !== null) {
+                  setItems((prev) =>
+                    prev
+                      .filter((_, idx) => idx !== selectedRow)
+                      .map((item, idx) => ({ ...item, no: idx + 1 }))
+                  );
+                  setSelectedRow(null);
+                } else {
+                  alert("Please select an item row first.");
+                }
+              }}
+            >
+              Delete Item [DEL]
+            </button>
           </div>
 
           {/* Search */}
@@ -242,9 +623,12 @@ function POSPage() {
               <input
                 ref={searchRef}
                 className="search-input"
-                placeholder="Search by Item/ Serial no./ HSN code/ SKU/ Custom Field / Category or Scan Barcode"
+                placeholder="Search by Item / Serial no. / HSN code / SKU / Custom Field / Category or Scan Barcode"
                 value={searchVal}
-                onChange={(e) => { setSearchVal(e.target.value); setShowDropdown(true); }}
+                onChange={(e) => {
+                  setSearchVal(e.target.value);
+                  setShowDropdown(true);
+                }}
                 onFocus={() => setShowDropdown(true)}
               />
               <span className="f1-badge">F1</span>
@@ -268,9 +652,9 @@ function POSPage() {
                   )}
 
                   <button
-                className="create-item-btn"
-                onClick={() => navigate("/create-item", { state: { name: searchVal } })}
-                >
+                    className="create-item-btn"
+                    onClick={() => navigate("/create-item", { state: { name: searchVal } })}
+                  >
                     + Create Item
                   </button>
                 </div>
@@ -301,15 +685,26 @@ function POSPage() {
                             <path d="M26 26 L30 26" stroke="#9ca3af" strokeWidth="2" />
                           </svg>
                         </div>
-                        <p className="empty-text">🔍 Add items by searching item name or item code</p>
+                        <p className="empty-text empty-text--with-icon">
+                          <Search size={18} className="empty-icon-search" />
+                          Add items by searching item name or item code
+                        </p>
                         <p className="empty-subtext">Or</p>
                         <p className="empty-text">⬡ Simply scan barcode to add items</p>
                       </div>
                     </td>
                   </tr>
                 ) : (
-                  items.map((item) => (
-                    <tr key={item.no}>
+                  items.map((item, idx) => (
+                    <tr
+                      key={item.no}
+                      onClick={() => setSelectedRow(idx === selectedRow ? null : idx)}
+                      style={{
+                        cursor: "pointer",
+                        background: idx === selectedRow ? "#ede9fe" : undefined,
+                        outline: idx === selectedRow ? "2px solid #6366f1" : undefined,
+                      }}
+                    >
                       <td>{item.no}</td>
                       <td>{item.name}</td>
                       <td>{item.itemCode}</td>
@@ -328,8 +723,20 @@ function POSPage() {
         {/* Right Panel */}
         <div className="right-panel">
           <div className="discount-row">
-            <span className="discount-btn">Add Discount [F2]</span>
-            <span className="discount-btn">Add Additional Charge [F3]</span>
+            <span
+              className="discount-btn"
+              style={{ cursor: "pointer" }}
+              onClick={() => setShowDiscountModal(true)}
+            >
+              Add Discount [F2]
+            </span>
+            <span
+              className="discount-btn"
+              style={{ cursor: "pointer" }}
+              onClick={() => setShowChargeModal(true)}
+            >
+              Add Additional Charge [F3]
+            </span>
           </div>
 
           <div className="bill-details">
@@ -338,20 +745,37 @@ function POSPage() {
               <span className="bill-label">Sub Total</span>
               <span className="bill-val">₹ {subTotal.toFixed(0)}</span>
             </div>
+            {appliedDiscount > 0 && (
+              <div className="bill-row" style={{ color: "#16a34a" }}>
+                <span className="bill-label">Discount</span>
+                <span className="bill-val">− ₹ {appliedDiscount.toFixed(0)}</span>
+              </div>
+            )}
+            {appliedCharge > 0 && (
+              <div className="bill-row">
+                <span className="bill-label">{additionalChargeLabel}</span>
+                <span className="bill-val">+ ₹ {appliedCharge.toFixed(0)}</span>
+              </div>
+            )}
             <div className="bill-row">
               <span className="bill-label">Tax</span>
               <span className="bill-val">₹ 0</span>
             </div>
             <div className="bill-row bill-row--total">
               <span className="bill-label">Total Amount</span>
-              <span className="bill-val">₹ {subTotal.toFixed(0)}</span>
+              <span className="bill-val">₹ {totalAmount.toFixed(0)}</span>
             </div>
           </div>
 
           <div className="received-section">
             <span className="bill-label">Received Amount [F4]</span>
             <div className="received-row">
-              <input className="received-input" placeholder="₹ 0" type="number" />
+              <input
+                ref={receivedRef}
+                className="received-input"
+                placeholder="₹ 0"
+                type="number"
+              />
               <select className="pay-select">
                 <option>Cash</option>
                 <option>UPI</option>
@@ -361,8 +785,12 @@ function POSPage() {
           </div>
 
           <div className="save-btns">
-            <button className="btn--save-print">Save &amp; Print [F6]</button>
-            <button className="btn--save-bill">Save Bill [F7]</button>
+            <button className="btn--save-print" onClick={handleSavePrint}>
+              Save &amp; Print [F6]
+            </button>
+            <button className="btn--save-bill" onClick={handleSaveBill}>
+              Save Bill [F7]
+            </button>
           </div>
         </div>
       </div>

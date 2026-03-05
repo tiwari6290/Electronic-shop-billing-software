@@ -50,12 +50,12 @@
   font-size: 14px;
 }
 
-.search-box svg {
+/* .search-box svg {
   position: absolute;
   right: 10px;
   top: 10px;
   color: #9ca3af;
-}
+} */
 
 .category-select {
     height: 40px;

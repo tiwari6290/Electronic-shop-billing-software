@@ -1,0 +1,142 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
+
+* { box-sizing: border-box; }
+
+.csi-page {
+  font-family: 'DM Sans', sans-serif;
+  background: #f8f9fc;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Top Bar ──────────────────────────────────────────────────── */
+.csi-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px;
+  background: #fff;
+  border-bottom: 1px solid #e5e7eb;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.csi-back-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  font-size: 16px;
+  font-weight: 700;
+  color: #111827;
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  padding: 4px 0;
+}
+.csi-back-btn svg { width: 20px; height: 20px; }
+.csi-back-btn:hover { color: #4f46e5; }
+.csi-topbar-right { display: flex; align-items: center; gap: 10px; }
+.csi-keyboard-btn {
+  width: 36px; height: 36px; border-radius: 7px;
+  border: 1.5px solid #e5e7eb; background: #fff;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: #6b7280;
+}
+.csi-keyboard-btn svg { width: 18px; height: 18px; }
+.csi-settings-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 7px 14px; border: 1.5px solid #e5e7eb; border-radius: 7px;
+  background: #fff; font-family: 'DM Sans', sans-serif;
+  font-size: 13.5px; color: #374151; cursor: pointer;
+  position: relative;
+}
+.csi-settings-btn svg { width: 15px; height: 15px; }
+.csi-notif-dot { position: absolute; top: 5px; right: 5px; width: 7px; height: 7px; border-radius: 50%; background: #ef4444; }
+.csi-save-new-btn {
+  padding: 8px 20px; border: 1.5px solid #d1d5db; border-radius: 7px;
+  background: #fff; font-family: 'DM Sans', sans-serif; font-size: 14px;
+  color: #374151; cursor: pointer; font-weight: 500;
+}
+.csi-save-new-btn:hover { background: #f9fafb; }
+.csi-save-btn {
+  padding: 8px 24px; border: none; border-radius: 7px;
+  background: #6366f1; color: #fff; font-family: 'DM Sans', sans-serif;
+  font-size: 14px; font-weight: 600; cursor: pointer;
+}
+.csi-save-btn:hover { background: #4f46e5; }
+
+/* ── Body ─────────────────────────────────────────────────────── */
+.csi-body {
+  flex: 1;
+  background: #fff;
+  margin: 16px;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  overflow: hidden;
+}
+
+/* ── Top Panel ────────────────────────────────────────────────── */
+.csi-top-panel {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-bottom: 1px solid #e5e7eb;
+}
+.csi-party-col {
+  border-right: 1px solid #e5e7eb;
+  min-height: 160px;
+}
+.csi-meta-col {
+  position: relative;
+  padding-right: 24px;
+}
+
+/* ── Bottom Panel ─────────────────────────────────────────────── */
+.csi-bottom-panel {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-top: 1px solid #e5e7eb;
+  min-height: 300px;
+}
+.csi-footer-col {
+  border-right: 1px solid #e5e7eb;
+}
+.csi-summary-col {}
+
+/* ── Settings Modal ───────────────────────────────────────────── */
+.csi-overlay { position: fixed; inset: 0; background: rgba(17,24,39,.5); z-index: 500; display: flex; align-items: center; justify-content: center; }
+.csi-modal { background: #fff; border-radius: 12px; width: 440px; max-width: 96vw; font-family: 'DM Sans', sans-serif; animation: csiFadeUp .18s ease; }
+@keyframes csiFadeUp { from { opacity:0;transform:translateY(12px); } to { opacity:1;transform:translateY(0); } }
+.csi-modal-hdr { display: flex; justify-content: space-between; align-items: center; padding: 18px 22px; border-bottom: 1px solid #f3f4f6; font-size: 16px; font-weight: 700; color: #111827; }
+.csi-modal-hdr button { background: none; border: none; cursor: pointer; color: #9ca3af; font-size: 18px; }
+.csi-settings-body { padding: 0; max-height: 72vh; overflow-y: auto; }
+.csi-settings-section { padding: 14px 22px; border-bottom: 1px solid #f3f4f6; }
+.csi-settings-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+.csi-s-label { font-size: 13.5px; font-weight: 600; color: #111827; margin-bottom: 3px; display: flex; align-items: center; gap: 8px; }
+.csi-s-sub { font-size: 12px; color: #6b7280; line-height: 1.4; }
+.csi-badge-new { display: inline-flex; padding: 2px 7px; border-radius: 20px; background: #dbeafe; color: #1d4ed8; font-size: 11px; font-weight: 700; }
+.csi-prefix-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+.csi-prefix-row label { display: block; font-size: 12px; color: #6b7280; margin-bottom: 3px; }
+.csi-si-inp { width: 100%; padding: 7px 10px; border: 1.5px solid #e5e7eb; border-radius: 6px; font-size: 13px; outline: none; font-family: 'DM Sans', sans-serif; }
+.csi-si-inp:focus { border-color: #6366f1; }
+.csi-inv-preview { font-size: 12px; color: #6b7280; margin-top: 6px; }
+.csi-theme-sel { width: 100%; padding: 8px 12px; border: 1.5px solid #e5e7eb; border-radius: 7px; font-size: 13.5px; color: #374151; outline: none; font-family: 'DM Sans', sans-serif; }
+.csi-customize-banner { display: flex; align-items: center; justify-content: space-between; background: #eff6ff; border-radius: 8px; padding: 14px 16px; margin: 12px 22px 18px; }
+.csi-full-settings { background: none; border: none; color: #4f46e5; font-size: 13px; font-weight: 600; cursor: pointer; padding: 0; font-family: 'DM Sans', sans-serif; }
+.csi-invoice-thumb { width: 64px; height: 64px; background: #e5e7eb; border-radius: 6px; display: flex; align-items: center; justify-content: center; }
+.csi-modal-ftr { display: flex; justify-content: flex-end; gap: 10px; padding: 14px 22px; border-top: 1px solid #f3f4f6; }
+.csi-btn-cancel { padding: 8px 20px; border: 1.5px solid #e5e7eb; border-radius: 7px; background: #fff; font-size: 14px; color: #374151; cursor: pointer; font-family: 'DM Sans', sans-serif; }
+.csi-btn-primary { padding: 8px 24px; border: none; border-radius: 7px; background: #6366f1; color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; font-family: 'DM Sans', sans-serif; }
+.csi-btn-primary:hover { background: #4f46e5; }
+.csi-toggle { width: 40px; height: 22px; border-radius: 9999px; border: none; background: #d1d5db; position: relative; cursor: pointer; transition: background .2s; flex-shrink: 0; }
+.csi-toggle--on { background: #6366f1; }
+.csi-toggle-th { position: absolute; top: 2px; left: 2px; width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.2); transition: left .2s; }
+.csi-toggle--on .csi-toggle-th { left: 20px; }
+
+/* Responsive */
+@media (max-width: 900px) {
+  .csi-top-panel, .csi-bottom-panel { grid-template-columns: 1fr; }
+  .csi-party-col, .csi-footer-col { border-right: none; border-bottom: 1px solid #e5e7eb; }
+  .csi-meta-col { padding-right: 16px; }
+}
