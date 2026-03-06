@@ -87,9 +87,45 @@ interface Props {
   onSaveAndNew?: () => void;
   /** Pre-fill form from a converted quotation */
   fromQuotation?: any | null;
+  /** Pre-fill form from a converted delivery challan */
+  fromChallan?: any | null;
 }
 
-export default function CreateSalesInvoice({ editId, onBack, onSaveAndNew, fromQuotation }: Props) {
+export default function CreateSalesInvoice({ editId, onBack, onSaveAndNew, fromQuotation, fromChallan }: Props) {
+
+  // ── Convert challan data → SalesInvoice shape ──────────────────────────────
+  function challanToInvoice(c: any): import("./SalesInvoiceTypes").SalesInvoice {
+    const blank = makeBlankInvoice(getNextInvoiceNo());
+    const billItems = (c.billItems || []).map((item: any) => ({
+      rowId: `row-${Date.now()}-${item.rowId || item.itemId}`,
+      itemId: item.itemId,
+      name: item.name,
+      description: item.description || "",
+      hsn: item.hsn || "",
+      qty: item.qty,
+      unit: item.unit || "PCS",
+      price: item.price,
+      discountPct: item.discountPct || 0,
+      discountAmt: item.discountAmt || 0,
+      taxLabel: item.taxLabel || "None",
+      taxRate: item.taxRate || 0,
+      amount: item.amount,
+    }));
+    return {
+      ...blank,
+      party: c.party || null,
+      billItems,
+      additionalCharges: c.additionalCharges || [],
+      discountType: c.discountType || blank.discountType,
+      discountPct: c.discountPct || 0,
+      discountAmt: c.discountAmt || 0,
+      roundOff: c.roundOff || "none",
+      roundOffAmt: c.roundOffAmt || 0,
+      notes: c.notes || "",
+      termsConditions: c.termsConditions || blank.termsConditions,
+      challanNo: c.challanNo || "",
+    };
+  }
 
   // ── Convert quotation data → SalesInvoice shape ────────────────────────────
   function quotationToInvoice(q: any): import("./SalesInvoiceTypes").SalesInvoice {
@@ -127,6 +163,7 @@ export default function CreateSalesInvoice({ editId, onBack, onSaveAndNew, fromQ
 
   const [form, setForm] = useState<import("./SalesInvoiceTypes").SalesInvoice>(() => {
     if (editId) return getSalesInvoiceById(editId) ?? makeBlankInvoice(getNextInvoiceNo());
+    if (fromChallan) return challanToInvoice(fromChallan);
     if (fromQuotation) return quotationToInvoice(fromQuotation);
     return makeBlankInvoice(getNextInvoiceNo());
   });

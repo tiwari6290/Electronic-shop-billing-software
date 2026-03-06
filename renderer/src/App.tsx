@@ -5,15 +5,16 @@ import AdminSidebar from "./components/Admin/AdminSidebar/AdminSidebar";
 import Navbar from "./components/Cashier/Navbar";
 import Createparty from "./components/Cashier/Createparty";
 import CreateItem from "./components/Cashier/CreateItem/CreateItem";
-import ProformaInvoice from "./components/Cashier/ProformaInvoice";
+import ProformaInvoice from "./components/Cashier/Proformainvoice/Proformainvoice";
 import Purchases from "./components/Cashier/Purchases/Purchases";
 import CreateDebitNote from "./components/Cashier/CreateDebitNote/CreateDebitNote";
 import CreatePurchaseReturn from "./components/Cashier/CreatePurchaseReturn/CreatePurchaseReturn";
 import PaymentOut from "./components/Cashier/PaymentOut/PaymentOut";
 import PaymentIn from "./components/Cashier/PaymentIn/PaymentIn";
 import PaymentInView from "./components/Cashier/PaymentIn/Paymentinview";
-// import CreateCreditNote from "./components/Cashier/CreateCreditNote/CreateCreditNote";
-import DeliveryChallan from "./components/Cashier/DeliveryChallan/DeliveryChallan";
+import DeliveryChallanList from "./components/Cashier/Deliverychallan/Deliverychallan";
+import CreateDeliveryChallan from "./components/Cashier/Deliverychallan/Createdeliverychallan";
+import DeliveryChallanViewModel from "./components/Cashier/Deliverychallan/Deliverychallanviewmodel";
 import PurchaseOrder from "./components/Cashier/PurchaseOrder/PurchaseOrder";
 import Createexpense from "./components/Cashier/Createexpense";
 import AdminSettingSidebar from "./components/Admin/AdminSettingSidebar";
@@ -76,9 +77,11 @@ function CreateSalesInvoiceNew() {
   const navigate = useNavigate();
   const location = useLocation();
   const fromQuotation = location.state?.fromQuotation ?? null;
+  const fromChallan = location.state?.fromChallan ?? null;
   return (
     <CreateSalesInvoice
       fromQuotation={fromQuotation}
+      fromChallan={fromChallan}
       onBack={() => navigate("/cashier/sales-invoicses-list")}
       onSaveAndNew={() => navigate("/cashier/sales-invoice")}
     />
@@ -160,6 +163,27 @@ const AccountantLayout = () => (
   </div>
 );
 
+// ─── Delivery Challan wrappers ────────────────────────────────────────────────
+function DeliveryChallanCreateNew() {
+  const navigate = useNavigate();
+  return (
+    <CreateDeliveryChallan
+      onBack={() => navigate("/cashier/delivery-challan")}
+      onSaveAndNew={() => navigate("/cashier/delivery-challan-create")}
+    />
+  );
+}
+function DeliveryChallanEditPage() {
+  const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
+  return (
+    <CreateDeliveryChallan
+      editId={id}
+      onBack={() => navigate("/cashier/delivery-challan")}
+    />
+  );
+}
+
 function App() {
   return (
     <BrowserRouter>
@@ -173,6 +197,7 @@ function App() {
           <Route index element={<Navigate to="/cashier/create-party" replace />} />
           <Route path="navbar"              element={<Navbar title="Dashboard" />} />
           <Route path="create-party"        element={<Createparty />} />
+          <Route path="create-party/:id"    element={<Createparty />} />
           <Route path="create-item"         element={<CreateItem />} />
           <Route path="POS-billing"         element={<Billing />} />
           <Route path="parties"             element={<Parties />} />
@@ -191,7 +216,10 @@ function App() {
           <Route path="sales-return-view/:id"   element={<ViewSalesReturnPage />} />
 
           <Route path="credit-note"           element={<CreditNote />} />
-          <Route path="delivery-challan"      element={<DeliveryChallan />} />
+          <Route path="delivery-challan"             element={<DeliveryChallanList />} />
+          <Route path="delivery-challan-create"      element={<DeliveryChallanCreateNew />} />
+          <Route path="delivery-challan-edit/:id"    element={<DeliveryChallanEditPage />} />
+          <Route path="delivery-challan-view/:id"    element={<DeliveryChallanViewModel />} />
           <Route path="proforma-invoice"      element={<ProformaInvoice />} />
           <Route path="purchase"              element={<Purchases />} />
           <Route path="payment-out"           element={<PaymentOut />} />

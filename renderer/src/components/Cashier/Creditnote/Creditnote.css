@@ -53,6 +53,7 @@
   color: #9ca3af;
   width: 200px;
   transition: border-color 0.15s;
+  height: 35px;
 }
 .cn-search-box:focus-within {
   border-color: #6366f1;
@@ -218,7 +219,7 @@
   background: #fff;
   border: 1px solid #e5e7eb;
   border-radius: 10px;
-  overflow: hidden;
+  overflow: visible;
 }
 .cn-table {
   width: 100%;
