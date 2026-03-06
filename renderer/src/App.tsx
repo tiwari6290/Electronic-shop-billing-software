@@ -43,6 +43,7 @@ import Parties from "./components/Cashier/Parties/Parties";
 import PartyDetails from "./components/Cashier/Parties/PartyDetails";
 import PartyLedger from "./components/Cashier/Parties/PartyLedger";
 import QuotationEstimate from "./components/Cashier/Quotationestimate/Quotationestimate";
+import Purchase from "./components/Cashier/Createpurchase/Purchase";
 
 // Sales Return list + form + view
 import SalesReturn from "./components/Cashier/Salesreturn/Salesreturn";
@@ -203,33 +204,31 @@ function App() {
           <Route path="parties"             element={<Parties />} />
           <Route path="party/:id"           element={<PartyDetails />} />
           <Route path="party-ledger/:id"    element={<PartyLedger />} />
-          <Route path="payment-in"          element={<PaymentIn />} />
-          <Route path="payment-in-list"     element={<PaymentInList />} />
-          <Route path="payment-in-view/:id" element={<PaymentInView />} />
-          <Route path="create-item/inventory" element={<Inventory />} />
-          <Route path="create-item/godown"    element={<Godown />} />
 
-          {/* Sales Return - 4 routes */}
-          <Route path="sales-return"            element={<SalesReturn />} />
-          <Route path="sales-return-create"     element={<CreateSalesReturnNew />} />
-          <Route path="sales-return-edit/:id"   element={<EditSalesReturn />} />
-          <Route path="sales-return-view/:id"   element={<ViewSalesReturnPage />} />
+          {/* ── Payment In — 3 routes ────────────────────────────── */}
+          <Route path="payment-in"               element={<PaymentIn />} />
+          <Route path="payment-in-list"          element={<PaymentInList />} />
+         <Route path="payment-in-view/:id"      element={<PaymentInView />} /> 
+          <Route path="create-party" element={<Createparty />} />
+          <Route path="create-item" element={<CreateItem />} />
+          <Route path="/cashier/create-item/inventory" element ={<Inventory />} />
+          <Route path="/cashier/create-item/godown" element ={<Godown />} />
+          <Route path="POS-billing" element ={<Billing />}/>
+          <Route path="parties" element ={<Parties/>}/>
+          <Route path="party/:id" element={<PartyDetails />} />
 
-          <Route path="credit-note"           element={<CreditNote />} />
-          <Route path="delivery-challan"             element={<DeliveryChallanList />} />
-          <Route path="delivery-challan-create"      element={<DeliveryChallanCreateNew />} />
-          <Route path="delivery-challan-edit/:id"    element={<DeliveryChallanEditPage />} />
-          <Route path="delivery-challan-view/:id"    element={<DeliveryChallanViewModel />} />
-          <Route path="proforma-invoice"      element={<ProformaInvoice />} />
-          <Route path="purchase"              element={<Purchases />} />
-          <Route path="payment-out"           element={<PaymentOut />} />
-          <Route path="payment-out-list"      element={<PaymentOutList />} />
-          <Route path="purchase-return"       element={<CreatePurchaseReturn />} />
-          <Route path="debit-note"            element={<CreateDebitNote />} />
-          <Route path="purchase-orders-form"  element={<PurchaseOrder />} />
-          <Route path="purchase-orders"       element={<PurchaseOrdersPage />} />
-          <Route path="quotation-estimate"    element={<QuotationEstimate />} />
-          <Route path="create-expense"        element={<Createexpense />} />
+          <Route path="sales-return"        element={<SalesReturn />} />
+          {/* <Route path="delivery-challan"    element={<DeliveryChallan />} /> */}
+          <Route path="proforma-invoice"    element={<ProformaInvoice />} />
+          <Route path="purchase"            element={<Purchases />} />
+          <Route path="payment-out"         element={<PaymentOut />} />
+          <Route path="payment-out-list"    element={<PaymentOutList />} />
+          <Route path="purchase-return"     element={<CreatePurchaseReturn />} />
+          <Route path="debit-note"          element={<CreateDebitNote />} />
+          <Route path="purchase-orders-form" element={<PurchaseOrder />} />
+          <Route path="purchase-orders"     element={<PurchaseOrdersPage />} />
+          <Route path="quotation-estimate"  element={<QuotationEstimate />} />
+          <Route path="create-expense"      element={<Createexpense />} />
 
           {/* Sales Invoice - 3 routes */}
           <Route path="sales-invoicses-list"   element={<SalesInvoiceList />} />

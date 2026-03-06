@@ -184,9 +184,9 @@ const calcTotalStockValue = (items: Item[]) => items.reduce((s,it)=>s+itemStockV
 const calcTotalStockQty   = (items: Item[]) => items.filter(hasStock).reduce((s,it)=>s+Math.max(0,parseQty(it.stockQty)),0);
 const lowStockItems       = (items: Item[]) => items.filter(it => {
   const qty = parseQty(it.stockQty);
-  if (qty < 0) return true; // negative stock always low
+  if (qty < 0) return true;
   if (it.lowStockWarning === "Enabled" && it.lowStockQty !== "-") {
-    return qty <= parseInt(it.lowStockQty); // only if actual qty <= threshold
+    return qty <= parseInt(it.lowStockQty);
   }
   return false;
 });
@@ -291,13 +291,10 @@ const CustomFieldModal = ({ fields, onClose, onSave }: {
   return (
     <div className="modal-overlay" style={{zIndex:1100}} onClick={onClose}>
       <div className="cf-modal" onClick={e=>e.stopPropagation()}>
-        {/* Header */}
         <div className="cf-header">
           <span className="cf-title">Add Item Custom Fields</span>
           <button className="modal-close" onClick={onClose}><IcX /></button>
         </div>
-
-        {/* Bubble illustration */}
         <div className="cf-bubbles">
           <div className="cf-bubble cf-bubble-green" style={{top:30,left:160}}>
             <span className="cf-bubble-icon">⊞</span>
@@ -312,32 +309,17 @@ const CustomFieldModal = ({ fields, onClose, onSave }: {
             <span className="cf-bubble-label">Material</span>
           </div>
         </div>
-
-        {/* Fields */}
         <div className="cf-body">
           <label className="cf-label">Field Name</label>
           {localFields.map(f => (
             <div key={f.id} className="cf-field-row">
-              <input
-                className="cf-field-input"
-                placeholder="Enter Custom Field Name"
-                value={f.name}
-                onChange={e => updateName(f.id, e.target.value)}
-              />
-              <button className={`cf-field-btn${f.hidden?" active":""}`} title="Hide" onClick={() => toggleHide(f.id)}>
-                <IcEyeOff />
-              </button>
-              <button className="cf-field-btn danger" title="Delete" onClick={() => deleteField(f.id)}>
-                <IcTrash />
-              </button>
+              <input className="cf-field-input" placeholder="Enter Custom Field Name" value={f.name} onChange={e => updateName(f.id, e.target.value)}/>
+              <button className={`cf-field-btn${f.hidden?" active":""}`} title="Hide" onClick={() => toggleHide(f.id)}><IcEyeOff /></button>
+              <button className="cf-field-btn danger" title="Delete" onClick={() => deleteField(f.id)}><IcTrash /></button>
             </div>
           ))}
-          <button className="cf-add-btn" onClick={addField}>
-            <IcPlus /> Add New Field
-          </button>
+          <button className="cf-add-btn" onClick={addField}><IcPlus /> Add New Field</button>
         </div>
-
-        {/* Footer */}
         <div className="cf-footer">
           <button className="btn-secondary" onClick={onClose}>Close</button>
           <button className="btn-primary" onClick={() => { onSave(localFields); onClose(); }}>Save</button>
@@ -372,16 +354,11 @@ const SettingsModal = ({ settings, customFields, onClose, onSave }: {
     <>
       <div className="modal-overlay" onClick={onClose}>
         <div className="stg-modal" onClick={e=>e.stopPropagation()}>
-          {/* Header */}
           <div className="stg-header">
             <span className="stg-title">Item Settings</span>
             <button className="modal-close" onClick={onClose}><IcX /></button>
           </div>
-
-          {/* Body */}
           <div className="stg-body">
-
-            {/* Stock Value Calculation */}
             <div className="stg-row">
               <span className="stg-row-label">Stock Value Calculation</span>
               <div className="stg-select-wrap" ref={calcRef}>
@@ -400,8 +377,6 @@ const SettingsModal = ({ settings, customFields, onClose, onSave }: {
                 )}
               </div>
             </div>
-
-            {/* Item Batching */}
             <div className="stg-row stg-row-with-desc">
               <div className="stg-row-text">
                 <span className="stg-row-label">Enable Item Batching &amp; Expiry</span>
@@ -409,7 +384,6 @@ const SettingsModal = ({ settings, customFields, onClose, onSave }: {
               </div>
               <Toggle on={s.batchExpiry} onChange={v => set("batchExpiry",v)}/>
             </div>
-
             {s.batchExpiry && (
               <div className="stg-row stg-row-with-desc stg-indent">
                 <div className="stg-row-text">
@@ -430,8 +404,6 @@ const SettingsModal = ({ settings, customFields, onClose, onSave }: {
                 <Toggle on={s.alertBeforeExpiry} onChange={v => set("alertBeforeExpiry",v)}/>
               </div>
             )}
-
-            {/* Serial Number */}
             <div className="stg-row stg-row-with-desc">
               <div className="stg-row-text">
                 <span className="stg-row-label">Enable Serial Number/IMEI</span>
@@ -439,17 +411,13 @@ const SettingsModal = ({ settings, customFields, onClose, onSave }: {
               </div>
               <Toggle on={s.serialImei} onChange={v => set("serialImei",v)}/>
             </div>
-
             {s.serialImei && (
               <div className="stg-indent stg-indent-field">
                 <label className="stg-sub-label">Field Name</label>
-                <input className="stg-field-input" value={s.serialFieldName}
-                  onChange={e=>set("serialFieldName",e.target.value)}/>
+                <input className="stg-field-input" value={s.serialFieldName} onChange={e=>set("serialFieldName",e.target.value)}/>
                 <p className="stg-hint">Choose a custom field name like IMEI Number, Model Number, Part Number etc. for adding the serial numbers.</p>
               </div>
             )}
-
-            {/* MRP */}
             <div className="stg-row">
               <span className="stg-row-label">MRP</span>
               <Toggle on={s.mrp} onChange={v=>set("mrp",v)}/>
@@ -462,14 +430,10 @@ const SettingsModal = ({ settings, customFields, onClose, onSave }: {
                 </label>
               </div>
             )}
-
-            {/* Wholesale */}
             <div className="stg-row">
               <span className="stg-row-label">Wholesale Price</span>
               <Toggle on={s.wholesalePrice} onChange={v=>set("wholesalePrice",v)}/>
             </div>
-
-            {/* Party Wise */}
             <div className="stg-row stg-row-with-desc">
               <div className="stg-row-text">
                 <span className="stg-row-label">Party Wise Item Price <span className="badge-new">New</span></span>
@@ -477,27 +441,16 @@ const SettingsModal = ({ settings, customFields, onClose, onSave }: {
               </div>
               <Toggle on={s.partyWisePrice} onChange={v=>set("partyWisePrice",v)}/>
             </div>
-
-            {/* Add Custom Field */}
-            <button className="stg-add-custom" onClick={() => setShowCfModal(true)}>
-              + Add Custom Field
-            </button>
+            <button className="stg-add-custom" onClick={() => setShowCfModal(true)}>+ Add Custom Field</button>
           </div>
-
-          {/* Footer */}
           <div className="stg-footer">
             <button className="btn-secondary" onClick={onClose}>Cancel</button>
             <button className="btn-primary" onClick={() => { onSave(s, cf); onClose(); }}>Save</button>
           </div>
         </div>
       </div>
-
       {showCfModal && (
-        <CustomFieldModal
-          fields={cf}
-          onClose={() => setShowCfModal(false)}
-          onSave={f => setCf(f)}
-        />
+        <CustomFieldModal fields={cf} onClose={() => setShowCfModal(false)} onSave={f => setCf(f)}/>
       )}
     </>
   );
@@ -573,15 +526,11 @@ const EditItemModal = ({ item, onClose, onSave }: {
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="edit-item-modal" onClick={e=>e.stopPropagation()}>
-        {/* Header */}
         <div className="edit-modal-header">
           <span className="edit-modal-title">Edit Item</span>
           <button className="modal-close" onClick={onClose}><IcX /></button>
         </div>
-
-        {/* Body */}
         <div className="edit-modal-body">
-          {/* Section: General */}
           <div className="edit-section-title">General Details</div>
           <div className="edit-form-grid">
             <div className="edit-form-group">
@@ -605,8 +554,6 @@ const EditItemModal = ({ item, onClose, onSave }: {
               <textarea className="edit-textarea" value={form.itemDescription} onChange={e=>set("itemDescription",e.target.value)} placeholder="Item description" rows={2}/>
             </div>
           </div>
-
-          {/* Section: Pricing */}
           <div className="edit-section-title">Pricing Details</div>
           <div className="edit-form-grid">
             <div className="edit-form-group">
@@ -628,8 +575,6 @@ const EditItemModal = ({ item, onClose, onSave }: {
               <input className="edit-input" value={form.secondaryUnit} onChange={e=>set("secondaryUnit",e.target.value)} placeholder="-"/>
             </div>
           </div>
-
-          {/* Section: Stock */}
           <div className="edit-section-title">Stock Settings</div>
           <div className="edit-form-grid">
             <div className="edit-form-group">
@@ -645,8 +590,6 @@ const EditItemModal = ({ item, onClose, onSave }: {
             </div>
           </div>
         </div>
-
-        {/* Footer */}
         <div className="edit-modal-footer">
           <button className="btn-secondary" onClick={onClose}>Cancel</button>
           <button className="btn-primary" onClick={handleSave}>Save Changes</button>
@@ -661,7 +604,6 @@ const EditItemModal = ({ item, onClose, onSave }: {
 // ═══════════════════════════════════════════════════════════════════════════════
 type DetailTab = "itemDetails"|"stockDetails"|"partyWiseReport"|"godown"|"partyWisePrices";
 
-// Empty state with icon for tabs
 const TabEmpty = ({ message }: { message: string }) => (
   <div className="tab-empty-state">
     <svg width={48} height={48} viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth={1.2}>
@@ -705,8 +647,6 @@ const ItemDetailPage = ({ item, onBack, onDelete, onAdjust, onEdit }: {
         {tabs.map(([k,l])=><button key={k} className={`tab-btn${tab===k?" active":""}`} onClick={()=>setTab(k)}>{l}</button>)}
       </div>
       <div className="detail-body">
-
-        {/* ── Item Details ── */}
         {tab==="itemDetails"&&(
           <div className="tab-cards-grid">
             <div className="info-card">
@@ -734,8 +674,6 @@ const ItemDetailPage = ({ item, onBack, onDelete, onAdjust, onEdit }: {
             </div>
           </div>
         )}
-
-        {/* ── Stock Details ── */}
         {tab==="stockDetails"&&(
           <div className="tab-section">
             <div className="tab-toolbar">
@@ -763,8 +701,6 @@ const ItemDetailPage = ({ item, onBack, onDelete, onAdjust, onEdit }: {
             ) : <TabEmpty message="No stock transactions found for this item." />}
           </div>
         )}
-
-        {/* ── Party Wise Report ── */}
         {tab==="partyWiseReport"&&(
           <div className="tab-section">
             <div className="tab-toolbar">
@@ -792,8 +728,6 @@ const ItemDetailPage = ({ item, onBack, onDelete, onAdjust, onEdit }: {
             ) : <TabEmpty message="No party wise transactions found for this item." />}
           </div>
         )}
-
-        {/* ── Godown ── */}
         {tab==="godown"&&(
           <div className="tab-section">
             <div className="tab-toolbar">
@@ -817,8 +751,6 @@ const ItemDetailPage = ({ item, onBack, onDelete, onAdjust, onEdit }: {
             ) : <TabEmpty message="No godown stock found. Assign this item to a godown to see it here." />}
           </div>
         )}
-
-        {/* ── Party Wise Prices ── */}
         {tab==="partyWisePrices"&&(
           <div className="tab-section">
             <div className="tab-toolbar">
@@ -846,7 +778,6 @@ const ItemDetailPage = ({ item, onBack, onDelete, onAdjust, onEdit }: {
             ) : <TabEmpty message={partySearch ? `No party found matching "${partySearch}".` : "No party wise prices set for this item."} />}
           </div>
         )}
-
       </div>
     </div>
   );
@@ -873,7 +804,6 @@ const ReportShell = ({ title, onBack, topRight, children }: {
   </div>
 );
 
-// ── Rate List ─────────────────────────────────────────────────────────────────
 const RateListPage = ({ items, onBack }: { items:Item[]; onBack:()=>void }) => {
   const listed = items.filter(it=>it.sellingPrice!==null);
   return (
@@ -890,11 +820,9 @@ const RateListPage = ({ items, onBack }: { items:Item[]; onBack:()=>void }) => {
   );
 };
 
-// ── Stock Summary ─────────────────────────────────────────────────────────────
 const StockSummaryPage = ({ items, onBack }: { items:Item[]; onBack:()=>void }) => {
   const [dateRange, setDateRange] = useState<DateRange>("today");
   const stockItems = items.filter(hasStock);
-  // Filter stock details by date range (shows items that had activity in range, or all items)
   const filteredItems = dateRange==="all" ? stockItems : stockItems.filter(it =>
     it.stockDetails.length===0 || it.stockDetails.some(s=>inRange(s.date, dateRange))
   );
@@ -925,7 +853,6 @@ const StockSummaryPage = ({ items, onBack }: { items:Item[]; onBack:()=>void }) 
   );
 };
 
-// ── Low Stock Summary ─────────────────────────────────────────────────────────
 const LowStockSummaryPage = ({ items, onBack }: { items:Item[]; onBack:()=>void }) => {
   const low = lowStockItems(items);
   const totalVal = low.reduce((s,it)=>s+itemStockValue(it),0);
@@ -948,10 +875,8 @@ const LowStockSummaryPage = ({ items, onBack }: { items:Item[]; onBack:()=>void 
   );
 };
 
-// ── Item Sales Summary ────────────────────────────────────────────────────────
 const ItemSalesSummaryPage = ({ items, onBack }: { items:Item[]; onBack:()=>void }) => {
   const [dateRange, setDateRange] = useState<DateRange>("this_week");
-  // Filter partyWiseReport rows based on date (using stock details as proxy for transaction dates)
   const withTx = items.filter(it=>it.partyWiseReport.length>0);
   const filteredWithTx = dateRange==="all" ? withTx : withTx.filter(it =>
     it.stockDetails.length===0 || it.stockDetails.some(s=>inRange(s.date,dateRange))
@@ -1115,11 +1040,9 @@ const ItemsListPage = ({ items, onItemClick, onDelete, search, setSearch,
               <IcSearch />
               <input className="search-input" placeholder="Search by Serial No." value={search} onChange={e=>setSearch(e.target.value)}/>
             </div>
-            {/* Category dropdown in toolbar */}
             <CategoryDropdown categories={categories} selectedCat={selectedCat} onSelect={onSelectCat} onAddCategory={onAddCategory}/>
           </div>
           <div className="toolbar-right">
-            {/* Low Stock toggle button — label changes */}
             <button className={`btn-filter${lowStockFilter?" active":""}`} onClick={()=>setLowStockFilter(!lowStockFilter)}>
               <IcAlert /> {lowStockFilter ? "Show All Stock" : "Low Stock"}
             </button>
@@ -1171,7 +1094,12 @@ const ItemsListPage = ({ items, onItemClick, onDelete, search, setSearch,
 type AppView = "list"|"detail"|"report";
 
 export default function ItemsPage() {
-  const [items,          setItems]          = useState<Item[]>(ITEMS_INIT);
+  // ── ONLY CHANGE FROM ORIGINAL: localStorage se saved items merge karo ──
+  const [items, setItems] = useState<Item[]>(() => {
+    const saved = JSON.parse(localStorage.getItem("inventory_items") || "[]");
+    return [...ITEMS_INIT, ...saved];
+  });
+
   const [view,           setView]           = useState<AppView>("list");
   const [selectedId,     setSelectedId]     = useState<string|null>(null);
   const [adjustItem,     setAdjustItem]     = useState<Item|null>(null);
@@ -1249,7 +1177,6 @@ export default function ItemsPage() {
       {view==="report"&&activeReport==="item_sales"    &&<ItemSalesSummaryPage items={items} onBack={backReport}/>}
 
       {adjustItem&&<AdjustModal item={adjustItem} onClose={()=>setAdjustItem(null)} onSave={adjustStock}/>}
-
       {editItem&&<EditItemModal item={editItem} onClose={()=>setEditItem(null)} onSave={saveEditedItem}/>}
 
       {showSettings&&(
