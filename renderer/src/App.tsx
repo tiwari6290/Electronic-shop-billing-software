@@ -12,7 +12,7 @@ import CreatePurchaseReturn from "./components/Cashier/CreatePurchaseReturn/Crea
 import PaymentOut from "./components/Cashier/PaymentOut/PaymentOut";
 import PaymentIn from "./components/Cashier/PaymentIn/PaymentIn";
 import PaymentInView from "./components/Cashier/PaymentIn/Paymentinview";
-import DeliveryChallanList from "./components/Cashier/Deliverychallan/Deliverychallan";
+import DeliveryChallanList from "./components/Cashier/Deliverychallan/Deliverychallan";       // FIX 1: was used as <DeliveryChallan /> in routes
 import CreateDeliveryChallan from "./components/Cashier/Deliverychallan/Createdeliverychallan";
 import DeliveryChallanViewModel from "./components/Cashier/Deliverychallan/Deliverychallanviewmodel";
 import PurchaseOrder from "./components/Cashier/PurchaseOrder/PurchaseOrder";
@@ -43,7 +43,8 @@ import Parties from "./components/Cashier/Parties/Parties";
 import PartyDetails from "./components/Cashier/Parties/PartyDetails";
 import PartyLedger from "./components/Cashier/Parties/PartyLedger";
 import QuotationEstimate from "./components/Cashier/Quotationestimate/Quotationestimate";
-import Purchase from "./components/Cashier/Createpurchase/Purchase";
+// FIX 2: Removed unused `import Purchase from "./components/Cashier/Createpurchase/Purchase"`
+//         The purchase route correctly uses <Purchases /> from Purchases/Purchases above.
 
 // Sales Return list + form + view
 import SalesReturn from "./components/Cashier/Salesreturn/Salesreturn";
@@ -73,7 +74,7 @@ const AccountantDashboard = () => (
   </div>
 );
 
-// Sales Invoice wrappers
+// ─── Sales Invoice wrappers ───────────────────────────────────────────────────
 function CreateSalesInvoiceNew() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -101,33 +102,44 @@ function EditSalesInvoice() {
   );
 }
 
-// Sales Return wrappers
+// ─── Sales Return wrappers ────────────────────────────────────────────────────
 function CreateSalesReturnNew() {
   const navigate = useNavigate();
-  return (
-    <CreateSalesReturn
-      onBack={() => navigate("/cashier/sales-return")}
-    />
-  );
+  return <CreateSalesReturn onBack={() => navigate("/cashier/sales-return")} />;
 }
 
 function EditSalesReturn() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  return (
-    <CreateSalesReturn
-      editId={id}
-      onBack={() => navigate("/cashier/sales-return")}
-    />
-  );
+  return <CreateSalesReturn editId={id} onBack={() => navigate("/cashier/sales-return")} />;
 }
 
-// SalesReturnViewModel uses useParams/useNavigate internally — no props needed
 function ViewSalesReturnPage() {
   return <SalesReturnViewModel />;
 }
 
-// Layouts
+// ─── Delivery Challan wrappers ────────────────────────────────────────────────
+function DeliveryChallanCreateNew() {
+  const navigate = useNavigate();
+  return (
+    <CreateDeliveryChallan
+      onBack={() => navigate("/cashier/delivery-challan")}
+      onSaveAndNew={() => navigate("/cashier/delivery-challan-create")}
+    />
+  );
+}
+function DeliveryChallanEditPage() {
+  const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
+  return (
+    <CreateDeliveryChallan
+      editId={id}
+      onBack={() => navigate("/cashier/delivery-challan")}
+    />
+  );
+}
+
+// ─── Layouts ──────────────────────────────────────────────────────────────────
 const CashierLayout = () => (
   <div style={{ display: "flex", height: "100vh" }}>
     <Sidebar />
@@ -164,27 +176,6 @@ const AccountantLayout = () => (
   </div>
 );
 
-// ─── Delivery Challan wrappers ────────────────────────────────────────────────
-function DeliveryChallanCreateNew() {
-  const navigate = useNavigate();
-  return (
-    <CreateDeliveryChallan
-      onBack={() => navigate("/cashier/delivery-challan")}
-      onSaveAndNew={() => navigate("/cashier/delivery-challan-create")}
-    />
-  );
-}
-function DeliveryChallanEditPage() {
-  const navigate = useNavigate();
-  const { id } = useParams<{ id: string }>();
-  return (
-    <CreateDeliveryChallan
-      editId={id}
-      onBack={() => navigate("/cashier/delivery-challan")}
-    />
-  );
-}
-
 function App() {
   return (
     <BrowserRouter>
@@ -193,50 +184,71 @@ function App() {
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<Login />} />
 
-        {/* Cashier */}
+        {/* ── Cashier ── */}
         <Route path="/cashier" element={<CashierLayout />}>
           <Route index element={<Navigate to="/cashier/create-party" replace />} />
           <Route path="navbar"              element={<Navbar title="Dashboard" />} />
+
+          {/* Party & Items */}
           <Route path="create-party"        element={<Createparty />} />
           <Route path="create-party/:id"    element={<Createparty />} />
           <Route path="create-item"         element={<CreateItem />} />
+          {/* FIX 3: relative paths (no leading /cashier/) inside nested route */}
+          <Route path="create-item/inventory" element={<Inventory />} />
+          <Route path="create-item/godown"    element={<Godown />} />
+
+          {/* POS & Parties */}
           <Route path="POS-billing"         element={<Billing />} />
           <Route path="parties"             element={<Parties />} />
           <Route path="party/:id"           element={<PartyDetails />} />
           <Route path="party-ledger/:id"    element={<PartyLedger />} />
 
-          {/* ── Payment In — 3 routes ────────────────────────────── */}
-          <Route path="payment-in"               element={<PaymentIn />} />
-          <Route path="payment-in-list"          element={<PaymentInList />} />
-         <Route path="payment-in-view/:id"      element={<PaymentInView />} /> 
-          <Route path="create-party" element={<Createparty />} />
-          <Route path="create-item" element={<CreateItem />} />
-          <Route path="/cashier/create-item/inventory" element ={<Inventory />} />
-          <Route path="/cashier/create-item/godown" element ={<Godown />} />
-          <Route path="POS-billing" element ={<Billing />}/>
-          <Route path="parties" element ={<Parties/>}/>
-          <Route path="party/:id" element={<PartyDetails />} />
+          {/* Payment In */}
+          <Route path="payment-in"          element={<PaymentIn />} />
+          <Route path="payment-in-list"     element={<PaymentInList />} />
+          <Route path="payment-in-view/:id" element={<PaymentInView />} />
 
-          <Route path="sales-return"        element={<SalesReturn />} />
-          {/* <Route path="delivery-challan"    element={<DeliveryChallan />} /> */}
-          <Route path="proforma-invoice"    element={<ProformaInvoice />} />
-          <Route path="purchase"            element={<Purchases />} />
-          <Route path="payment-out"         element={<PaymentOut />} />
-          <Route path="payment-out-list"    element={<PaymentOutList />} />
-          <Route path="purchase-return"     element={<CreatePurchaseReturn />} />
-          <Route path="debit-note"          element={<CreateDebitNote />} />
-          <Route path="purchase-orders-form" element={<PurchaseOrder />} />
-          <Route path="purchase-orders"     element={<PurchaseOrdersPage />} />
-          <Route path="quotation-estimate"  element={<QuotationEstimate />} />
-          <Route path="create-expense"      element={<Createexpense />} />
+          {/* Sales Return */}
+          <Route path="sales-return"            element={<SalesReturn />} />
+          <Route path="sales-return-create"     element={<CreateSalesReturnNew />} />
+          <Route path="sales-return-edit/:id"   element={<EditSalesReturn />} />
+          <Route path="sales-return-view/:id"   element={<ViewSalesReturnPage />} />
 
-          {/* Sales Invoice - 3 routes */}
-          <Route path="sales-invoicses-list"   element={<SalesInvoiceList />} />
-          <Route path="sales-invoice"          element={<CreateSalesInvoiceNew />} />
-          <Route path="sales-invoice/edit/:id" element={<EditSalesInvoice />} />
+          {/* Credit Note */}
+          <Route path="credit-note"             element={<CreditNote />} />
+
+          {/* Delivery Challan */}
+          {/* FIX 1: <DeliveryChallanList /> — not <DeliveryChallan /> */}
+          <Route path="delivery-challan"             element={<DeliveryChallanList />} />
+          <Route path="delivery-challan-create"      element={<DeliveryChallanCreateNew />} />
+          <Route path="delivery-challan-edit/:id"    element={<DeliveryChallanEditPage />} />
+          <Route path="delivery-challan-view/:id"    element={<DeliveryChallanViewModel />} />
+
+          {/* Proforma Invoice */}
+          <Route path="proforma-invoice"        element={<ProformaInvoice />} />
+
+          {/* Purchase */}
+          <Route path="purchase"                element={<Purchases />} />
+          <Route path="purchase-return"         element={<CreatePurchaseReturn />} />
+          <Route path="debit-note"              element={<CreateDebitNote />} />
+          <Route path="purchase-orders-form"    element={<PurchaseOrder />} />
+          <Route path="purchase-orders"         element={<PurchaseOrdersPage />} />
+
+          {/* Payment Out */}
+          <Route path="payment-out"             element={<PaymentOut />} />
+          <Route path="payment-out-list"        element={<PaymentOutList />} />
+
+          {/* Other */}
+          <Route path="quotation-estimate"      element={<QuotationEstimate />} />
+          <Route path="create-expense"          element={<Createexpense />} />
+
+          {/* Sales Invoice */}
+          <Route path="sales-invoicses-list"    element={<SalesInvoiceList />} />
+          <Route path="sales-invoice"           element={<CreateSalesInvoiceNew />} />
+          <Route path="sales-invoice/edit/:id"  element={<EditSalesInvoice />} />
         </Route>
 
-        {/* Admin */}
+        {/* ── Admin ── */}
         <Route path="/admin" element={<Outlet />}>
           <Route element={<AdminMainLayout />}>
             <Route index element={<Navigate to="/cashier/dashboard" replace />} />
@@ -262,7 +274,7 @@ function App() {
           </Route>
         </Route>
 
-        {/* Accountant */}
+        {/* ── Accountant ── */}
         <Route path="/accountant" element={<AccountantLayout />}>
           <Route index element={<Navigate to="/accountant/dashboard" replace />} />
           <Route path="dashboard"       element={<AccountantDashboard />} />
