@@ -533,14 +533,33 @@ export default function SalesInvoiceList() {
   const bulkRef = useRef<HTMLDivElement>(null);
   const dateRef = useRef<HTMLDivElement>(null);
 
-  // Reload from localStorage whenever we navigate back here
+  // Reload from localStorage whenever we navigate back here (SPA navigation or tab focus)
   useEffect(() => {
     function reload() {
       const raw: any[] = JSON.parse(localStorage.getItem("salesInvoices") || "[]");
-      if (raw.length > 0) setInvoices(raw);
+      if (raw.length > 0) {
+        setInvoices(raw.map((r: any): SalesInvoice => {
+          if (r.invoiceNo !== undefined) return r as SalesInvoice;
+          return {
+            id: r.id, invoiceNo: r.invoiceNumber ?? 0,
+            invoiceDate: r.date ?? todayStr(), party: r.partyName ? { name: r.partyName } : null,
+            dueDate: r.dueDate || r.date || todayStr(), showDueDate: !!r.dueIn, paymentTermsDays: 0,
+            billItems: [{ qty:1, price:r.amount??0, discountPct:0, discountAmt:0, taxRate:0, amount:r.amount??0 }],
+            additionalCharges: [], discountPct:0, discountAmt:0, applyTCS:false, tcsRate:0,
+            tcsBase: "Taxable Amount", roundOffAmt:0,
+            amountReceived: r.amount - (r.unpaidAmount ?? 0),
+            status: r.status ?? "Unpaid", createdAt: r.date ?? todayStr(),
+          };
+        }));
+      }
     }
+    reload(); // run on mount (catches navigation within SPA)
     window.addEventListener("focus", reload);
-    return () => window.removeEventListener("focus", reload);
+    document.addEventListener("visibilitychange", reload);
+    return () => {
+      window.removeEventListener("focus", reload);
+      document.removeEventListener("visibilitychange", reload);
+    };
   }, []);
 
   useEffect(() => {

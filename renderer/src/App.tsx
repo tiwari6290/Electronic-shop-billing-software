@@ -5,15 +5,13 @@ import AdminSidebar from "./components/Admin/AdminSidebar/AdminSidebar";
 import Navbar from "./components/Cashier/Navbar";
 import Createparty from "./components/Cashier/Createparty";
 import CreateItem from "./components/Cashier/CreateItem/CreateItem";
-import ProformaInvoice from "./components/Cashier/ProformaInvoice";
+import ProformaInvoice from "./components/Cashier/Proformainvoice/Proformainvoice";
 import Purchases from "./components/Cashier/Purchases/Purchases";
 import CreateDebitNote from "./components/Cashier/CreateDebitNote/CreateDebitNote";
 import CreatePurchaseReturn from "./components/Cashier/CreatePurchaseReturn/CreatePurchaseReturn";
 import PaymentOut from "./components/Cashier/PaymentOut/PaymentOut";
 import PaymentIn from "./components/Cashier/PaymentIn/PaymentIn";
 import PaymentInView from "./components/Cashier/PaymentIn/Paymentinview";
-// import CreateCreditNote from "./components/Cashier/CreateCreditNote/CreateCreditNote";
-import DeliveryChallan from "./components/Cashier/DeliveryChallan/DeliveryChallan";
 import PurchaseOrder from "./components/Cashier/PurchaseOrder/PurchaseOrder";
 import Createexpense from "./components/Cashier/Createexpense";
 import AdminSettingSidebar from "./components/Admin/AdminSettingSidebar";
@@ -43,11 +41,14 @@ import PartyDetails from "./components/Cashier/Parties/PartyDetails";
 import PartyLedger from "./components/Cashier/Parties/PartyLedger";
 import QuotationEstimate from "./components/Cashier/Quotationestimate/Quotationestimate";
 
+
 // Sales Return list + form + view
-/*import SalesReturn from "./components/Cashier/Salesreturn/Salesreturn";
+import SalesReturn from "./components/Cashier/Salesreturn/Salesreturn";
 import CreateSalesReturn from "./components/Cashier/Salesreturn/Createsalesreturn";
 import SalesReturnViewModel from "./components/Cashier/Salesreturn/Salesreturnviewmodel";
-import CreditNote from "./components/Cashier/Creditnote/Creditnote";*/
+import CreditNote from "./components/Cashier/Creditnote/Creditnote";
+
+import DeliveryChallan from "./components/Cashier/DeliveryChallan/DeliveryChallan";
 
 // Sales Invoice components
 import SalesInvoiceList   from "./components/Cashier/Salesinvoices/SalesInvoiceList";
@@ -71,14 +72,16 @@ const AccountantDashboard = () => (
   </div>
 );
 
-// Sales Invoice wrappers
+// ─── Sales Invoice wrappers ───────────────────────────────────────────────────
 function CreateSalesInvoiceNew() {
   const navigate = useNavigate();
   const location = useLocation();
   const fromQuotation = location.state?.fromQuotation ?? null;
+  const fromChallan = location.state?.fromChallan ?? null;
   return (
     <CreateSalesInvoice
       fromQuotation={fromQuotation}
+      fromChallan={fromChallan}
       onBack={() => navigate("/cashier/sales-invoicses-list")}
       onSaveAndNew={() => navigate("/cashier/sales-invoice")}
     />
@@ -97,33 +100,26 @@ function EditSalesInvoice() {
   );
 }
 
-// // Sales Return wrappers
-// function CreateSalesReturnNew() {
-//   const navigate = useNavigate();
-//   return (
-//     <CreateSalesReturn
-//       onBack={() => navigate("/cashier/sales-return")}
-//     />
-//   );
-// }
+// ─── Sales Return wrappers ────────────────────────────────────────────────────
+function CreateSalesReturnNew() {
+  const navigate = useNavigate();
+  return <CreateSalesReturn onBack={() => navigate("/cashier/sales-return")} />;
+}
 
-// function EditSalesReturn() {
-//   const navigate = useNavigate();
-//   const { id } = useParams<{ id: string }>();
-//   return (
-//     <CreateSalesReturn
-//       editId={id}
-//       onBack={() => navigate("/cashier/sales-return")}
-//     />
-//   );
-// }
+function EditSalesReturn() {
+  const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
+  return <CreateSalesReturn editId={id} onBack={() => navigate("/cashier/sales-return")} />;
+}
 
-// // SalesReturnViewModel uses useParams/useNavigate internally — no props needed
-// function ViewSalesReturnPage() {
-//   return <SalesReturnViewModel />;
-// }
+function ViewSalesReturnPage() {
+  return <SalesReturnViewModel />;
+}
 
-// Layouts
+
+
+
+// ─── Layouts ──────────────────────────────────────────────────────────────────
 const CashierLayout = () => (
   <div style={{ display: "flex", height: "100vh" }}>
     <Sidebar />
@@ -168,50 +164,69 @@ function App() {
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<Login />} />
 
-        {/* Cashier */}
+        {/* ── Cashier ── */}
         <Route path="/cashier" element={<CashierLayout />}>
           <Route index element={<Navigate to="/cashier/create-party" replace />} />
           <Route path="navbar"              element={<Navbar title="Dashboard" />} />
+
+          {/* Party & Items */}
           <Route path="create-party"        element={<Createparty />} />
           <Route path="create-party/:id"    element={<Createparty />} />
-          {/* <Route path="create-item"         element={<CreateItem />} /> */}
-          <Route path="create-item"         element={<CreateItem key="create-item" />} />
+          <Route path="create-item"         element={<CreateItem />} />
+          {/* FIX 3: relative paths (no leading /cashier/) inside nested route */}
+          <Route path="create-item/inventory" element={<Inventory />} />
+          <Route path="create-item/godown"    element={<Godown />} />
+
+          {/* POS & Parties */}
           <Route path="POS-billing"         element={<Billing />} />
           <Route path="parties"             element={<Parties />} />
           <Route path="party/:id"           element={<PartyDetails />} />
           <Route path="party-ledger/:id"    element={<PartyLedger />} />
+
+          {/* Payment In */}
           <Route path="payment-in"          element={<PaymentIn />} />
           <Route path="payment-in-list"     element={<PaymentInList />} />
           <Route path="payment-in-view/:id" element={<PaymentInView />} />
-          <Route path="create-item/inventory" element={<Inventory />} />
-          <Route path="create-item/godown"    element={<Godown />} />
 
-          {/* Sales Return - 4 routes */}
-          {/* <Route path="sales-return"            element={<SalesReturn />} />
+          {/* Sales Return */}
+          <Route path="sales-return"            element={<SalesReturn />} />
           <Route path="sales-return-create"     element={<CreateSalesReturnNew />} />
           <Route path="sales-return-edit/:id"   element={<EditSalesReturn />} />
           <Route path="sales-return-view/:id"   element={<ViewSalesReturnPage />} />
 
-          <Route path="credit-note"           element={<CreditNote />} /> */}
-          <Route path="delivery-challan"      element={<DeliveryChallan />} />
-          <Route path="proforma-invoice"      element={<ProformaInvoice />} />
-          <Route path="purchase"              element={<Purchases />} />
-          <Route path="payment-out"           element={<PaymentOut />} />
-          <Route path="payment-out-list"      element={<PaymentOutList />} />
-          <Route path="purchase-return"       element={<CreatePurchaseReturn />} />
-          <Route path="debit-note"            element={<CreateDebitNote />} />
-          <Route path="purchase-orders-form"  element={<PurchaseOrder />} />
-          <Route path="purchase-orders"       element={<PurchaseOrdersPage />} />
-          <Route path="quotation-estimate"    element={<QuotationEstimate />} />
-          <Route path="create-expense"        element={<Createexpense />} />
+          <Route path="delivery-challan" element={<DeliveryChallan />} />
 
-          {/* Sales Invoice - 3 routes */}
-          <Route path="sales-invoicses-list"   element={<SalesInvoiceList />} />
-          <Route path="sales-invoice"          element={<CreateSalesInvoiceNew />} />
-          <Route path="sales-invoice/edit/:id" element={<EditSalesInvoice />} />
+          
+          {/* Credit Note */}
+          <Route path="credit-note"             element={<CreditNote />} />
+
+          
+
+          {/* Proforma Invoice */}
+          <Route path="proforma-invoice"        element={<ProformaInvoice />} />
+
+          {/* Purchase */}
+          <Route path="purchase"                element={<Purchases />} />
+          <Route path="purchase-return"         element={<CreatePurchaseReturn />} />
+          <Route path="debit-note"              element={<CreateDebitNote />} />
+          <Route path="purchase-orders-form"    element={<PurchaseOrder />} />
+          <Route path="purchase-orders"         element={<PurchaseOrdersPage />} />
+
+          {/* Payment Out */}
+          <Route path="payment-out"             element={<PaymentOut />} />
+          <Route path="payment-out-list"        element={<PaymentOutList />} />
+
+          {/* Other */}
+          <Route path="quotation-estimate"      element={<QuotationEstimate />} />
+          <Route path="create-expense"          element={<Createexpense />} />
+
+          {/* Sales Invoice */}
+          <Route path="sales-invoicses-list"    element={<SalesInvoiceList />} />
+          <Route path="sales-invoice"           element={<CreateSalesInvoiceNew />} />
+          <Route path="sales-invoice/edit/:id"  element={<EditSalesInvoice />} />
         </Route>
 
-        {/* Admin */}
+        {/* ── Admin ── */}
         <Route path="/admin" element={<Outlet />}>
           <Route element={<AdminMainLayout />}>
             <Route index element={<Navigate to="/cashier/dashboard" replace />} />
@@ -237,7 +252,7 @@ function App() {
           </Route>
         </Route>
 
-        {/* Accountant */}
+        {/* ── Accountant ── */}
         <Route path="/accountant" element={<AccountantLayout />}>
           <Route index element={<Navigate to="/accountant/dashboard" replace />} />
           <Route path="dashboard"       element={<AccountantDashboard />} />
