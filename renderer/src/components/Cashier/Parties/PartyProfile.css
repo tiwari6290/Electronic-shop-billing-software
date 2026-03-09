@@ -239,13 +239,27 @@
 
 .pp-cf-add { margin-left: auto; }
 
+.pp-cf-empty-wrap {
+  padding: 14px 16px 18px;
+}
+
 .pp-cf-empty {
   font-size: 13.5px;
   color: #6b7280;
-  padding: 14px 16px 18px;
   line-height: 1.5;
-  margin: 0;
+  margin: 0 0 12px 0;
 }
+
+.pp-cf-goto-btn {
+  background: none;
+  border: none;
+  color: #4f46e5;
+  font-size: 13.5px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0;
+}
+.pp-cf-goto-btn:hover { text-decoration: underline; }
 
 .pp-cf-grid {
   display: grid;
@@ -262,6 +276,7 @@
   justify-content: space-between;
 }
 .pp-cf-name { font-size: 12.5px; color: #6b7280; font-weight: 500; }
+.pp-cf-value { font-size: 14px; color: #111827; }
 
 .pp-cf-del {
   display: flex; align-items: center;
@@ -300,21 +315,21 @@
 
 .pp-modal {
   background: #ffffff;
-  width: 540px;
+  width: 560px;
   max-width: 96vw;
-  border-radius: 10px;
+  border-radius: 12px;
   box-shadow: 0 20px 60px rgba(0,0,0,0.18);
   overflow: hidden;
 }
-.pp-modal-sm { width: 440px; }
+.pp-modal-sm { width: 460px; }
 
 .pp-modal-hdr {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px 20px;
+  padding: 18px 20px;
   border-bottom: 1px solid #e5e7eb;
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 700;
   color: #111827;
 }
@@ -326,12 +341,12 @@
 }
 .pp-close:hover { background: #f3f4f6; color: #374151; }
 
-.pp-modal-body { padding: 18px 20px; }
+.pp-modal-body { padding: 20px; }
 
 .pp-grid2 {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 14px;
+  gap: 16px;
 }
 
 .pp-field {
@@ -348,9 +363,9 @@
 
 .pp-field input,
 .pp-field select {
-  padding: 8px 12px;
+  padding: 10px 12px;
   border: 1px solid #d0d5dd;
-  border-radius: 7px;
+  border-radius: 8px;
   font-size: 14px;
   color: #111827;
   outline: none;
@@ -362,29 +377,19 @@
 .pp-field input:focus,
 .pp-field select:focus { border-color: #4f46e5; }
 
-.pp-checkbox-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-  font-size: 14px;
-  color: #374151;
-}
-.pp-checkbox-row input { width: 15px; height: 15px; cursor: pointer; accent-color: #4f46e5; }
-
 .pp-modal-ftr {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
-  padding: 14px 20px;
+  padding: 16px 20px;
   border-top: 1px solid #e5e7eb;
 }
 
 .pp-btn-cancel {
-  padding: 8px 18px;
+  padding: 9px 20px;
   border: 1px solid #d0d5dd;
   background: #ffffff;
-  border-radius: 7px;
+  border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
   color: #374151;
@@ -393,11 +398,11 @@
 .pp-btn-cancel:hover { background: #f3f4f6; }
 
 .pp-btn-primary {
-  padding: 8px 20px;
+  padding: 9px 22px;
   background: #4f46e5;
   color: #ffffff;
   border: none;
-  border-radius: 7px;
+  border-radius: 8px;
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;

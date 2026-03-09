@@ -1,119 +1,118 @@
-.ledger-container {
-  padding: 20px;
+/* ════════════════════════════════════════
+   PartyLedger.css — matches screenshots
+   No icons from lucide-react used.
+════════════════════════════════════════ */
+
+.pl-wrap {
+  padding: 20px 24px;
   background: #f8f9fb;
   min-height: 100%;
   font-family: "Inter", sans-serif;
+  font-size: 14px;
+  color: #374151;
 }
 
-/* ── Top Bar ──────────────────────────── */
-.ledger-top {
+/* ── Controls Row ─────────────────────── */
+.pl-controls {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 16px;
   gap: 12px;
-  margin-bottom: 20px;
 }
 
-.ledger-left-controls { display: flex; align-items: center; gap: 10px; }
-.ledger-right-controls { display: flex; align-items: center; gap: 10px; }
+/* Date button */
+.pl-date-wrap {
+  position: relative;
+}
 
-.ledger-date-wrap { position: relative; }
-
-.ledger-date-btn {
+.pl-date-btn {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 14px;
+  padding: 7px 14px;
   background: #ffffff;
   border: 1px solid #d0d5dd;
   border-radius: 8px;
   font-size: 14px;
-  color: #374151;
+  color: #344054;
   cursor: pointer;
-  transition: border-color 0.15s;
-  min-width: 180px;
+  min-width: 170px;
   justify-content: space-between;
 }
-.ledger-date-btn:hover { border-color: #4f46e5; }
+.pl-date-btn:hover { border-color: #98a2b3; }
 
-.ledger-dropdown {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
-  min-width: 220px;
-  background: #ffffff;
-  border-radius: 8px;
-  box-shadow: 0 10px 20px rgba(0,0,0,0.10);
-  border: 1px solid #e4e7ec;
-  max-height: 280px;
-  overflow-y: auto;
-  z-index: 200;
-}
-.ledger-dropdown div {
-  padding: 10px 14px;
-  cursor: pointer;
-  font-size: 14px;
-  color: #374151;
-  transition: background 0.12s;
-}
-.ledger-dropdown div:hover { background: #f3f4f6; }
-.ledger-dropdown div.selected { background: #f0eeff; color: #4f46e5; font-weight: 600; }
+.pl-cal-icon { display: flex; align-items: center; }
+.pl-arrow    { font-size: 16px; color: #667085; line-height: 1; }
 
-.share-dropdown { right: 0; left: auto; }
-
-.ledger-action-btn {
+/* Action buttons group */
+.pl-action-group {
   display: flex;
   align-items: center;
-  gap: 7px;
-  padding: 8px 14px;
+  gap: 8px;
+}
+
+.pl-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
   background: #ffffff;
   border: 1px solid #d0d5dd;
   border-radius: 8px;
   font-size: 14px;
   font-weight: 500;
-  color: #374151;
+  color: #344054;
   cursor: pointer;
-  transition: background 0.15s;
+  white-space: nowrap;
 }
-.ledger-action-btn:hover { background: #f3f4f6; }
-.ledger-action-btn.primary {
-  background: #4f46e5;
-  color: #ffffff;
-  border-color: #4f46e5;
-}
-.ledger-action-btn.primary:hover { background: #4338ca; }
+.pl-btn:hover { background: #f2f4f7; }
 
-/* ── Ledger Card (Document) ───────────── */
-.ledger-card {
+.pl-btn-share {
+  /* Share has a chevron inside */
+}
+
+.pl-share-wrap {
+  position: relative;
+}
+
+/* Shared dropdown */
+.pl-dropdown {
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 0;
+  min-width: 190px;
   background: #ffffff;
-  border-radius: 10px;
   border: 1px solid #e4e7ec;
+  border-radius: 8px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.10);
+  z-index: 400;
+  overflow: hidden;
+}
+.pl-share-dd {
+  left: auto;
+  right: 0;
+}
+
+.pl-dd-row {
+  padding: 10px 14px;
+  font-size: 14px;
+  color: #344054;
+  cursor: pointer;
+}
+.pl-dd-row:hover  { background: #f2f4f7; }
+.pl-dd-row.active { background: #f0eeff; color: #4f46e5; font-weight: 600; }
+
+/* ── Document Card ────────────────────── */
+.pl-doc {
+  background: #ffffff;
+  border: 1px solid #e4e7ec;
+  border-radius: 10px;
   overflow: hidden;
 }
 
-.ledger-summary {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  padding: 20px 24px;
-  border-bottom: 1px solid #e4e7ec;
-}
-
-.ledger-company { font-weight: 600; font-size: 18px; }
-.ledger-company p { margin: 0 0 4px 0; }
-.ledger-company .company-name { font-size: 17px; font-weight: 700; color: #111827; }
-.ledger-company .company-phone { font-size: 13px; color: #667085; font-weight: 400; }
-
-.ledger-title-box {
-  font-size: 16px;
-  font-weight: 700;
-  color: #374151;
-  padding: 8px 16px;
-  border: 1px solid #e4e7ec;
-  border-radius: 6px;
-}
-
-.ledger-doc-header {
+/* Header: biz info left + "Party Ledger" right */
+.pl-doc-head {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
@@ -121,10 +120,22 @@
   border-bottom: 1px solid #f0f0f0;
 }
 
-.ledger-company-info .company-name  { font-size: 17px; font-weight: 700; color: #111827; margin: 0 0 3px 0; }
-.ledger-company-info .company-phone { font-size: 13px; color: #667085; margin: 0; }
+.pl-biz-name  { font-size: 17px; font-weight: 700; color: #111827; margin: 0 0 3px 0; }
+.pl-biz-phone { font-size: 13px; color: #667085; margin: 0; }
 
-.ledger-party-row {
+.pl-doc-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #374151;
+  border: 1px solid #e4e7ec;
+  border-radius: 6px;
+  padding: 7px 18px;
+  background: #fff;
+  white-space: nowrap;
+}
+
+/* Party info + summary box row */
+.pl-party-row {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
@@ -132,60 +143,103 @@
   border-bottom: 1px solid #e4e7ec;
 }
 
-.ledger-to .to-label { font-size: 13px; color: #9ca3af; margin: 0 0 3px 0; }
-.ledger-to .to-name  { font-size: 16px; font-weight: 600; color: #111827; margin: 0 0 2px 0; }
-.ledger-to .to-phone { font-size: 13px; color: #667085; margin: 0; }
+.pl-to {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.pl-to-prefix { font-size: 13px; color: #9ca3af; }
+.pl-to-name   { font-size: 16px; font-weight: 700; color: #111827; margin: 3px 0 0; }
+.pl-to-phone  { font-size: 13px; color: #667085; margin: 2px 0 0; }
 
-.ledger-summary-box {
+/* Summary box */
+.pl-sum-box {
   border: 1px solid #e4e7ec;
   border-radius: 8px;
   padding: 12px 18px;
-  min-width: 220px;
-  text-align: right;
+  min-width: 230px;
 }
-.summary-date-range { font-size: 13px; color: #667085; margin-bottom: 8px; }
-.summary-divider { border-top: 1px solid #e4e7ec; margin: 8px 0; }
-.summary-total-row {
+
+.pl-sum-date {
+  font-size: 13px;
+  color: #667085;
+  text-align: right;
+  margin: 0 0 8px;
+}
+
+.pl-sum-sep {
+  border-top: 1px solid #e4e7ec;
+  margin: 6px 0 8px;
+}
+
+.pl-sum-row {
   display: flex;
   justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+}
+
+.pl-sum-label {
   font-size: 14px;
   font-weight: 600;
-  color: #111827;
+  color: #374151;
+  white-space: nowrap;
 }
-.summary-total-value { color: #4f46e5; }
 
-/* ── Ledger Table ─────────────────────── */
-.ledger-table-wrapper { overflow-x: auto; }
+.pl-sum-value {
+  font-size: 15px;
+  font-weight: 700;
+  color: #4f46e5;
+}
 
-.ledger-table { width: 100%; border-collapse: collapse; }
+/* ── Table ────────────────────────────── */
+.pl-table-outer {
+  overflow-x: auto;
+}
 
-.ledger-table th {
-  background: #f2f4f7;
-  padding: 12px 14px;
+.pl-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.pl-table thead tr {
+  background: #f9fafb;
+}
+
+.pl-table th {
+  padding: 11px 14px;
   text-align: left;
-  font-size: 13.5px;
+  font-size: 13px;
   font-weight: 600;
   color: #344054;
   border-bottom: 1px solid #eaecf0;
+  white-space: nowrap;
 }
 
-.ledger-table td {
-  padding: 12px 14px;
+.pl-table td {
+  padding: 13px 14px;
   font-size: 13.5px;
   color: #374151;
   border-bottom: 1px solid #eaecf0;
 }
 
-.ledger-table .opening-row td,
-.ledger-table .closing-row td {
+.pl-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Opening / Closing rows */
+.pl-table tr.pl-special td {
   background: #f9fafb;
+}
+
+.pl-special-label {
   font-weight: 600;
   color: #111827;
 }
 
-.no-ledger { text-align: center; padding: 40px; color: #9ca3af; font-size: 14px; }
-
 /* Print */
 @media print {
-  .ledger-top { display: none; }
+  .pl-controls { display: none; }
+  .pl-wrap     { padding: 0; background: #fff; }
+  .pl-doc      { border: none; border-radius: 0; }
 }

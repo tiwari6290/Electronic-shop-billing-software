@@ -1,6 +1,5 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { useParams } from "react-router-dom";
-import { ChevronDown, Download, Printer, Share2, Calendar } from "lucide-react";
 import "./PartyLedger.css";
 import axios from "axios";
 
@@ -16,156 +15,177 @@ interface LedgerEntry {
 }
 
 const DATE_OPTIONS = [
-  "Today","Yesterday","This Week","Last Week","Last 7 Days",
-  "This Month","Previous Month","Last 30 Days","This Quarter",
-  "Previous Quarter","Current Fiscal Year","Previous Fiscal Year","Last 365 Days",
+  "Today", "Yesterday", "This Week", "Last Week", "Last 7 Days",
+  "This Month", "Previous Month", "Last 30 Days", "This Quarter",
+  "Previous Quarter", "Current Fiscal Year", "Previous Fiscal Year", "Last 365 Days",
 ];
 
 const PartyLedger: React.FC = () => {
   const { id } = useParams();
 
-  const [ledgerData, setLedgerData] = useState<LedgerEntry[]>([]);
-  const [partyName, setPartyName] = useState<string>("");
-  const [partyPhone, setPartyPhone] = useState<string>("");
+  const [ledgerData, setLedgerData]     = useState<LedgerEntry[]>([]);
+  const [partyName, setPartyName]       = useState<string>("");
+  const [partyPhone, setPartyPhone]     = useState<string>("");
   const [partyBalance, setPartyBalance] = useState<number>(0);
-  const [dateFilter, setDateFilter] = useState("Last 365 Days");
-  const [showDateDropdown, setShowDateDropdown] = useState(false);
+  const [balanceLabel, setBalanceLabel] = useState<string>("Total Payable");
+  const [dateFilter, setDateFilter]     = useState("Last 365 Days");
+  const [showDateDropdown, setShowDateDropdown]   = useState(false);
   const [showShareDropdown, setShowShareDropdown] = useState(false);
-  const [businessName] = useState("scratchweb.solutions");
+  const [businessName]  = useState("scratchweb.solutions");
   const [businessPhone] = useState("06289909521");
 
   useEffect(() => {
-    const fetchLedger = async () => {
+    const fetchAll = async () => {
       try {
-        const res = await axios.get(`http://localhost:4000/api/ledger/party/${id}`);
-        const data = res.data;
-        setLedgerData(data.entries || []);
-        setPartyName(data.partyName || "");
-        setPartyPhone(data.partyPhone || "");
-        setPartyBalance(data.totalPayable || 0);
+        const res = await axios.get(`http://localhost:4000/api/party/${id}/ledger`);
+        setLedgerData(res.data.data || []);
       } catch {
-        try {
-          const partiesRes = await axios.get("http://localhost:4000/api/parties");
-          const found = partiesRes.data.data?.find((p: any) => String(p.id) === String(id));
-          if (found) {
-            setPartyName(found.partyName);
-            setPartyPhone(found.mobileNumber || "");
-            setPartyBalance(
-              found.openingBalanceType === "To_Collect"
-                ? Number(found.openingBalance)
-                : -Number(found.openingBalance)
-            );
-          }
-        } catch {}
         setLedgerData([]);
       }
+      try {
+        const r = await axios.get("http://localhost:4000/api/parties");
+        const found = r.data.data?.find((p: any) => String(p.id) === String(id));
+        if (found) {
+          setPartyName(found.partyName);
+          setPartyPhone(found.mobileNumber || "");
+          const raw =
+            found.openingBalanceType === "To_Collect"
+              ? Number(found.openingBalance)
+              : -Number(found.openingBalance);
+          setPartyBalance(Math.abs(raw));
+          setBalanceLabel(raw >= 0 ? "Total Receivable" : "Total Payable");
+        }
+      } catch {}
     };
-    if (id) fetchLedger();
+    if (id) fetchAll();
   }, [id]);
 
   const dateRange = useMemo(() => {
     const now = new Date();
     const fmt = (d: Date) =>
-      `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
     switch (dateFilter) {
-      case "Today": return `${fmt(now)} - ${fmt(now)}`;
-      case "Last 7 Days":  { const s = new Date(now); s.setDate(now.getDate()-7);   return `${fmt(s)} - ${fmt(now)}`; }
-      case "Last 30 Days": { const s = new Date(now); s.setDate(now.getDate()-30);  return `${fmt(s)} - ${fmt(now)}`; }
-      case "Last 365 Days":{ const s = new Date(now); s.setFullYear(now.getFullYear()-1); return `${fmt(s)} - ${fmt(now)}`; }
-      default:             { const s = new Date(now); s.setFullYear(now.getFullYear()-1); return `${fmt(s)} - ${fmt(now)}`; }
+      case "Today":        return `${fmt(now)} - ${fmt(now)}`;
+      case "Last 7 Days":  { const s = new Date(now); s.setDate(now.getDate() - 7);  return `${fmt(s)} - ${fmt(now)}`; }
+      case "Last 30 Days": { const s = new Date(now); s.setDate(now.getDate() - 30); return `${fmt(s)} - ${fmt(now)}`; }
+      default:             { const s = new Date(now); s.setFullYear(now.getFullYear() - 1); return `${fmt(s)} - ${fmt(now)}`; }
     }
   }, [dateFilter]);
 
   const handleDownload = () => {
     const rows = [
       ["Date","Voucher","Sr No","Credit","Debit","TDS by Party","TDS by Self","Balance"],
-      ...ledgerData.map((e) => [e.date, e.voucher, e.srNo, e.credit ?? "-", e.debit ?? "-", e.tdsParty ?? "-", e.tdsSelf ?? "-", e.balance]),
+      ...ledgerData.map(e => [
+        e.date, e.voucher, e.srNo,
+        e.credit   ?? "-", e.debit    ?? "-",
+        e.tdsParty ?? "-", e.tdsSelf  ?? "-",
+        e.balance,
+      ]),
     ];
-    const csv = rows.map((r) => r.join(",")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `Ledger_${partyName}.csv`;
-    link.click();
+    const blob = new Blob([rows.map(r => r.join(",")).join("\n")], { type: "text/csv" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `Ledger_${partyName}.csv`;
+    a.click();
   };
 
-  const totalCredit = ledgerData.reduce((a, e) => a + (e.credit || 0), 0);
+  const closingCredit = ledgerData.reduce((a, e) => a + (e.credit || 0), 0);
+
+  const closeAll = () => { setShowDateDropdown(false); setShowShareDropdown(false); };
 
   return (
-    <div className="ledger-container">
-      {/* Top Bar */}
-      <div className="ledger-top">
-        <div className="ledger-left-controls">
-          <div className="ledger-date-wrap">
-            <button className="ledger-date-btn" onClick={() => setShowDateDropdown(!showDateDropdown)}>
-              <Calendar size={14} />
-              {dateFilter}
-              <ChevronDown size={14} />
-            </button>
-            {showDateDropdown && (
-              <div className="ledger-dropdown">
-                {DATE_OPTIONS.map((item) => (
-                  <div key={item} className={dateFilter === item ? "selected" : ""}
-                    onClick={() => { setDateFilter(item); setShowDateDropdown(false); }}>
-                    {item}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+    <div className="pl-wrap" onClick={closeAll}>
+
+      {/* ── Controls Row ──────────────────────────── */}
+      <div className="pl-controls" onClick={e => e.stopPropagation()}>
+
+        {/* Date filter — left */}
+        <div className="pl-date-wrap">
+          <button
+            className="pl-date-btn"
+            onClick={() => { setShowDateDropdown(v => !v); setShowShareDropdown(false); }}
+          >
+            <span className="pl-cal-icon">
+              {/* calendar svg — tiny, no lucide */}
+              <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+                <rect x="1" y="2" width="12" height="11" rx="1.5" stroke="#667085" strokeWidth="1.3"/>
+                <path d="M1 5.5h12" stroke="#667085" strokeWidth="1.3"/>
+                <path d="M4.5 1v2M9.5 1v2" stroke="#667085" strokeWidth="1.3" strokeLinecap="round"/>
+              </svg>
+            </span>
+            {dateFilter}
+            <span className="pl-arrow">&#8964;</span>
+          </button>
+
+          {showDateDropdown && (
+            <div className="pl-dropdown">
+              {DATE_OPTIONS.map(opt => (
+                <div
+                  key={opt}
+                  className={`pl-dd-row${dateFilter === opt ? " active" : ""}`}
+                  onClick={() => { setDateFilter(opt); setShowDateDropdown(false); }}
+                >
+                  {opt}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
-        <div className="ledger-right-controls">
-          <button className="ledger-action-btn" onClick={handleDownload}>
-            <Download size={14} /> Download
-          </button>
-          <button className="ledger-action-btn" onClick={() => window.print()}>
-            <Printer size={14} /> Print
-          </button>
-          <div style={{ position: "relative" }}>
-            <button className="ledger-action-btn" onClick={() => setShowShareDropdown(!showShareDropdown)}>
-              <Share2 size={14} /> Share <ChevronDown size={13} />
+        {/* Action buttons — right */}
+        <div className="pl-action-group">
+          <button className="pl-btn" onClick={handleDownload}>Download</button>
+          <button className="pl-btn" onClick={() => window.print()}>Print</button>
+          <div className="pl-share-wrap">
+            <button
+              className="pl-btn pl-btn-share"
+              onClick={() => { setShowShareDropdown(v => !v); setShowDateDropdown(false); }}
+            >
+              Share <span className="pl-arrow">&#8964;</span>
             </button>
             {showShareDropdown && (
-              <div className="ledger-dropdown share-dropdown">
-                <div onClick={() => setShowShareDropdown(false)}>Share via WhatsApp</div>
-                <div onClick={() => setShowShareDropdown(false)}>Share via Email</div>
-                <div onClick={() => setShowShareDropdown(false)}>Copy Link</div>
+              <div className="pl-dropdown pl-share-dd">
+                <div className="pl-dd-row" onClick={() => setShowShareDropdown(false)}>Share via WhatsApp</div>
+                <div className="pl-dd-row" onClick={() => setShowShareDropdown(false)}>Share via Email</div>
+                <div className="pl-dd-row" onClick={() => setShowShareDropdown(false)}>Copy Link</div>
               </div>
             )}
           </div>
         </div>
       </div>
 
-      {/* Ledger Document */}
-      <div className="ledger-card">
-        <div className="ledger-doc-header">
-          <div className="ledger-company-info">
-            <p className="company-name">{businessName}</p>
-            <p className="company-phone">Phone no: {businessPhone}</p>
+      {/* ── Ledger Document ───────────────────────── */}
+      <div className="pl-doc">
+
+        {/* Top: business name + "Party Ledger" label */}
+        <div className="pl-doc-head">
+          <div>
+            <p className="pl-biz-name">{businessName}</p>
+            <p className="pl-biz-phone">Phone no: {businessPhone}</p>
           </div>
-          <div className="ledger-title-box">Party Ledger</div>
+          <div className="pl-doc-title">Party Ledger</div>
         </div>
 
-        <div className="ledger-party-row">
-          <div className="ledger-to">
-            <p className="to-label">To,</p>
-            <p className="to-name">{partyName}</p>
-            <p className="to-phone">{partyPhone}</p>
+        {/* Party info + summary box */}
+        <div className="pl-party-row">
+          <div className="pl-to">
+            <span className="pl-to-prefix">To,</span>
+            {partyName  && <p className="pl-to-name">{partyName}</p>}
+            {partyPhone && <p className="pl-to-phone">{partyPhone}</p>}
           </div>
-          <div className="ledger-summary-box">
-            <div className="summary-date-range">{dateRange}</div>
-            <div className="summary-divider" />
-            <div className="summary-total-row">
-              <span>Total Payable</span>
-              <span className="summary-total-value">{partyBalance}</span>
+          <div className="pl-sum-box">
+            <p className="pl-sum-date">{dateRange}</p>
+            <div className="pl-sum-sep" />
+            <div className="pl-sum-row">
+              <span className="pl-sum-label">{balanceLabel}</span>
+              <span className="pl-sum-value">{partyBalance}</span>
             </div>
           </div>
         </div>
 
         {/* Table */}
-        <div className="ledger-table-wrapper">
-          <table className="ledger-table">
+        <div className="pl-table-outer">
+          <table className="pl-table">
             <thead>
               <tr>
                 <th>Date</th>
@@ -179,39 +199,42 @@ const PartyLedger: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              <tr className="opening-row">
+              {/* Opening Balance */}
+              <tr className="pl-special">
                 <td></td>
-                <td>Opening Balance</td>
-                <td></td><td>-</td><td>-</td><td>-</td><td>-</td>
+                <td className="pl-special-label">Opening Balance</td>
+                <td></td>
+                <td>-</td><td>-</td><td>-</td><td>-</td>
                 <td>0.0</td>
               </tr>
-              {ledgerData.length === 0 ? (
-                <tr><td colSpan={8} className="no-ledger">No ledger entries found.</td></tr>
-              ) : (
-                ledgerData.map((entry, i) => (
-                  <tr key={i}>
-                    <td>{entry.date}</td>
-                    <td>{entry.voucher}</td>
-                    <td>{entry.srNo}</td>
-                    <td>{entry.credit != null ? `${entry.credit}.0` : "-"}</td>
-                    <td>{entry.debit  != null ? `${entry.debit}.0`  : "-"}</td>
-                    <td>{entry.tdsParty != null ? entry.tdsParty : "-"}</td>
-                    <td>{entry.tdsSelf  != null ? entry.tdsSelf  : "-"}</td>
-                    <td>{entry.balance}</td>
-                  </tr>
-                ))
-              )}
-              <tr className="closing-row">
+
+              {/* Entries */}
+              {ledgerData.map((e, i) => (
+                <tr key={i}>
+                  <td>{e.date ? String(e.date).slice(0, 10) : ""}</td>
+                  <td>{e.voucher || ""}</td>
+                  <td>{e.srNo ?? ""}</td>
+                  <td>{e.credit   != null ? e.credit   : "-"}</td>
+                  <td>{e.debit    != null ? e.debit    : "-"}</td>
+                  <td>{e.tdsParty != null ? e.tdsParty : "-"}</td>
+                  <td>{e.tdsSelf  != null ? e.tdsSelf  : "-"}</td>
+                  <td>{e.balance}</td>
+                </tr>
+              ))}
+
+              {/* Closing Balance */}
+              <tr className="pl-special">
                 <td></td>
-                <td>Closing Balance</td>
+                <td className="pl-special-label">Closing Balance</td>
                 <td></td>
-                <td>{totalCredit > 0 ? `${totalCredit}.0` : "-"}</td>
+                <td>{closingCredit > 0 ? `0${closingCredit}` : "-"}</td>
                 <td>-</td><td>-</td><td>-</td>
-                <td>{partyBalance}</td>
+                <td>{partyBalance || 0}</td>
               </tr>
             </tbody>
           </table>
         </div>
+
       </div>
     </div>
   );

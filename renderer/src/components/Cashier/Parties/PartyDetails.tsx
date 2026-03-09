@@ -173,12 +173,12 @@ const PartyDetails: React.FC = () => {
   useEffect(() => {
     const fetchTransactions = async () => {
       try {
-        const res = await axios.get(`http://localhost:4000/api/transactions/party/${id}`);
+        const res = await axios.get(`http://localhost:4000/api/party/${id}`);
         const formatted = res.data.data?.map((t: any) => ({
           id: t.id,
           date: t.date,
           type: t.type,
-          number: t.invoiceNumber || t.id,
+          number: t.number || t.id,
           amount: t.amount,
           status: t.status || "Unpaid",
         })) || [];
