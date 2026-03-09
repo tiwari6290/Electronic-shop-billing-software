@@ -484,7 +484,7 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: var(--accent);
+  background: #6366f1;
   border: none;
   border-radius: var(--r-sm);
   padding: 9px 26px;

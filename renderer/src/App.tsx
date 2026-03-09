@@ -152,7 +152,7 @@ function App() {
           <Route index element={<Navigate to="/cashier/create-party" replace />} />
           <Route path="navbar"              element={<Navbar title="Dashboard" />} />
           <Route path="create-party"        element={<Createparty />} />
-          <Route path="create-item"         element={<CreateItem />} />
+          <Route path="create-item"         element={<CreateItem key="create-item" />} />
           <Route path="POS-billing"         element={<Billing />} />
           <Route path="parties"             element={<Parties />} />
           <Route path="party/:id"           element={<PartyDetails />} />
