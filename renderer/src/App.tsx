@@ -174,7 +174,8 @@ function App() {
           <Route path="navbar"              element={<Navbar title="Dashboard" />} />
           <Route path="create-party"        element={<Createparty />} />
           <Route path="create-party/:id"    element={<Createparty />} />
-          <Route path="create-item"         element={<CreateItem />} />
+          {/* <Route path="create-item"         element={<CreateItem />} /> */}
+          <Route path="create-item"         element={<CreateItem key="create-item" />} />
           <Route path="POS-billing"         element={<Billing />} />
           <Route path="parties"             element={<Parties />} />
           <Route path="party/:id"           element={<PartyDetails />} />

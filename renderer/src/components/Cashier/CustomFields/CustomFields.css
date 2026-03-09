@@ -1,7 +1,7 @@
-/* ================= EMPTY STATE ================= */
-
+/* ── EMPTY STATE ── */
 .cf-wrapper {
   height: 100%;
+  min-height: 320px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -16,8 +16,8 @@
 }
 
 .cf-image {
-  width: 140px;
-  margin-bottom: 20px;
+  width: 130px;
+  margin-bottom: 16px;
 }
 
 .cf-text {
@@ -35,14 +35,53 @@
   border-radius: 8px;
   font-size: 14px;
   cursor: pointer;
+  font-weight: 500;
+}
+.cf-btn:hover { background: #dbeafe; }
+
+/* ── FIELDS PANEL (after save, Image 8) ── */
+.cf-fields-panel {
+  padding: 4px 0;
 }
 
-.cf-btn:hover {
-  background: #dbeafe;
+.cf-field-entry {
+  margin-bottom: 20px;
 }
 
-/* ================= MODAL BACKDROP ================= */
+.cf-field-label {
+  display: block;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 6px;
+}
 
+.cf-field-input {
+  width: 100%;
+  max-width: 420px;
+  padding: 9px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  outline: none;
+}
+.cf-field-input:focus { border-color: #6366f1; }
+
+.cf-add-item-link {
+  background: none;
+  border: none;
+  color: #1677ff;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.cf-add-item-link:hover { text-decoration: underline; }
+
+/* ── MODAL BACKDROP ── */
 .cf-modal-backdrop {
   position: fixed;
   inset: 0;
@@ -53,31 +92,34 @@
   z-index: 1000;
 }
 
-/* ================= MODAL ================= */
-
+/* ── MODAL ── */
 .cf-modal {
-  width: 600px;
+  width: 560px;
   max-height: 90vh;
-  background: #ffffff;
+  background: #fff;
   border-radius: 12px;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.15);
 }
 
-/* ================= HEADER ================= */
+.cf-modal-wide { width: 640px; }
 
+/* ── HEADER ── */
 .cf-modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 16px 20px;
   border-bottom: 1px solid #e5e7eb;
+  flex-shrink: 0;
 }
 
 .cf-modal-header h3 {
   font-size: 16px;
   font-weight: 600;
+  color: #111827;
 }
 
 .cf-modal-header button {
@@ -86,50 +128,94 @@
   font-size: 22px;
   cursor: pointer;
   color: #6b7280;
+  line-height: 1;
 }
+.cf-modal-header button:hover { color: #111827; }
 
-/* ================= BODY ================= */
-
+/* ── BODY ── */
 .cf-modal-body {
   padding: 20px;
   overflow-y: auto;
+  flex: 1;
 }
 
-/* SIMPLE ROW */
+/* ── STOCK VALUE ROW ── */
 .cf-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  padding: 16px 0;
+  border-bottom: 1px solid #f3f4f6;
+  gap: 12px;
 }
 
 .cf-row span {
   font-size: 14px;
-  color: #374151;
+  font-weight: 500;
+  color: #111827;
 }
 
-.cf-row select {
-  padding: 8px 12px;
-  border-radius: 6px;
+/* ── CUSTOM DROPDOWN ── */
+.cf-dd-wrapper { position: relative; }
+
+.cf-dd-trigger {
   border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 8px 12px;
   font-size: 14px;
+  color: #374151;
+  cursor: pointer;
+  background: #fff;
+  min-width: 210px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  user-select: none;
+}
+.cf-dd-trigger:hover { border-color: #9ca3af; }
+.cf-dd-arrow { color: #9ca3af; font-size: 11px; }
+
+.cf-dd-list {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  min-width: 100%;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+  z-index: 200;
 }
 
-/* ================= TOGGLE ROW ================= */
+.cf-dd-item {
+  padding: 10px 14px;
+  font-size: 14px;
+  color: #374151;
+  cursor: pointer;
+}
+.cf-dd-item:hover { background: #f9fafb; }
+.cf-dd-selected { background: #eef2ff; color: #4f46e5; font-weight: 500; }
 
+/* ── DAYS DROPDOWN ── */
+.cf-days-dd { width: 120px; }
+.cf-days-trigger { min-width: 110px; }
+
+/* ── TOGGLE ROW ── */
 .cf-toggle-row {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   gap: 16px;
   padding: 16px 0;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid #f3f4f6;
 }
 
 .cf-toggle-row strong {
   font-size: 14px;
-  color: #374151;
+  color: #111827;
   font-weight: 500;
+  display: block;
 }
 
 .cf-toggle-row p {
@@ -139,40 +225,134 @@
   max-width: 380px;
 }
 
-/* ================= INPUT ================= */
+/* ── ALERT EXPIRY RIGHT SIDE ── */
+.cf-expiry-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
 
-.cf-modal-body input {
-  padding: 8px 10px;
-  border-radius: 6px;
+/* number box next to Select dropdown */
+.cf-expiry-number {
+  width: 54px !important;
+  padding: 7px 8px !important;
+  border: 1px solid #d1d5db !important;
+  border-radius: 6px !important;
+  font-size: 14px !important;
+  text-align: center;
+  outline: none;
+  
+}
+.cf-expiry-number::-webkit-outer-spin-button,
+.cf-expiry-number::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.cf-expiry-number:focus { border-color: #6366f1 !important; }
+
+/* ── SERIAL EXPAND ── */
+.cf-serial-expand {
+  padding: 12px 0 4px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.cf-serial-expand label {
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 6px;
+  display: block;
+}
+
+.cf-serial-input {
+  width: 220px;
+  padding: 8px 12px;
   border: 1px solid #d1d5db;
+  border-radius: 6px;
   font-size: 14px;
+  outline: none;
+}
+.cf-serial-input:focus { border-color: #6366f1; }
+
+.cf-hint {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 6px;
+  max-width: 420px;
+  line-height: 1.5;
 }
 
-.cf-modal-body input:disabled,
-.cf-modal-body select:disabled {
-  background: #f3f4f6;
-  cursor: not-allowed;
+/* ── MRP DISCOUNT CHECKBOX ── */
+.cf-mrp-check {
+  padding: 10px 0 14px;
+  border-bottom: 1px solid #f3f4f6;
 }
 
-/* ================= SWITCH ================= */
+.cf-checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  color: #374151;
+  cursor: pointer;
+}
+.cf-checkbox-row input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #6366f1;
+  flex-shrink: 0;
+}
 
+/* ── SAVED FIELD ROW (in settings modal) ── */
+.cf-saved-field-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #f3f4f6;
+  font-size: 14px;
+  color: #374151;
+}
+
+.cf-delete-link {
+  background: none;
+  border: none;
+  color: #ef4444;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.cf-delete-link:hover { text-decoration: underline; }
+
+/* ── ADD CUSTOM FIELD BUTTON ── */
+.cf-add-field {
+  margin-top: 16px;
+  background: none;
+  border: none;
+  color: #1677ff;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0;
+}
+.cf-add-field:hover { text-decoration: underline; }
+
+/* ── SWITCH ── */
 .cf-switch {
   position: relative;
   width: 42px;
   height: 22px;
   flex-shrink: 0;
+  display: inline-block;
+  cursor: pointer;
 }
 
-.cf-switch input {
-  display: none;
-}
+.cf-switch input { display: none; }
 
 .cf-slider {
   position: absolute;
   inset: 0;
   background: #d1d5db;
   border-radius: 999px;
-  transition: background 0.3s;
+  transition: background 0.25s;
 }
 
 .cf-slider::before {
@@ -180,68 +360,118 @@
   position: absolute;
   width: 18px;
   height: 18px;
-  background: #ffffff;
+  background: #fff;
   border-radius: 50%;
   top: 2px;
   left: 2px;
-  transition: transform 0.3s;
+  transition: transform 0.25s;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
 }
 
-.cf-switch input:checked + .cf-slider {
-  background: #4f46e5;
-}
+.cf-switch input:checked + .cf-slider { background: #4f46e5; }
+.cf-switch input:checked + .cf-slider::before { transform: translateX(20px); }
 
-.cf-switch input:checked + .cf-slider::before {
-  transform: translateX(20px);
-}
-
-/* ================= NEW BADGE ================= */
-
+/* ── NEW BADGE ── */
 .cf-new {
-  background: #e0e7ff;
-  color: #4f46e5;
+  background: #3b82f6;
+  color: #fff;
   font-size: 11px;
-  padding: 2px 6px;
-  border-radius: 6px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-weight: 600;
   margin-left: 6px;
 }
 
-/* ================= ADD FIELD ================= */
-
-.cf-add-field {
-  margin-top: 18px;
-  background: none;
-  border: none;
-  color: #1677ff;
-  font-size: 14px;
-  cursor: pointer;
+/* ── ADD FIELD MODAL IMAGE ── */
+.cf-addfield-img-wrap {
+  background: #f0f6ff;
+  padding: 20px;
+  text-align: center;
+  flex-shrink: 0;
 }
 
-/* ================= FOOTER ================= */
+.cf-addfield-img { width: 180px; }
 
+/* ── FIELD ROWS IN ADD MODAL ── */
+.cf-field-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.cf-field-name-input {
+  flex: 1;
+  padding: 9px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  outline: none;
+}
+.cf-field-name-input:focus { border-color: #6366f1; }
+
+.cf-icon-btn {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 8px;
+  cursor: pointer;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+.cf-icon-btn:hover { background: #f3f4f6; }
+
+.cf-icon-btn-del { color: #ef4444 !important; }
+.cf-icon-btn-del:hover { background: #fef2f2 !important; }
+
+/* ── DASHED ADD NEW FIELD ── */
+.cf-dashed {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: 2px dashed #93c5fd;
+  color: #2563eb;
+  font-size: 13.5px;
+  font-weight: 500;
+  padding: 9px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  margin-top: 4px;
+}
+.cf-dashed:hover { background: #eff6ff; }
+
+/* ── FOOTER ── */
 .cf-modal-footer {
   padding: 16px 20px;
   border-top: 1px solid #e5e7eb;
   display: flex;
   justify-content: flex-end;
   gap: 12px;
+  flex-shrink: 0;
 }
 
 .cf-cancel {
-  background: #ffffff;
+  background: #fff;
   border: 1px solid #d1d5db;
-  padding: 8px 18px;
+  padding: 9px 20px;
   border-radius: 8px;
   font-size: 14px;
   cursor: pointer;
+  color: #374151;
 }
+.cf-cancel:hover { background: #f9fafb; }
 
 .cf-save {
   background: #4f46e5;
-  color: #ffffff;
+  color: #fff;
   border: none;
-  padding: 8px 22px;
+  padding: 9px 22px;
   border-radius: 8px;
   font-size: 14px;
   cursor: pointer;
+  font-weight: 500;
 }
+.cf-save:hover { background: #4338ca; }

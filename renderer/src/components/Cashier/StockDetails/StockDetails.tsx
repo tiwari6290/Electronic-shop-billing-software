@@ -1,15 +1,72 @@
-import { useState } from "react";
-import hsnEmptyImg from "../../../assets/1.png"; // 🔁 adjust path if needed
+import { useState, useEffect } from "react";
+import hsnEmptyImg from "../../../assets/1.png";
+import api from "../../../lib/axios";
+import "./StockDetails.css";
 
-const StockDetails = () => {
+interface StockDetailsProps {
+  godownId: string;
+  setGodownId: React.Dispatch<React.SetStateAction<string>>;
+
+  openingStock: string;
+  setOpeningStock: React.Dispatch<React.SetStateAction<string>>;
+
+  asOfDate: string;
+  setAsOfDate: React.Dispatch<React.SetStateAction<string>>;
+
+  itemCode: string;
+  setItemCode: React.Dispatch<React.SetStateAction<string>>;
+
+  hsnCode: string;
+  setHsnCode: React.Dispatch<React.SetStateAction<string>>;
+
+  description: string;
+  setDescription: React.Dispatch<React.SetStateAction<string>>;
+
+  lowStockQty: string;
+  setLowStockQty: React.Dispatch<React.SetStateAction<string>>;
+
+  lowStockAlert: boolean;
+  setLowStockAlert: React.Dispatch<React.SetStateAction<boolean>>;
+}
+
+const StockDetails = ({
+  godownId,
+  setGodownId,
+  openingStock,
+  setOpeningStock,
+  asOfDate,
+  setAsOfDate,
+  itemCode,
+  setItemCode,
+  hsnCode,
+  setHsnCode,
+  description,
+  setDescription,
+  lowStockQty,
+  setLowStockQty,
+  lowStockAlert,
+  setLowStockAlert
+}: StockDetailsProps) => {
   const [files, setFiles] = useState<File[]>([]);
   const [showAltUnit, setShowAltUnit] = useState(false);
   const [showLowStock, setShowLowStock] = useState(false);
   const [showHSNDrawer, setShowHSNDrawer] = useState(false);
+  const [godowns, setGodowns] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchGodowns = async () => {
+      try {
+        const res = await api.get("/godowns");
+        setGodowns(res.data.data);
+      } catch (err) {
+        console.error("Failed to fetch godowns");
+      }
+    };
+    fetchGodowns();
+  }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
-
     const selectedFiles = Array.from(e.target.files);
     if (selectedFiles.length > 5) {
       alert("Maximum 5 images allowed");
@@ -20,20 +77,15 @@ const StockDetails = () => {
 
   return (
     <>
-      {/* ================= OVERLAY ================= */}
+      {/* ── HSN DRAWER OVERLAY ── */}
       {showHSNDrawer && (
         <div
           onClick={() => setShowHSNDrawer(false)}
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,0.45)",
-            zIndex: 1000,
-          }}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.45)", zIndex: 1000 }}
         />
       )}
 
-      {/* ================= HSN DRAWER ================= */}
+      {/* ── HSN DRAWER ── */}
       <div
         style={{
           position: "fixed",
@@ -49,209 +101,103 @@ const StockDetails = () => {
           flexDirection: "column",
         }}
       >
-        {/* HEADER */}
-        <div
-          style={{
-            padding: "16px 20px",
-            borderBottom: "1px solid #eee",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
+        <div style={{ padding: "16px 20px", borderBottom: "1px solid #eee", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <strong>HSN Code</strong>
-          <span
-            onClick={() => setShowHSNDrawer(false)}
-            style={{ cursor: "pointer", fontSize: "18px" }}
-          >
-            ✕
-          </span>
+          <span onClick={() => setShowHSNDrawer(false)} style={{ cursor: "pointer", fontSize: "18px" }}>✕</span>
         </div>
-
-        {/* SEARCH */}
         <div style={{ padding: "16px 20px" }}>
-          <input
-            className="input"
-            placeholder="Search by HSN Code or Item Name"
-          />
+          <input className="input" placeholder="Search by HSN Code or Item Name" />
         </div>
-
-        {/* EMPTY STATE IMAGE */}
-        <div
-          style={{
-            flex: 1,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            flexDirection: "column",
-            textAlign: "center",
-            color: "#6b7280",
-          }}
-        >
-          <img
-            src={hsnEmptyImg}
-            alt="HSN Search"
-            style={{ width: "150px", marginBottom: "16px" }}
-          />
+        <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", textAlign: "center", color: "#6b7280" }}>
+          <img src={hsnEmptyImg} alt="HSN Search" style={{ width: "150px", marginBottom: "16px" }} />
           Search by HSN Code or Item Name
         </div>
       </div>
 
-      {/* ================= MAIN CONTENT ================= */}
+      {/* ── MAIN CONTENT ── */}
       <div style={{ maxWidth: "900px" }}>
-        {/* ================= TOP SECTION ================= */}
-        <div style={{ marginBottom: "28px" }}>
-          {/* ITEM CODE + HSN */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: "24px",
-              marginBottom: "20px",
-            }}
-          >
-            {/* ITEM CODE */}
-            <div>
-              <label>Item Code</label>
-              <div style={{ display: "flex" }}>
-                <input
-                  className="input"
-                  placeholder="ex: ITM12549"
-                  style={{ borderTopRightRadius: 0, borderBottomRightRadius: 0 }}
-                />
-                <button
-                  style={{
-                    border: "1px solid #d9d9d9",
-                    borderLeft: "none",
-                    background: "#e6f4ff",
-                    color: "#1677ff",
-                    padding: "0 14px",
-                    cursor: "pointer",
-                    borderTopRightRadius: "6px",
-                    borderBottomRightRadius: "6px",
-                  }}
-                >
-                  Generate Barcode
-                </button>
-              </div>
-            </div>
 
-            {/* HSN */}
-            <div>
-              <label>HSN code</label>
-              <input className="input" placeholder="ex: 4010" />
-              <div
-                onClick={() => setShowHSNDrawer(true)}
-                style={{
-                  color: "#1677ff",
-                  fontSize: "13px",
-                  marginTop: "6px",
-                  cursor: "pointer",
-                }}
-              >
-                Find HSN Code
-              </div>
+        {/* ITEM CODE + HSN */}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "24px", marginBottom: "20px" }}>
+          <div>
+            <label>Item Code</label>
+            <div style={{ display: "flex" }}>
+              <input
+                className="input"
+                placeholder="ex: ITM12549"
+                value={itemCode}
+  onChange={(e) => setItemCode(e.target.value)}
+                style={{ borderTopRightRadius: 0, borderBottomRightRadius: 0 }}
+              />
+              <button className="sd-barcode-btn">Generate Barcode</button>
             </div>
           </div>
 
-          {/* MEASURING UNIT */}
-          <div style={{ marginBottom: "10px" }}>
-            <label>Measuring Unit</label>
-            <select className="input">
-              <option>Pieces (PCS)</option>
-              <option>Box (BOX)</option>
-              <option>Kg (KGS)</option>
-            </select>
+          <div>
+            <label>HSN code</label>
+            <input className="input" placeholder="ex: 4010" value={hsnCode}
+  onChange={(e) => setHsnCode(e.target.value)} />
+            <button className="sd-link" onClick={() => setShowHSNDrawer(true)}>
+              Find HSN Code
+            </button>
           </div>
+        </div>
 
-          {/* ALTERNATIVE UNIT */}
-          {!showAltUnit && (
-            <div
-              onClick={() => setShowAltUnit(true)}
-              style={{ color: "#1677ff", cursor: "pointer", fontSize: "14px" }}
-            >
-              + Alternative Unit
-            </div>
-          )}
+        {/* MEASURING UNIT */}
+        <div style={{ marginBottom: "10px" }}>
+          <label>Measuring Unit</label>
+          <select className="input" style={{ maxWidth: "300px" }}>
+            <option>Pieces (PCS)</option>
+            <option>Box (BOX)</option>
+            <option>Kg (KGS)</option>
+          </select>
+        </div>
 
-          {showAltUnit && (
-            <div
-              style={{
-                border: "1px solid #d9d9d9",
-                borderRadius: "8px",
-                padding: "16px",
-                background: "#fafafa",
-                marginTop: "12px",
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  marginBottom: "12px",
-                }}
-              >
-                <strong>Alternative Unit</strong>
-                <span
-                  onClick={() => setShowAltUnit(false)}
-                  style={{ color: "#ff4d4f", cursor: "pointer" }}
-                >
-                  ✕ Remove Alternative Unit
-                </span>
-              </div>
-
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr 1fr",
-                  gap: "16px",
-                }}
-              >
+        {/* ALTERNATIVE UNIT */}
+        {!showAltUnit ? (
+          <button className="sd-add-link" style={{ marginBottom: "20px" }} onClick={() => setShowAltUnit(true)}>
+            + Alternative Unit
+          </button>
+        ) : (
+          <div className="sd-alt-box">
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "10px" }}>
+              <div>
+                <label>Secondary Unit</label>
                 <select className="input">
+                  <option>Select Secondary Unit</option>
                   <option>Box (BOX)</option>
                   <option>Kg (KGS)</option>
                 </select>
-                <input
-                  className="input"
-                  placeholder="ex: 1 BOX = 10 PCS"
-                />
-                <button
-                  style={{
-                    background: "#1677ff",
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: "6px",
-                  }}
-                >
-                  Add Unit
-                </button>
+              </div>
+              <div>
+                <label>Conversion Rate *</label>
+                <div style={{ display: "flex", alignItems: "center" }}>
+                  <span style={{ padding: "9px 12px", background: "#f3f4f6", border: "1px solid #d1d5db", borderRight: "none", borderRadius: "6px 0 0 6px", fontSize: "13px", color: "#6b7280", whiteSpace: "nowrap" }}>
+                    1 PCS =
+                  </span>
+                  <input className="input" placeholder="Enter Conversion Rate" style={{ borderRadius: 0 }} />
+                  <span style={{ padding: "9px 12px", background: "#f3f4f6", border: "1px solid #d1d5db", borderLeft: "none", borderRadius: "0 6px 6px 0", fontSize: "13px", color: "#6b7280" }}>
+                    Unit
+                  </span>
+                </div>
               </div>
             </div>
-          )}
-        </div>
+            <button className="sd-remove-link" onClick={() => setShowAltUnit(false)}>
+              ✕ Remove Alternative Unit
+            </button>
+          </div>
+        )}
 
-        {/* ================= STOCK DETAILS ================= */}
-        <div
-          style={{
-            background: "#f7f8fa",
-            padding: "24px",
-            borderRadius: "10px",
-          }}
-        >
-          {/* GODOWN + OPENING STOCK */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr 1fr",
-              gap: "24px",
-              marginBottom: "20px",
-            }}
-          >
+        {/* GODOWN + OPENING STOCK + AS OF DATE */}
+        <div className="sd-stock-box">
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "24px", marginBottom: "16px" }}>
             <div>
               <label>Godowns</label>
-              <select className="input">
-                <option>Select Godown</option>
-                <option>Main Godown</option>
+              <select className="input" value={godownId} onChange={(e) => setGodownId(e.target.value)}>
+                <option value="">Select Godown</option>
+                {Array.isArray(godowns) && godowns.map((g) => (
+                  <option key={g.godown_id} value={g.godown_id}>{g.godown_name}</option>
+                ))}
               </select>
             </div>
 
@@ -259,146 +205,100 @@ const StockDetails = () => {
               <label>Opening Stock</label>
               <div style={{ display: "flex" }}>
                 <input
+                  type="number"
                   className="input"
-                  placeholder="ex: 150"
+                  placeholder="ex: 150 PCS"
+                  value={openingStock}
+                  onChange={(e) => setOpeningStock(e.target.value)}
                   style={{ borderTopRightRadius: 0, borderBottomRightRadius: 0 }}
                 />
-                <span
-                  style={{
-                    padding: "8px 14px",
-                    background: "#eee",
-                    border: "1px solid #ccc",
-                    borderLeft: "none",
-                    borderTopRightRadius: "6px",
-                    borderBottomRightRadius: "6px",
-                  }}
-                >
-                  PCS
-                </span>
+                <span className="sd-unit-suffix">PCS</span>
               </div>
             </div>
 
             <div>
               <label>As of Date</label>
-              <input type="date" className="input" />
+              <input
+                type="date"
+                className="input"
+                value={asOfDate}
+                onChange={(e) => setAsOfDate(e.target.value)}
+              />
             </div>
           </div>
 
           {/* LOW STOCK */}
-          {!showLowStock && (
-            <div
-              onClick={() => setShowLowStock(true)}
-              style={{
-                color: "#1677ff",
-                cursor: "pointer",
-                marginBottom: "16px",
-              }}
-            >
+          {!showLowStock ? (
+            <button
+  className="sd-add-link"
+  onClick={() => {
+    setShowLowStock(true);
+    setLowStockAlert(true);
+  }}
+>
               + Enable Low stock quantity warning
-            </div>
-          )}
-
-          {showLowStock && (
-            <div
-              style={{
-                background: "#fff",
-                padding: "16px",
-                borderRadius: "8px",
-                marginBottom: "20px",
-              }}
-            >
+            </button>
+          ) : (
+            <div className="sd-lowstock-box">
               <label>Low Stock Quantity</label>
               <div style={{ display: "flex", marginTop: "6px" }}>
                 <input
                   className="input"
                   placeholder="Enter Low Stock Quantity"
-                  style={{
-                    borderTopRightRadius: 0,
-                    borderBottomRightRadius: 0,
-                  }}
+                  value={lowStockQty}
+  onChange={(e) => setLowStockQty(e.target.value)}
+                  style={{ borderTopRightRadius: 0, borderBottomRightRadius: 0 }}
                 />
-                <span
-                  style={{
-                    padding: "8px 14px",
-                    background: "#eee",
-                    border: "1px solid #ccc",
-                    borderLeft: "none",
-                    borderTopRightRadius: "6px",
-                    borderBottomRightRadius: "6px",
-                  }}
-                >
-                  PCS
-                </span>
+                <span className="sd-unit-suffix">PCS</span>
               </div>
-
-              <div
-                onClick={() => setShowLowStock(false)}
-                style={{
-                  color: "#1677ff",
-                  cursor: "pointer",
-                  marginTop: "10px",
-                  fontSize: "13px",
-                }}
-              >
+              <button
+  className="sd-remove-link"
+  onClick={() => {
+    setShowLowStock(false);
+    setLowStockAlert(false);
+  }}
+>
                 ✕ Remove Low stock quantity warning
-              </div>
+              </button>
             </div>
-          )}
-
-          {/* DESCRIPTION */}
-          <div style={{ marginBottom: "20px" }}>
-            <label>Description</label>
-            <textarea
-              className="input"
-              placeholder="Enter Description"
-              rows={4}
-            />
-          </div>
-
-          {/* FILE UPLOAD */}
-          <div
-            style={{
-              border: "2px dashed #d9d9d9",
-              padding: "20px",
-              borderRadius: "10px",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
-            <div>
-              <strong>Please select or drag and drop 5 files.</strong>
-              <p style={{ fontSize: "13px", color: "#666" }}>
-                Maximum of 5 images in PNG or JPEG, file size no more than 5 MB
-              </p>
-            </div>
-
-            <label
-              style={{
-                background: "#e6f4ff",
-                color: "#1677ff",
-                padding: "8px 16px",
-                borderRadius: "6px",
-                cursor: "pointer",
-              }}
-            >
-              Select File
-              <input
-                type="file"
-                multiple
-                accept="image/png, image/jpeg"
-                hidden
-                onChange={handleFileChange}
-              />
-            </label>
-          </div>
-
-          {files.length > 0 && (
-            <p style={{ marginTop: "10px", fontSize: "13px" }}>
-              {files.length} file(s) selected
-            </p>
           )}
         </div>
+
+        {/* DESCRIPTION */}
+        <div style={{ marginBottom: "20px" }}>
+          <label>Description</label>
+          <textarea
+  className="sd-textarea"
+  placeholder="Enter Description"
+  rows={4}
+  value={description}
+  onChange={(e) => setDescription(e.target.value)}
+/>
+        </div>
+
+        {/* FILE UPLOAD */}
+        <div className="sd-upload">
+          <div className="sd-upload-text">
+            <strong>Please select or drag and drop 5 files.</strong>
+            <p>Maximum of 5 images in PNG or JPEG, file size no more than 5 MB</p>
+          </div>
+          <label className="sd-select-file-label">
+            Select File
+            <input
+              type="file"
+              multiple
+              accept="image/png, image/jpeg"
+              hidden
+              onChange={handleFileChange}
+            />
+          </label>
+        </div>
+
+        {files.length > 0 && (
+          <p style={{ marginTop: "10px", fontSize: "13px", color: "#6b7280" }}>
+            {files.length} file(s) selected
+          </p>
+        )}
       </div>
     </>
   );

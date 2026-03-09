@@ -1,5 +1,7 @@
+import api from "../../../lib/axios";
 import { useState, useEffect, useRef } from "react";
 import "./Inventory.css";
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface StockDetail { date: string; transactionType: string; quantity: string; invoiceNumber: string | null; closingStock: string; }
@@ -13,123 +15,19 @@ interface Item {
   lowStockWarning: "Enabled" | "Disabled"; itemDescription: string;
   stockDetails: StockDetail[]; partyWiseReport: PartyWiseReport[];
   godownStock: GodownStock[]; partyWisePrices: PartyWisePrice[];
+  stockNumber: number;
 }
+interface Godown { godown_id: number; godown_name: string; }
 
 // ─── Settings types ───────────────────────────────────────────────────────────
 type StockValCalc = "purchase_with_tax" | "purchase_without_tax" | "sales_with_tax" | "sales_without_tax";
 interface ItemSettings {
   stockValCalc: StockValCalc;
-  batchExpiry: boolean;
-  alertBeforeExpiry: boolean;
-  alertDays: string;
-  serialImei: boolean;
-  serialFieldName: string;
-  mrp: boolean;
-  showDiscount: boolean;
-  wholesalePrice: boolean;
-  partyWisePrice: boolean;
+  batchExpiry: boolean; alertBeforeExpiry: boolean; alertDays: string;
+  serialImei: boolean; serialFieldName: string; mrp: boolean;
+  showDiscount: boolean; wholesalePrice: boolean; partyWisePrice: boolean;
 }
 interface CustomField { id: string; name: string; hidden: boolean; }
-
-// ─── Data ─────────────────────────────────────────────────────────────────────
-const ITEMS_INIT: Item[] = [
-  {
-    id:"1", itemName:"GODREJ FRIDGE", itemCode:"34567", stockQty:"143 ACS", sellingPrice:42000, purchasePrice:0,
-    category:"Electronics", gstTaxRate:"18%", hsnCode:"8418", secondaryUnit:"-", lowStockQty:"10", lowStockWarning:"Enabled",
-    itemDescription:"Godrej double-door refrigerator, 265 litre capacity.",
-    stockDetails:[
-      {date:"01-03-2026",transactionType:"Sales Invoices",quantity:"-1 ACS",invoiceNumber:"18",closingStock:"143 ACS"},
-      {date:"27-02-2026",transactionType:"Sales Invoices",quantity:"-1 ACS",invoiceNumber:"3",closingStock:"144 ACS"},
-      {date:"27-02-2026",transactionType:"Sales Invoices",quantity:"-1 ACS",invoiceNumber:"2",closingStock:"145 ACS"},
-      {date:"27-02-2026",transactionType:"Sales Invoices",quantity:"-4 ACS",invoiceNumber:"1",closingStock:"146 ACS"},
-      {date:"27-02-2026",transactionType:"Opening Stock",quantity:"150 ACS",invoiceNumber:null,closingStock:"150 ACS"},
-    ],
-    partyWiseReport:[
-      {partyName:"sumon",salesQuantity:1,salesAmount:35593.22,purchaseQuantity:0,purchaseAmount:"-"},
-      {partyName:"anando",salesQuantity:2,salesAmount:71186.44,purchaseQuantity:0,purchaseAmount:"-"},
-      {partyName:"ranjan",salesQuantity:4,salesAmount:142372.88,purchaseQuantity:0,purchaseAmount:"-"},
-    ],
-    godownStock:[{godownName:"mondal electronic",stockAvailable:"143 ACS",address:"Main Road, Kolkata"}],
-    partyWisePrices:[{partyName:"All Parties Price",salesPrice:42000}],
-  },
-  {
-    id:"2", itemName:"HERIER AC", itemCode:"1234", stockQty:"93 PCS", sellingPrice:45000, purchasePrice:38000,
-    category:"Electronics", gstTaxRate:"18%", hsnCode:"8415", secondaryUnit:"-", lowStockQty:"5", lowStockWarning:"Enabled",
-    itemDescription:"Herier 1.5 ton split air conditioner with inverter technology.",
-    stockDetails:[
-      {date:"28-02-2026",transactionType:"Sales Invoices",quantity:"-5 PCS",invoiceNumber:"15",closingStock:"93 PCS"},
-      {date:"20-02-2026",transactionType:"Sales Invoices",quantity:"-2 PCS",invoiceNumber:"9",closingStock:"98 PCS"},
-      {date:"10-02-2026",transactionType:"Purchase Invoice",quantity:"+30 PCS",invoiceNumber:"P-12",closingStock:"100 PCS"},
-      {date:"01-02-2026",transactionType:"Opening Stock",quantity:"70 PCS",invoiceNumber:null,closingStock:"70 PCS"},
-    ],
-    partyWiseReport:[
-      {partyName:"Cool Zone",salesQuantity:5,salesAmount:225000,purchaseQuantity:0,purchaseAmount:"-"},
-      {partyName:"Raj Electronics",salesQuantity:2,salesAmount:90000,purchaseQuantity:0,purchaseAmount:"-"},
-      {partyName:"Prime Distributors",salesQuantity:0,salesAmount:0,purchaseQuantity:30,purchaseAmount:"₹ 11,40,000"},
-    ],
-    godownStock:[
-      {godownName:"mondal electronic",stockAvailable:"60 PCS",address:"Main Road, Kolkata"},
-      {godownName:"Main Godown",stockAvailable:"33 PCS",address:"Salt Lake, Kolkata"},
-    ],
-    partyWisePrices:[
-      {partyName:"All Parties Price",salesPrice:45000},
-      {partyName:"Wholesale Price",salesPrice:42000},
-    ],
-  },
-  {
-    id:"3", itemName:"HISENSE 32 INCH", itemCode:"", stockQty:"39 PCS", sellingPrice:21000, purchasePrice:18000,
-    category:"Electronics", gstTaxRate:"18%", hsnCode:"8528", secondaryUnit:"-", lowStockQty:"5", lowStockWarning:"Enabled",
-    itemDescription:"Hisense 32 inch HD LED Smart TV with Android OS.",
-    stockDetails:[
-      {date:"25-02-2026",transactionType:"Sales Invoices",quantity:"-3 PCS",invoiceNumber:"12",closingStock:"39 PCS"},
-      {date:"15-02-2026",transactionType:"Sales Invoices",quantity:"-4 PCS",invoiceNumber:"8",closingStock:"42 PCS"},
-      {date:"05-02-2026",transactionType:"Purchase Invoice",quantity:"+10 PCS",invoiceNumber:"P-8",closingStock:"46 PCS"},
-      {date:"01-01-2026",transactionType:"Opening Stock",quantity:"36 PCS",invoiceNumber:null,closingStock:"36 PCS"},
-    ],
-    partyWiseReport:[
-      {partyName:"Vision Store",salesQuantity:3,salesAmount:63000,purchaseQuantity:0,purchaseAmount:"-"},
-      {partyName:"Dey Electronics",salesQuantity:4,salesAmount:84000,purchaseQuantity:0,purchaseAmount:"-"},
-      {partyName:"National Suppliers",salesQuantity:0,salesAmount:0,purchaseQuantity:10,purchaseAmount:"₹ 1,80,000"},
-    ],
-    godownStock:[{godownName:"mondal electronic",stockAvailable:"39 PCS",address:"Main Road, Kolkata"}],
-    partyWisePrices:[{partyName:"All Parties Price",salesPrice:21000}],
-  },
-  {
-    id:"4", itemName:"HISENSE 43INCG TV", itemCode:"00974", stockQty:"119 PCS", sellingPrice:30000, purchasePrice:null,
-    category:"Electronics", gstTaxRate:"18%", hsnCode:"8528", secondaryUnit:"-", lowStockQty:"-", lowStockWarning:"Disabled",
-    itemDescription:"Hisense 43 inch 4K UHD Smart TV with Google TV.",
-    stockDetails:[
-      {date:"01-03-2026",transactionType:"Sales Invoices",quantity:"-6 PCS",invoiceNumber:"20",closingStock:"119 PCS"},
-      {date:"20-02-2026",transactionType:"Sales Invoices",quantity:"-5 PCS",invoiceNumber:"11",closingStock:"125 PCS"},
-      {date:"01-02-2026",transactionType:"Purchase Invoice",quantity:"+50 PCS",invoiceNumber:"P-15",closingStock:"130 PCS"},
-      {date:"15-01-2026",transactionType:"Opening Stock",quantity:"80 PCS",invoiceNumber:null,closingStock:"80 PCS"},
-    ],
-    partyWiseReport:[
-      {partyName:"anando",salesQuantity:6,salesAmount:180000,purchaseQuantity:0,purchaseAmount:"-"},
-      {partyName:"sumon",salesQuantity:5,salesAmount:150000,purchaseQuantity:0,purchaseAmount:"-"},
-    ],
-    godownStock:[
-      {godownName:"mondal electronic",stockAvailable:"80 PCS",address:"Main Road, Kolkata"},
-      {godownName:"Main Godown",stockAvailable:"39 PCS",address:"Salt Lake, Kolkata"},
-    ],
-    partyWisePrices:[{partyName:"All Parties Price",salesPrice:30000}],
-  },
-  {
-    id:"5", itemName:"BILLING SOFTWARE MOBILE APP", itemCode:"BSM001", stockQty:"-", sellingPrice:256, purchasePrice:null,
-    category:"Software", gstTaxRate:"18%", hsnCode:"8523", secondaryUnit:"-", lowStockQty:"-", lowStockWarning:"Disabled",
-    itemDescription:"Mobile billing application for small businesses.",
-    stockDetails:[
-      {date:"01-03-2026",transactionType:"Sales Invoices",quantity:"-1",invoiceNumber:"21",closingStock:"-"},
-      {date:"20-02-2026",transactionType:"Sales Invoices",quantity:"-2",invoiceNumber:"10",closingStock:"-"},
-    ],
-    partyWiseReport:[
-      {partyName:"Ramesh Traders",salesQuantity:2,salesAmount:512,purchaseQuantity:0,purchaseAmount:"-"},
-      {partyName:"City Store",salesQuantity:1,salesAmount:256,purchaseQuantity:0,purchaseAmount:"-"},
-    ],
-    godownStock:[],
-    partyWisePrices:[{partyName:"All Parties Price",salesPrice:256}],
-  },
-];
 
 const DEFAULT_SETTINGS: ItemSettings = {
   stockValCalc:"purchase_with_tax", batchExpiry:false, alertBeforeExpiry:false,
@@ -140,9 +38,9 @@ const DEFAULT_SETTINGS: ItemSettings = {
 // ─── Date helpers ─────────────────────────────────────────────────────────────
 const TODAY = new Date(); TODAY.setHours(0,0,0,0);
 const addDays = (d: Date, n: number) => { const r = new Date(d); r.setDate(r.getDate()+n); return r; };
-const startOfWeek = (d: Date) => { const r = new Date(d); r.setDate(r.getDate()-r.getDay()+1); r.setHours(0,0,0,0); return r; };
-const startOfMonth= (d: Date) => new Date(d.getFullYear(), d.getMonth(), 1);
-const startOfYear = (d: Date) => new Date(d.getFullYear(), 0, 1);
+const startOfWeek  = (d: Date) => { const r = new Date(d); r.setDate(r.getDate()-r.getDay()+1); r.setHours(0,0,0,0); return r; };
+const startOfMonth = (d: Date) => new Date(d.getFullYear(), d.getMonth(), 1);
+const startOfYear  = (d: Date) => new Date(d.getFullYear(), 0, 1);
 
 type DateRange = "today"|"this_week"|"this_month"|"this_year"|"last_7"|"last_30"|"last_365"|"all";
 const DATE_RANGE_LABELS: Record<DateRange, string> = {
@@ -153,22 +51,17 @@ const DATE_RANGE_LABELS: Record<DateRange, string> = {
 const getDateRange = (r: DateRange): [Date, Date] => {
   const end = new Date(); end.setHours(23,59,59,999);
   switch(r) {
-    case "today":     return [TODAY, end];
-    case "this_week": return [startOfWeek(TODAY), end];
-    case "this_month":return [startOfMonth(TODAY), end];
-    case "this_year": return [startOfYear(TODAY), end];
-    case "last_7":    return [addDays(TODAY,-6), end];
-    case "last_30":   return [addDays(TODAY,-29), end];
-    case "last_365":  return [addDays(TODAY,-364), end];
-    case "all":       return [new Date(2000,0,1), end];
+    case "today":      return [TODAY, end];
+    case "this_week":  return [startOfWeek(TODAY), end];
+    case "this_month": return [startOfMonth(TODAY), end];
+    case "this_year":  return [startOfYear(TODAY), end];
+    case "last_7":     return [addDays(TODAY,-6), end];
+    case "last_30":    return [addDays(TODAY,-29), end];
+    case "last_365":   return [addDays(TODAY,-364), end];
+    case "all":        return [new Date(2000,0,1), end];
   }
 };
-
-const parseDMY = (s: string): Date => {
-  const [d,m,y] = s.split("-").map(Number);
-  return new Date(y,m-1,d);
-};
-
+const parseDMY = (s: string): Date => { const [d,m,y] = s.split("-").map(Number); return new Date(y,m-1,d); };
 const inRange = (dateStr: string, range: DateRange): boolean => {
   if (range === "all") return true;
   const [from, to] = getDateRange(range);
@@ -177,19 +70,21 @@ const inRange = (dateStr: string, range: DateRange): boolean => {
 };
 
 // ─── Calc helpers ─────────────────────────────────────────────────────────────
-const parseQty         = (q: string) => { if (!q||q==="-") return 0; return parseInt(q)||0; };
-const hasStock         = (it: Item) => it.stockQty !== "-";
-const itemStockValue   = (it: Item) => { const q=parseQty(it.stockQty); if(q<=0||!it.sellingPrice) return 0; return q*it.sellingPrice; };
+const parseQty       = (q: string) => { if (!q||q==="-") return 0; return parseInt(q)||0; };
+const hasStock       = (it: Item) => it.stockQty !== "-";
+const itemStockValue = (it: Item) => { const q=it.stockNumber; if(q<=0||!it.sellingPrice) return 0; return q*it.sellingPrice; };
 const calcTotalStockValue = (items: Item[]) => items.reduce((s,it)=>s+itemStockValue(it),0);
-const calcTotalStockQty   = (items: Item[]) => items.filter(hasStock).reduce((s,it)=>s+Math.max(0,parseQty(it.stockQty)),0);
-const lowStockItems       = (items: Item[]) => items.filter(it => {
-  const qty = parseQty(it.stockQty);
-  if (qty < 0) return true; // negative stock always low
+const calcTotalStockQty   = (items: Item[]) => items.filter(hasStock).reduce((s,it)=>s+Math.max(0,it.stockNumber),0);
+const isLowStock = (it: Item): boolean => {
+  const qty = it.stockNumber;
+  if (qty < 0) return true;
   if (it.lowStockWarning === "Enabled" && it.lowStockQty !== "-") {
-    return qty <= parseInt(it.lowStockQty); // only if actual qty <= threshold
+    const threshold = parseInt(it.lowStockQty);
+    if (!isNaN(threshold)) return qty <= threshold;
   }
   return false;
-});
+};
+const lowStockItems = (items: Item[]) => items.filter(isLowStock);
 const fmtRs  = (n: number) => n===0?"₹ 0":"₹ "+n.toLocaleString("en-IN");
 const fmt    = (n: number|null) => n===null?"-":`₹ ${n.toLocaleString("en-IN")}`;
 const fmtAmt = (n: number) => `₹ ${n.toLocaleString("en-IN",{minimumFractionDigits:2,maximumFractionDigits:2})}`;
@@ -220,7 +115,19 @@ const IcEyeOff   = () => <svg width={14} height={14} viewBox="0 0 24 24" fill="n
 const IcBox      = () => <svg width={44} height={44} viewBox="0 0 24 24" fill="none" stroke="#c0c5d0" strokeWidth={1.3}><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 002 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1={12} y1={22.08} x2={12} y2={12}/></svg>;
 const IcFile     = () => <svg width={44} height={44} viewBox="0 0 24 24" fill="none" stroke="#c0c5d0" strokeWidth={1.3}><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1={16} y1={13} x2={8} y2={13}/><line x1={16} y1={17} x2={8} y2={17}/></svg>;
 
-// ─── Toggle component ─────────────────────────────────────────────────────────
+// ─── Spinner ──────────────────────────────────────────────────────────────────
+const Spinner = () => (
+  <div style={{ display:"flex", alignItems:"center", justifyContent:"center", padding:"60px 0" }}>
+    <svg width={32} height={32} viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth={2.5}
+      style={{ animation:"spin 0.75s linear infinite" }}>
+      <circle cx={12} cy={12} r={10} strokeOpacity={0.2}/>
+      <path d="M12 2a10 10 0 0110 10" stroke="#6366f1"/>
+    </svg>
+    <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+  </div>
+);
+
+// ─── Toggle ───────────────────────────────────────────────────────────────────
 const Toggle = ({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) => (
   <div className={`stg-toggle${on?" on":""}`} onClick={() => onChange(!on)}>
     <div className="stg-thumb"/>
@@ -233,7 +140,7 @@ const Toast = ({ msg, onDone }: { msg: string; onDone: () => void }) => {
   return <div className="toast">{msg}</div>;
 };
 
-// ─── Date Picker Dropdown ─────────────────────────────────────────────────────
+// ─── Date Range Picker ────────────────────────────────────────────────────────
 const DateRangePicker = ({ value, onChange }: { value: DateRange; onChange: (v: DateRange) => void }) => {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -264,7 +171,6 @@ const DateRangePicker = ({ value, onChange }: { value: DateRange; onChange: (v: 
 // ═══════════════════════════════════════════════════════════════════════════════
 // ITEM SETTINGS MODAL
 // ═══════════════════════════════════════════════════════════════════════════════
-
 const STOCK_CALC_OPTS: { value: StockValCalc; label: string }[] = [
   {value:"purchase_with_tax",   label:"Purchase Price with Tax"},
   {value:"purchase_without_tax",label:"Purchase Price Without Tax"},
@@ -272,72 +178,36 @@ const STOCK_CALC_OPTS: { value: StockValCalc; label: string }[] = [
   {value:"sales_without_tax",   label:"Sales Price Without Tax"},
 ];
 
-// ── Custom Field Modal ────────────────────────────────────────────────────────
 const CustomFieldModal = ({ fields, onClose, onSave }: {
-  fields: CustomField[];
-  onClose: () => void;
-  onSave: (f: CustomField[]) => void;
+  fields: CustomField[]; onClose: () => void; onSave: (f: CustomField[]) => void;
 }) => {
-  const [localFields, setLocalFields] = useState<CustomField[]>(fields.length > 0 ? [...fields] : [
-    {id:"cf1",name:"",hidden:false},
-    {id:"cf2",name:"",hidden:false},
-  ]);
-
-  const addField = () => setLocalFields(f => [...f, {id:`cf${Date.now()}`,name:"",hidden:false}]);
+  const [localFields, setLocalFields] = useState<CustomField[]>(
+    fields.length > 0 ? [...fields] : [{id:"cf1",name:"",hidden:false},{id:"cf2",name:"",hidden:false}]
+  );
+  const addField    = () => setLocalFields(f => [...f, {id:`cf${Date.now()}`,name:"",hidden:false}]);
   const deleteField = (id: string) => setLocalFields(f => f.filter(x => x.id !== id));
   const updateName  = (id: string, name: string) => setLocalFields(f => f.map(x => x.id===id?{...x,name}:x));
   const toggleHide  = (id: string) => setLocalFields(f => f.map(x => x.id===id?{...x,hidden:!x.hidden}:x));
-
   return (
     <div className="modal-overlay" style={{zIndex:1100}} onClick={onClose}>
       <div className="cf-modal" onClick={e=>e.stopPropagation()}>
-        {/* Header */}
-        <div className="cf-header">
-          <span className="cf-title">Add Item Custom Fields</span>
-          <button className="modal-close" onClick={onClose}><IcX /></button>
-        </div>
-
-        {/* Bubble illustration */}
+        <div className="cf-header"><span className="cf-title">Add Item Custom Fields</span><button className="modal-close" onClick={onClose}><IcX /></button></div>
         <div className="cf-bubbles">
-          <div className="cf-bubble cf-bubble-green" style={{top:30,left:160}}>
-            <span className="cf-bubble-icon">⊞</span>
-            <span className="cf-bubble-label">Dimensions</span>
-          </div>
-          <div className="cf-bubble cf-bubble-yellow" style={{top:60,left:60}}>
-            <span className="cf-bubble-icon">🎨</span>
-            <span className="cf-bubble-label">Color</span>
-          </div>
-          <div className="cf-bubble cf-bubble-orange" style={{top:30,right:80}}>
-            <span className="cf-bubble-icon">⬡</span>
-            <span className="cf-bubble-label">Material</span>
-          </div>
+          <div className="cf-bubble cf-bubble-green" style={{top:30,left:160}}><span className="cf-bubble-icon">⊞</span><span className="cf-bubble-label">Dimensions</span></div>
+          <div className="cf-bubble cf-bubble-yellow" style={{top:60,left:60}}><span className="cf-bubble-icon">🎨</span><span className="cf-bubble-label">Color</span></div>
+          <div className="cf-bubble cf-bubble-orange" style={{top:30,right:80}}><span className="cf-bubble-icon">⬡</span><span className="cf-bubble-label">Material</span></div>
         </div>
-
-        {/* Fields */}
         <div className="cf-body">
           <label className="cf-label">Field Name</label>
           {localFields.map(f => (
             <div key={f.id} className="cf-field-row">
-              <input
-                className="cf-field-input"
-                placeholder="Enter Custom Field Name"
-                value={f.name}
-                onChange={e => updateName(f.id, e.target.value)}
-              />
-              <button className={`cf-field-btn${f.hidden?" active":""}`} title="Hide" onClick={() => toggleHide(f.id)}>
-                <IcEyeOff />
-              </button>
-              <button className="cf-field-btn danger" title="Delete" onClick={() => deleteField(f.id)}>
-                <IcTrash />
-              </button>
+              <input className="cf-field-input" placeholder="Enter Custom Field Name" value={f.name} onChange={e => updateName(f.id, e.target.value)}/>
+              <button className={`cf-field-btn${f.hidden?" active":""}`} title="Hide" onClick={() => toggleHide(f.id)}><IcEyeOff /></button>
+              <button className="cf-field-btn danger" title="Delete" onClick={() => deleteField(f.id)}><IcTrash /></button>
             </div>
           ))}
-          <button className="cf-add-btn" onClick={addField}>
-            <IcPlus /> Add New Field
-          </button>
+          <button className="cf-add-btn" onClick={addField}><IcPlus /> Add New Field</button>
         </div>
-
-        {/* Footer */}
         <div className="cf-footer">
           <button className="btn-secondary" onClick={onClose}>Close</button>
           <button className="btn-primary" onClick={() => { onSave(localFields); onClose(); }}>Save</button>
@@ -347,41 +217,27 @@ const CustomFieldModal = ({ fields, onClose, onSave }: {
   );
 };
 
-// ── Settings Modal ────────────────────────────────────────────────────────────
 const SettingsModal = ({ settings, customFields, onClose, onSave }: {
-  settings: ItemSettings;
-  customFields: CustomField[];
-  onClose: () => void;
-  onSave: (s: ItemSettings, cf: CustomField[]) => void;
+  settings: ItemSettings; customFields: CustomField[];
+  onClose: () => void; onSave: (s: ItemSettings, cf: CustomField[]) => void;
 }) => {
   const [s, setS] = useState<ItemSettings>({...settings});
   const [cf, setCf] = useState<CustomField[]>(customFields);
   const [calcOpen, setCalcOpen] = useState(false);
   const [showCfModal, setShowCfModal] = useState(false);
   const calcRef = useRef<HTMLDivElement>(null);
-
   useEffect(() => {
     const h = (e: MouseEvent) => { if(calcRef.current&&!calcRef.current.contains(e.target as Node)) setCalcOpen(false); };
     document.addEventListener("mousedown",h); return ()=>document.removeEventListener("mousedown",h);
   },[]);
-
   const set = (k: keyof ItemSettings, v: any) => setS(p=>({...p,[k]:v}));
   const selectedLabel = STOCK_CALC_OPTS.find(o=>o.value===s.stockValCalc)?.label ?? "";
-
   return (
     <>
       <div className="modal-overlay" onClick={onClose}>
         <div className="stg-modal" onClick={e=>e.stopPropagation()}>
-          {/* Header */}
-          <div className="stg-header">
-            <span className="stg-title">Item Settings</span>
-            <button className="modal-close" onClick={onClose}><IcX /></button>
-          </div>
-
-          {/* Body */}
+          <div className="stg-header"><span className="stg-title">Item Settings</span><button className="modal-close" onClick={onClose}><IcX /></button></div>
           <div className="stg-body">
-
-            {/* Stock Value Calculation */}
             <div className="stg-row">
               <span className="stg-row-label">Stock Value Calculation</span>
               <div className="stg-select-wrap" ref={calcRef}>
@@ -392,68 +248,38 @@ const SettingsModal = ({ settings, customFields, onClose, onSave }: {
                   <div className="stg-select-menu">
                     {STOCK_CALC_OPTS.map(o => (
                       <div key={o.value} className={`stg-select-opt${s.stockValCalc===o.value?" active":""}`}
-                        onClick={() => { set("stockValCalc",o.value); setCalcOpen(false); }}>
-                        {o.label}
-                      </div>
+                        onClick={() => { set("stockValCalc",o.value); setCalcOpen(false); }}>{o.label}</div>
                     ))}
                   </div>
                 )}
               </div>
             </div>
-
-            {/* Item Batching */}
             <div className="stg-row stg-row-with-desc">
-              <div className="stg-row-text">
-                <span className="stg-row-label">Enable Item Batching &amp; Expiry</span>
-                <span className="stg-row-desc">Keep track of multiple prices, expiry and manufacturing dates</span>
-              </div>
+              <div className="stg-row-text"><span className="stg-row-label">Enable Item Batching &amp; Expiry</span><span className="stg-row-desc">Keep track of multiple prices, expiry and manufacturing dates</span></div>
               <Toggle on={s.batchExpiry} onChange={v => set("batchExpiry",v)}/>
             </div>
-
             {s.batchExpiry && (
               <div className="stg-row stg-row-with-desc stg-indent">
-                <div className="stg-row-text">
-                  <span className="stg-row-label">Alert Before Expiry</span>
-                  <span className="stg-row-desc">We will notify you the below selected days before your batch expires</span>
-                </div>
+                <div className="stg-row-text"><span className="stg-row-label">Alert Before Expiry</span><span className="stg-row-desc">We will notify you the below selected days before your batch expires</span></div>
                 <div className="stg-alert-row">
                   <input className="stg-small-input" value={s.alertDays} onChange={e=>set("alertDays",e.target.value)} placeholder="days"/>
-                  <div className="select-wrap">
-                    <select className="form-select stg-small-select">
-                      <option>Select</option>
-                      <option>7 days</option>
-                      <option>15 days</option>
-                      <option>30 days</option>
-                    </select>
-                  </div>
+                  <div className="select-wrap"><select className="form-select stg-small-select"><option>Select</option><option>7 days</option><option>15 days</option><option>30 days</option></select></div>
                 </div>
                 <Toggle on={s.alertBeforeExpiry} onChange={v => set("alertBeforeExpiry",v)}/>
               </div>
             )}
-
-            {/* Serial Number */}
             <div className="stg-row stg-row-with-desc">
-              <div className="stg-row-text">
-                <span className="stg-row-label">Enable Serial Number/IMEI</span>
-                <span className="stg-row-desc">Manage your items by Serial Number or IMEI and track them easily</span>
-              </div>
+              <div className="stg-row-text"><span className="stg-row-label">Enable Serial Number/IMEI</span><span className="stg-row-desc">Manage your items by Serial Number or IMEI and track them easily</span></div>
               <Toggle on={s.serialImei} onChange={v => set("serialImei",v)}/>
             </div>
-
             {s.serialImei && (
               <div className="stg-indent stg-indent-field">
                 <label className="stg-sub-label">Field Name</label>
-                <input className="stg-field-input" value={s.serialFieldName}
-                  onChange={e=>set("serialFieldName",e.target.value)}/>
-                <p className="stg-hint">Choose a custom field name like IMEI Number, Model Number, Part Number etc. for adding the serial numbers.</p>
+                <input className="stg-field-input" value={s.serialFieldName} onChange={e=>set("serialFieldName",e.target.value)}/>
+                <p className="stg-hint">Choose a custom field name like IMEI Number, Model Number, Part Number etc.</p>
               </div>
             )}
-
-            {/* MRP */}
-            <div className="stg-row">
-              <span className="stg-row-label">MRP</span>
-              <Toggle on={s.mrp} onChange={v=>set("mrp",v)}/>
-            </div>
+            <div className="stg-row"><span className="stg-row-label">MRP</span><Toggle on={s.mrp} onChange={v=>set("mrp",v)}/></div>
             {s.mrp && (
               <div className="stg-indent">
                 <label className="stg-checkbox-row">
@@ -462,92 +288,176 @@ const SettingsModal = ({ settings, customFields, onClose, onSave }: {
                 </label>
               </div>
             )}
-
-            {/* Wholesale */}
-            <div className="stg-row">
-              <span className="stg-row-label">Wholesale Price</span>
-              <Toggle on={s.wholesalePrice} onChange={v=>set("wholesalePrice",v)}/>
-            </div>
-
-            {/* Party Wise */}
+            <div className="stg-row"><span className="stg-row-label">Wholesale Price</span><Toggle on={s.wholesalePrice} onChange={v=>set("wholesalePrice",v)}/></div>
             <div className="stg-row stg-row-with-desc">
-              <div className="stg-row-text">
-                <span className="stg-row-label">Party Wise Item Price <span className="badge-new">New</span></span>
-                <span className="stg-row-desc">Set custom Sales Prices for individual Parties</span>
-              </div>
+              <div className="stg-row-text"><span className="stg-row-label">Party Wise Item Price <span className="badge-new">New</span></span><span className="stg-row-desc">Set custom Sales Prices for individual Parties</span></div>
               <Toggle on={s.partyWisePrice} onChange={v=>set("partyWisePrice",v)}/>
             </div>
-
-            {/* Add Custom Field */}
-            <button className="stg-add-custom" onClick={() => setShowCfModal(true)}>
-              + Add Custom Field
-            </button>
+            <button className="stg-add-custom" onClick={() => setShowCfModal(true)}>+ Add Custom Field</button>
           </div>
-
-          {/* Footer */}
           <div className="stg-footer">
             <button className="btn-secondary" onClick={onClose}>Cancel</button>
             <button className="btn-primary" onClick={() => { onSave(s, cf); onClose(); }}>Save</button>
           </div>
         </div>
       </div>
-
-      {showCfModal && (
-        <CustomFieldModal
-          fields={cf}
-          onClose={() => setShowCfModal(false)}
-          onSave={f => setCf(f)}
-        />
-      )}
+      {showCfModal && <CustomFieldModal fields={cf} onClose={() => setShowCfModal(false)} onSave={f => setCf(f)}/>}
     </>
   );
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// ADJUST STOCK MODAL
+// ADJUST STOCK MODAL  ← fully backend-integrated
 // ═══════════════════════════════════════════════════════════════════════════════
-const AdjustModal = ({ item, onClose, onSave }: {
-  item: Item; onClose: () => void;
-  onSave: (id: string, adj: { type:"add"|"reduce"; qty:number; godown:string; remarks:string }) => void;
+const AdjustModal = ({ item, onClose, onSaved }: {
+  item: Item;
+  onClose: () => void;
+  onSaved: (itemId: string) => void;   // called after successful save so parent can re-fetch
 }) => {
-  const [type, setType] = useState<"add"|"reduce">("add");
-  const [qty,  setQty]  = useState(0);
-  const [godown, setGodown] = useState("");
+  const [type,    setType]    = useState<"add"|"reduce">("add");
+  const [qty,     setQty]     = useState(0);
+  const [godown,  setGodown]  = useState("");
   const [remarks, setRemarks] = useState("");
-  const unit = item.stockQty.includes("ACS")?"ACS":"PCS";
-  const cur  = parseInt(item.stockQty)||0;
-  const newQ = type==="add"?cur+qty:cur-qty;
-  const save = () => { if(!godown){alert("Select godown");return;} onSave(item.id,{type,qty,godown,remarks}); onClose(); };
+  const [godowns, setGodowns] = useState<Godown[]>([]);
+  const [saving,  setSaving]  = useState(false);
+
+  const unit = item.stockQty.includes("ACS") ? "ACS" : "PCS";
+  const cur  = item.stockNumber;
+  const newQ = type === "add" ? cur + qty : cur - qty;
+
+  // Fetch all godowns from backend when modal opens
+  useEffect(() => {
+    api.get("/godowns")
+      .then(res => setGodowns(res.data.data || res.data))
+      .catch(err => console.error("Failed to fetch godowns:", err));
+  }, []);
+
+  const save = async () => {
+    if (!godown)  { alert("Please select a godown"); return; }
+    if (qty <= 0) { alert("Please enter a quantity greater than 0"); return; }
+    setSaving(true);
+    try {
+      await api.post(`/items/${item.id}/adjust-stock`, {
+        godownId: Number(godown),
+        type,
+        qty,
+        remarks,
+      });
+      onSaved(item.id);   // triggers fetchItemById + toast in parent
+      onClose();
+    } catch (err: any) {
+      alert(err?.response?.data?.message || "Failed to adjust stock");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-box" onClick={e=>e.stopPropagation()}>
-        <div className="modal-header"><h2>Adjust Stock Quantity</h2><button className="modal-close" onClick={onClose}><IcX /></button></div>
+      <div className="modal-box" onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <h2>Adjust Stock Quantity</h2>
+          <button className="modal-close" onClick={onClose}><IcX /></button>
+        </div>
         <div className="modal-body">
           <div className="modal-left">
-            <div className="form-group"><label>Date</label><div className="input-icon-wrap"><IcCalendar /><input className="form-input borderless" defaultValue="1 Mar 2026"/><IcChevDown /></div></div>
-            <div className="form-group"><label>Godown <span className="required">*</span></label><div className="select-wrap"><select className="form-select" value={godown} onChange={e=>setGodown(e.target.value)}><option value="">Select Godown</option>{item.godownStock.map(g=><option key={g.godownName} value={g.godownName}>{g.godownName}</option>)}<option value="default">Default Godown</option></select></div></div>
-            <div className="form-row">
-              <div className="form-group"><label>Add or Reduce Stock</label><div className="select-wrap"><select className="form-select" value={type} onChange={e=>setType(e.target.value as "add"|"reduce")}><option value="add">Add (+)</option><option value="reduce">Reduce (-)</option></select></div></div>
-              <div className="form-group"><label>Adjust quantity</label><div className="qty-input-wrap"><input type="number" min={0} value={qty} onChange={e=>setQty(Math.max(0,parseInt(e.target.value)||0))}/><span className="qty-unit">{unit}</span></div></div>
+            {/* Date — always today */}
+            <div className="form-group">
+              <label>Date</label>
+              <div className="input-icon-wrap">
+                <IcCalendar />
+                <input
+                  className="form-input borderless"
+                  readOnly
+                  value={new Date().toLocaleDateString("en-GB", { day:"numeric", month:"short", year:"numeric" })}
+                />
+              </div>
             </div>
-            <div className="form-group"><label>Remarks (Optional)</label><textarea className="form-textarea" placeholder="Enter remarks" value={remarks} onChange={e=>setRemarks(e.target.value)}/></div>
+
+            {/* Godown — fetched from backend */}
+            <div className="form-group">
+              <label>Godown <span className="required">*</span></label>
+              <div className="select-wrap">
+                <select className="form-select" value={godown} onChange={e => setGodown(e.target.value)}>
+                  <option value="">Select Godown</option>
+                  {godowns.map(g => (
+                    <option key={g.godown_id} value={g.godown_id}>{g.godown_name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="form-row">
+              {/* Add / Reduce */}
+              <div className="form-group">
+                <label>Add or Reduce Stock</label>
+                <div className="select-wrap">
+                  <select className="form-select" value={type} onChange={e => setType(e.target.value as "add"|"reduce")}>
+                    <option value="add">Add (+)</option>
+                    <option value="reduce">Reduce (-)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Quantity — fixed editable input */}
+              <div className="form-group">
+                <label>Adjust quantity</label>
+                <div className="qty-input-wrap">
+                  <input
+                    type="number"
+                    min={0}
+                    value={qty === 0 ? "" : qty}
+                    onChange={e => {
+                      const val = e.target.value;
+                      if (val === "") { setQty(0); return; }
+                      const parsed = parseInt(val);
+                      if (!isNaN(parsed) && parsed >= 0) setQty(parsed);
+                    }}
+                    onBlur={e => { if (e.target.value === "") setQty(0); }}
+                    placeholder="0"
+                  />
+                  <span className="qty-unit">{unit}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Remarks */}
+            <div className="form-group">
+              <label>Remarks (Optional)</label>
+              <textarea className="form-textarea" placeholder="Enter remarks" value={remarks} onChange={e => setRemarks(e.target.value)}/>
+            </div>
           </div>
+
+          {/* Right panel — stock calculation preview */}
           <div className="modal-right">
-            <div><p className="modal-label">Item Name</p><p className="modal-item-name">{item.itemName}</p></div>
+            <div>
+              <p className="modal-label">Item Name</p>
+              <p className="modal-item-name">{item.itemName}</p>
+            </div>
             <div className="stock-calc">
               <div className="stock-calc-header"><IcReports /> Stock Calculation</div>
-              {qty>0?(
+              {qty > 0 ? (
                 <div className="stock-calc-body">
                   <div className="stock-row"><span>Current Stock</span><span>{cur} {unit}</span></div>
-                  <div className="stock-row adjust-row"><span>{type==="add"?"Adding":"Reducing"}</span><span className={type==="add"?"positive":"negative"}>{type==="add"?"+":"-"}{qty} {unit}</span></div>
+                  <div className="stock-row adjust-row">
+                    <span>{type === "add" ? "Adding" : "Reducing"}</span>
+                    <span className={type === "add" ? "positive" : "negative"}>
+                      {type === "add" ? "+" : "-"}{qty} {unit}
+                    </span>
+                  </div>
                   <div className="stock-divider"/>
                   <div className="stock-row final-row"><span>New Stock</span><span className="new-stock">{newQ} {unit}</span></div>
                 </div>
-              ):<p className="calc-placeholder">Adjustment will be shown here</p>}
+              ) : <p className="calc-placeholder">Adjustment will be shown here</p>}
             </div>
           </div>
         </div>
-        <div className="modal-footer"><button className="btn-secondary" onClick={onClose}>Close</button><button className="btn-primary" onClick={save}>Save</button></div>
+        <div className="modal-footer">
+          <button className="btn-secondary" onClick={onClose}>Close</button>
+          <button className="btn-primary" onClick={save} disabled={saving}>
+            {saving ? "Saving..." : "Save"}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -561,92 +471,38 @@ const GST_RATES = ["0%","5%","12%","18%","28%"];
 const EditItemModal = ({ item, onClose, onSave }: {
   item: Item; onClose:()=>void; onSave:(updated: Item)=>void;
 }) => {
-  const [form, setForm] = useState<Item>({...item});
+  const [form, setForm] = useState<Item>(item);
   const set = (k: keyof Item, v: any) => setForm(p => ({...p, [k]: v}));
-
   const handleSave = () => {
     if (!form.itemName.trim()) { alert("Item name is required"); return; }
-    onSave(form);
-    onClose();
+    onSave(form); onClose();
   };
-
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="edit-item-modal" onClick={e=>e.stopPropagation()}>
-        {/* Header */}
-        <div className="edit-modal-header">
-          <span className="edit-modal-title">Edit Item</span>
-          <button className="modal-close" onClick={onClose}><IcX /></button>
-        </div>
-
-        {/* Body */}
+        <div className="edit-modal-header"><span className="edit-modal-title">Edit Item</span><button className="modal-close" onClick={onClose}><IcX /></button></div>
         <div className="edit-modal-body">
-          {/* Section: General */}
           <div className="edit-section-title">General Details</div>
           <div className="edit-form-grid">
-            <div className="edit-form-group">
-              <label>Item Name <span className="required">*</span></label>
-              <input className="edit-input" value={form.itemName} onChange={e=>set("itemName",e.target.value)} placeholder="Item name"/>
-            </div>
-            <div className="edit-form-group">
-              <label>Item Code</label>
-              <input className="edit-input" value={form.itemCode} onChange={e=>set("itemCode",e.target.value)} placeholder="Item code"/>
-            </div>
-            <div className="edit-form-group">
-              <label>Category</label>
-              <input className="edit-input" value={form.category} onChange={e=>set("category",e.target.value)} placeholder="Category"/>
-            </div>
-            <div className="edit-form-group">
-              <label>HSN Code</label>
-              <input className="edit-input" value={form.hsnCode} onChange={e=>set("hsnCode",e.target.value)} placeholder="HSN code"/>
-            </div>
-            <div className="edit-form-group span-full">
-              <label>Description</label>
-              <textarea className="edit-textarea" value={form.itemDescription} onChange={e=>set("itemDescription",e.target.value)} placeholder="Item description" rows={2}/>
-            </div>
+            <div className="edit-form-group"><label>Item Name <span className="required">*</span></label><input className="edit-input" value={form.itemName} onChange={e=>set("itemName",e.target.value)} placeholder="Item name"/></div>
+            <div className="edit-form-group"><label>Item Code</label><input className="edit-input" value={form.itemCode} onChange={e=>set("itemCode",e.target.value)} placeholder="Item code"/></div>
+            <div className="edit-form-group"><label>Category</label><input className="edit-input" value={form.category} onChange={e=>set("category",e.target.value)} placeholder="Category"/></div>
+            <div className="edit-form-group"><label>HSN Code</label><input className="edit-input" value={form.hsnCode} onChange={e=>set("hsnCode",e.target.value)} placeholder="HSN code"/></div>
+            <div className="edit-form-group span-full"><label>Description</label><textarea className="edit-textarea" value={form.itemDescription} onChange={e=>set("itemDescription",e.target.value)} placeholder="Item description" rows={2}/></div>
           </div>
-
-          {/* Section: Pricing */}
           <div className="edit-section-title">Pricing Details</div>
           <div className="edit-form-grid">
-            <div className="edit-form-group">
-              <label>Selling Price (₹)</label>
-              <input className="edit-input" type="number" value={form.sellingPrice ?? ""} onChange={e=>set("sellingPrice", e.target.value===""?null:Number(e.target.value))} placeholder="0"/>
-            </div>
-            <div className="edit-form-group">
-              <label>Purchase Price (₹)</label>
-              <input className="edit-input" type="number" value={form.purchasePrice ?? ""} onChange={e=>set("purchasePrice", e.target.value===""?null:Number(e.target.value))} placeholder="0"/>
-            </div>
-            <div className="edit-form-group">
-              <label>GST Tax Rate</label>
-              <select className="edit-select" value={form.gstTaxRate} onChange={e=>set("gstTaxRate",e.target.value)}>
-                {GST_RATES.map(r=><option key={r} value={r}>{r}</option>)}
-              </select>
-            </div>
-            <div className="edit-form-group">
-              <label>Secondary Unit</label>
-              <input className="edit-input" value={form.secondaryUnit} onChange={e=>set("secondaryUnit",e.target.value)} placeholder="-"/>
-            </div>
+            <div className="edit-form-group"><label>Selling Price (₹)</label><input className="edit-input" type="number" value={form.sellingPrice ?? ""} onChange={e=>set("sellingPrice", e.target.value===""?null:Number(e.target.value))} placeholder="0"/></div>
+            <div className="edit-form-group"><label>Purchase Price (₹)</label><input className="edit-input" type="number" value={form.purchasePrice ?? ""} onChange={e=>set("purchasePrice", e.target.value===""?null:Number(e.target.value))} placeholder="0"/></div>
+            <div className="edit-form-group"><label>GST Tax Rate</label><select className="edit-select" value={form.gstTaxRate} onChange={e=>set("gstTaxRate",e.target.value)}>{GST_RATES.map(r=><option key={r} value={r}>{r}</option>)}</select></div>
+            <div className="edit-form-group"><label>Secondary Unit</label><input className="edit-input" value={form.secondaryUnit} onChange={e=>set("secondaryUnit",e.target.value)} placeholder="-"/></div>
           </div>
-
-          {/* Section: Stock */}
           <div className="edit-section-title">Stock Settings</div>
           <div className="edit-form-grid">
-            <div className="edit-form-group">
-              <label>Low Stock Quantity</label>
-              <input className="edit-input" value={form.lowStockQty} onChange={e=>set("lowStockQty",e.target.value)} placeholder="-"/>
-            </div>
-            <div className="edit-form-group">
-              <label>Low Stock Warning</label>
-              <select className="edit-select" value={form.lowStockWarning} onChange={e=>set("lowStockWarning",e.target.value as "Enabled"|"Disabled")}>
-                <option value="Disabled">Disabled</option>
-                <option value="Enabled">Enabled</option>
-              </select>
-            </div>
+            <div className="edit-form-group"><label>Low Stock Quantity</label><input className="edit-input" value={form.lowStockQty} onChange={e=>set("lowStockQty",e.target.value)} placeholder="-"/></div>
+            <div className="edit-form-group"><label>Low Stock Warning</label><select className="edit-select" value={form.lowStockWarning} onChange={e=>set("lowStockWarning",e.target.value as "Enabled"|"Disabled")}><option value="Disabled">Disabled</option><option value="Enabled">Enabled</option></select></div>
           </div>
         </div>
-
-        {/* Footer */}
         <div className="edit-modal-footer">
           <button className="btn-secondary" onClick={onClose}>Cancel</button>
           <button className="btn-primary" onClick={handleSave}>Save Changes</button>
@@ -661,7 +517,6 @@ const EditItemModal = ({ item, onClose, onSave }: {
 // ═══════════════════════════════════════════════════════════════════════════════
 type DetailTab = "itemDetails"|"stockDetails"|"partyWiseReport"|"godown"|"partyWisePrices";
 
-// Empty state with icon for tabs
 const TabEmpty = ({ message }: { message: string }) => (
   <div className="tab-empty-state">
     <svg width={48} height={48} viewBox="0 0 24 24" fill="none" stroke="#d1d5db" strokeWidth={1.2}>
@@ -671,8 +526,9 @@ const TabEmpty = ({ message }: { message: string }) => (
   </div>
 );
 
-const ItemDetailPage = ({ item, onBack, onDelete, onAdjust, onEdit }: {
-  item: Item; onBack:()=>void; onDelete:(id:string)=>void; onAdjust:()=>void; onEdit:()=>void;
+const ItemDetailPage = ({ item, onBack, onDelete, onAdjust, onEdit, loading }: {
+  item: Item; onBack:()=>void; onDelete:(id:string)=>void;
+  onAdjust:()=>void; onEdit:()=>void; loading: boolean;
 }) => {
   const [tab, setTab] = useState<DetailTab>("itemDetails");
   const [partySearch, setPartySearch] = useState("");
@@ -681,11 +537,9 @@ const ItemDetailPage = ({ item, onBack, onDelete, onAdjust, onEdit }: {
     ["itemDetails","Item Details"],["stockDetails","Stock Details"],
     ["partyWiseReport","Party Wise Report"],["godown","Godown"],["partyWisePrices","Party Wise Prices"]
   ];
-
   const filteredPartyPrices = item.partyWisePrices.filter(p =>
     p.partyName.toLowerCase().includes(partySearch.toLowerCase())
   );
-
   return (
     <div className="detail-page">
       <div className="detail-topbar">
@@ -697,157 +551,136 @@ const ItemDetailPage = ({ item, onBack, onDelete, onAdjust, onEdit }: {
         <div className="detail-topbar-right">
           <button className="btn-outline-sm"><IcBarcode /> View Barcode</button>
           <button className="btn-outline-sm" onClick={onAdjust}>Adjust Stock</button>
-          <button className="btn-icon-action edit" title="Edit Item" onClick={onEdit}><IcEdit /></button>
+          <button className="btn-icon-action edit" title="Edit Item" onClick={e=>{e.stopPropagation();onEdit();}}><IcEdit /></button>
           <button className="btn-icon-action delete" title="Delete Item" onClick={()=>{if(confirm(`Delete ${item.itemName}?`)){onDelete(item.id);onBack();}}}><IcTrash /></button>
         </div>
       </div>
       <div className="detail-tabbar">
         {tabs.map(([k,l])=><button key={k} className={`tab-btn${tab===k?" active":""}`} onClick={()=>setTab(k)}>{l}</button>)}
       </div>
-      <div className="detail-body">
 
-        {/* ── Item Details ── */}
-        {tab==="itemDetails"&&(
-          <div className="tab-cards-grid">
-            <div className="info-card">
-              <div className="card-heading">General Details</div>
-              <div className="info-grid">
-                <div className="info-item"><span className="info-label">Item Name</span><span className="info-value">{item.itemName||"-"}</span></div>
-                <div className="info-item"><span className="info-label">Item Code</span><span className="info-value">{item.itemCode||"-"}</span></div>
-                <div className="info-item"><span className="info-label">Category</span><span className="info-value">{item.category||"-"}</span></div>
-                <div className="info-item"><span className="info-label">Current Stock</span><span className="info-value">{item.stockQty}</span></div>
-                <div className="info-item"><span className="info-label">Stock Value</span><span className="info-value">{fmtRs(itemStockValue(item))}</span></div>
-                <div className="info-item"><span className="info-label">Low Stock Qty</span><span className="info-value">{item.lowStockQty}</span></div>
-                <div className="info-item"><span className="info-label">Low Stock Warning</span><span className={`info-value ${item.lowStockWarning==="Disabled"?"warn-dis":"warn-en"}`}>{item.lowStockWarning}</span></div>
-                <div className="info-item span-full"><span className="info-label">Description</span><span className="info-value">{item.itemDescription||"-"}</span></div>
+      {loading ? <Spinner /> : (
+        <div className="detail-body">
+          {tab==="itemDetails"&&(
+            <div className="tab-cards-grid">
+              <div className="info-card">
+                <div className="card-heading">General Details</div>
+                <div className="info-grid">
+                  <div className="info-item"><span className="info-label">Item Name</span><span className="info-value">{item.itemName||"-"}</span></div>
+                  <div className="info-item"><span className="info-label">Item Code</span><span className="info-value">{item.itemCode||"-"}</span></div>
+                  <div className="info-item"><span className="info-label">Category</span><span className="info-value">{item.category||"-"}</span></div>
+                  <div className="info-item"><span className="info-label">Current Stock</span><span className="info-value">{item.stockQty}</span></div>
+                  <div className="info-item"><span className="info-label">Stock Value</span><span className="info-value">{fmtRs(itemStockValue(item))}</span></div>
+                  <div className="info-item"><span className="info-label">Low Stock Qty</span><span className="info-value">{item.lowStockQty}</span></div>
+                  <div className="info-item"><span className="info-label">Low Stock Warning</span><span className={`info-value ${item.lowStockWarning==="Disabled"?"warn-dis":"warn-en"}`}>{item.lowStockWarning}</span></div>
+                  <div className="info-item span-full"><span className="info-label">Description</span><span className="info-value">{item.itemDescription||"-"}</span></div>
+                </div>
+              </div>
+              <div className="info-card">
+                <div className="card-heading">Pricing Details</div>
+                <div className="info-grid">
+                  <div className="info-item"><span className="info-label">Sales Price</span><span className="info-value">{item.sellingPrice!==null?`₹ ${item.sellingPrice.toLocaleString("en-IN")}`:"-"}<span className="with-tax"> With Tax</span></span></div>
+                  <div className="info-item"><span className="info-label">Purchase Price</span><span className="info-value">{item.purchasePrice!==null?`₹ ${item.purchasePrice.toLocaleString("en-IN")}`:"-"}<span className="with-tax"> With Tax</span></span></div>
+                  <div className="info-item"><span className="info-label">GST Tax Rate</span><span className="info-value">{item.gstTaxRate}</span></div>
+                  <div className="info-item"><span className="info-label">HSN Code</span><span className="info-value">{item.hsnCode}</span></div>
+                  <div className="info-item"><span className="info-label">Secondary Unit</span><span className="info-value">{item.secondaryUnit}</span></div>
+                </div>
               </div>
             </div>
-            <div className="info-card">
-              <div className="card-heading">Pricing Details</div>
-              <div className="info-grid">
-                <div className="info-item"><span className="info-label">Sales Price</span><span className="info-value">{item.sellingPrice!==null?`₹ ${item.sellingPrice.toLocaleString("en-IN")}`:"-"}<span className="with-tax"> With Tax</span></span></div>
-                <div className="info-item"><span className="info-label">Purchase Price</span><span className="info-value">{item.purchasePrice!==null?`₹ ${item.purchasePrice.toLocaleString("en-IN")}`:"-"}<span className="with-tax"> With Tax</span></span></div>
-                <div className="info-item"><span className="info-label">GST Tax Rate</span><span className="info-value">{item.gstTaxRate}</span></div>
-                <div className="info-item"><span className="info-label">HSN Code</span><span className="info-value">{item.hsnCode}</span></div>
-                <div className="info-item"><span className="info-label">Secondary Unit</span><span className="info-value">{item.secondaryUnit}</span></div>
+          )}
+          {tab==="stockDetails"&&(
+            <div className="tab-section">
+              <div className="tab-toolbar">
+                <button className="date-filter-btn"><IcCalendar/> Last 365 Days <IcChevDown/></button>
+                <div className="tab-toolbar-right">
+                  <button className="btn-outline-sm"><IcDownload/> Download</button>
+                  <button className="btn-outline-sm"><IcPrint/> Print PDF</button>
+                </div>
               </div>
+              {item.stockDetails.length>0 ? (
+                <table className="data-table">
+                  <thead><tr><th>Date</th><th>Transaction Type</th><th>Quantity</th><th>Invoice Number</th><th>Closing Stock</th></tr></thead>
+                  <tbody>
+                    {item.stockDetails.map((s,i)=>(
+                      <tr key={i}>
+                        <td>{s.date}</td>
+                        <td><span className={`tx-badge tx-${s.transactionType.toLowerCase().includes("sales")?"sales":s.transactionType.toLowerCase().includes("purchase")?"purchase":s.transactionType.toLowerCase().includes("opening")?"opening":"adjust"}`}>{s.transactionType}</span></td>
+                        <td className={s.quantity.startsWith("-")?"qty-neg":"qty-pos"}>{s.quantity}</td>
+                        <td>{s.invoiceNumber||"-"}</td>
+                        <td>{s.closingStock}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : <TabEmpty message="No stock transactions found for this item." />}
             </div>
-          </div>
-        )}
-
-        {/* ── Stock Details ── */}
-        {tab==="stockDetails"&&(
-          <div className="tab-section">
-            <div className="tab-toolbar">
-              <button className="date-filter-btn"><IcCalendar/> Last 365 Days <IcChevDown/></button>
-              <div className="tab-toolbar-right">
-                <button className="btn-outline-sm"><IcDownload/> Download</button>
-                <button className="btn-outline-sm"><IcPrint/> Print PDF</button>
+          )}
+          {tab==="partyWiseReport"&&(
+            <div className="tab-section">
+              <div className="tab-toolbar">
+                <button className="date-filter-btn"><IcCalendar/> Last 365 Days <IcChevDown/></button>
+                <div className="tab-toolbar-right">
+                  <button className="btn-outline-sm"><IcDownload/> Download</button>
+                  <button className="btn-outline-sm"><IcPrint/> Print PDF</button>
+                </div>
               </div>
+              {item.partyWiseReport.length>0 ? (
+                <table className="data-table">
+                  <thead><tr><th>Party Name</th><th>Sales Qty</th><th>Sales Amount</th><th>Purchase Qty</th><th>Purchase Amount</th></tr></thead>
+                  <tbody>
+                    {item.partyWiseReport.map((p,i)=>(
+                      <tr key={i}>
+                        <td className="td-party-name">{p.partyName}</td>
+                        <td>{p.salesQuantity>0?<span className="qty-pos">+{p.salesQuantity}</span>:<span className="td-secondary">0</span>}</td>
+                        <td>{p.salesAmount>0?fmtAmt(p.salesAmount):"-"}</td>
+                        <td>{p.purchaseQuantity>0?<span className="qty-pos">+{p.purchaseQuantity}</span>:<span className="td-secondary">0</span>}</td>
+                        <td>{p.purchaseAmount}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : <TabEmpty message="No party wise transactions found for this item." />}
             </div>
-            {item.stockDetails.length>0 ? (
-              <table className="data-table">
-                <thead><tr><th>Date</th><th>Transaction Type</th><th>Quantity</th><th>Invoice Number</th><th>Closing Stock</th></tr></thead>
-                <tbody>
-                  {item.stockDetails.map((s,i)=>(
-                    <tr key={i}>
-                      <td>{s.date}</td>
-                      <td><span className={`tx-badge tx-${s.transactionType.toLowerCase().includes("sales")?"sales":s.transactionType.toLowerCase().includes("purchase")?"purchase":s.transactionType.toLowerCase().includes("opening")?"opening":"adjust"}`}>{s.transactionType}</span></td>
-                      <td className={s.quantity.startsWith("-")?"qty-neg":"qty-pos"}>{s.quantity}</td>
-                      <td>{s.invoiceNumber||"-"}</td>
-                      <td>{s.closingStock}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : <TabEmpty message="No stock transactions found for this item." />}
-          </div>
-        )}
-
-        {/* ── Party Wise Report ── */}
-        {tab==="partyWiseReport"&&(
-          <div className="tab-section">
-            <div className="tab-toolbar">
-              <button className="date-filter-btn"><IcCalendar/> Last 365 Days <IcChevDown/></button>
-              <div className="tab-toolbar-right">
-                <button className="btn-outline-sm"><IcDownload/> Download</button>
-                <button className="btn-outline-sm"><IcPrint/> Print PDF</button>
+          )}
+          {tab==="godown"&&(
+            <div className="tab-section">
+              <div className="tab-toolbar">
+                <div className="tab-toolbar-right">
+                  <button className="btn-accent-sm">Transfer Stock <IcArrow/></button>
+                </div>
               </div>
+              {item.godownStock.length>0 ? (
+                <table className="data-table">
+                  <thead><tr><th>Godown Name</th><th>Stock Available</th><th>Address</th></tr></thead>
+                  <tbody>
+                    {item.godownStock.map((g,i)=>(
+                      <tr key={i}>
+                        <td className="td-party-name">{g.godownName}</td>
+                        <td><span className="qty-pos">{g.stockAvailable}</span></td>
+                        <td className="td-secondary">{g.address||"-"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : <TabEmpty message="No godown stock found. Assign this item to a godown to see it here." />}
             </div>
-            {item.partyWiseReport.length>0 ? (
-              <table className="data-table">
-                <thead><tr><th>Party Name</th><th>Sales Qty</th><th>Sales Amount</th><th>Purchase Qty</th><th>Purchase Amount</th></tr></thead>
-                <tbody>
-                  {item.partyWiseReport.map((p,i)=>(
-                    <tr key={i}>
-                      <td className="td-party-name">{p.partyName}</td>
-                      <td>{p.salesQuantity>0?<span className="qty-pos">+{p.salesQuantity}</span>:<span className="td-secondary">0</span>}</td>
-                      <td>{p.salesAmount>0?fmtAmt(p.salesAmount):"-"}</td>
-                      <td>{p.purchaseQuantity>0?<span className="qty-pos">+{p.purchaseQuantity}</span>:<span className="td-secondary">0</span>}</td>
-                      <td>{p.purchaseAmount}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : <TabEmpty message="No party wise transactions found for this item." />}
-          </div>
-        )}
-
-        {/* ── Godown ── */}
-        {tab==="godown"&&(
-          <div className="tab-section">
-            <div className="tab-toolbar">
-              <div className="tab-toolbar-right">
-                <button className="btn-accent-sm">Transfer Stock <IcArrow/></button>
+          )}
+          {tab==="partyWisePrices"&&(
+            <div className="tab-section">
+              <div className="tab-toolbar">
+                <div className="search-party"><IcSearch/><input type="text" className="search-input-sm" placeholder="Search Party" value={partySearch} onChange={e=>setPartySearch(e.target.value)}/></div>
+                <div className="tab-toolbar-right"><button className="btn-outline-sm"><IcEdit/> Edit Party Wise Prices</button></div>
               </div>
+              {filteredPartyPrices.length>0 ? (
+                <table className="data-table">
+                  <thead><tr><th>Party Name</th><th>Sales Price</th></tr></thead>
+                  <tbody>{filteredPartyPrices.map((p,i)=><tr key={i}><td className="td-party-name">{p.partyName}</td><td>₹ {p.salesPrice.toLocaleString("en-IN")}</td></tr>)}</tbody>
+                </table>
+              ) : <TabEmpty message={partySearch ? `No party found matching "${partySearch}".` : "No party wise prices set for this item."} />}
             </div>
-            {item.godownStock.length>0 ? (
-              <table className="data-table">
-                <thead><tr><th>Godown Name</th><th>Stock Available</th><th>Address</th></tr></thead>
-                <tbody>
-                  {item.godownStock.map((g,i)=>(
-                    <tr key={i}>
-                      <td className="td-party-name">{g.godownName}</td>
-                      <td><span className="qty-pos">{g.stockAvailable}</span></td>
-                      <td className="td-secondary">{g.address||"-"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : <TabEmpty message="No godown stock found. Assign this item to a godown to see it here." />}
-          </div>
-        )}
-
-        {/* ── Party Wise Prices ── */}
-        {tab==="partyWisePrices"&&(
-          <div className="tab-section">
-            <div className="tab-toolbar">
-              <div className="search-party">
-                <IcSearch/>
-                <input type="text" className="search-input-sm" placeholder="Search Party"
-                  value={partySearch} onChange={e=>setPartySearch(e.target.value)}/>
-              </div>
-              <div className="tab-toolbar-right">
-                <button className="btn-outline-sm"><IcEdit/> Edit Party Wise Prices</button>
-              </div>
-            </div>
-            {filteredPartyPrices.length>0 ? (
-              <table className="data-table">
-                <thead><tr><th>Party Name</th><th>Sales Price</th></tr></thead>
-                <tbody>
-                  {filteredPartyPrices.map((p,i)=>(
-                    <tr key={i}>
-                      <td className="td-party-name">{p.partyName}</td>
-                      <td>₹ {p.salesPrice.toLocaleString("en-IN")}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : <TabEmpty message={partySearch ? `No party found matching "${partySearch}".` : "No party wise prices set for this item."} />}
-          </div>
-        )}
-
-      </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
@@ -873,7 +706,6 @@ const ReportShell = ({ title, onBack, topRight, children }: {
   </div>
 );
 
-// ── Rate List ─────────────────────────────────────────────────────────────────
 const RateListPage = ({ items, onBack }: { items:Item[]; onBack:()=>void }) => {
   const listed = items.filter(it=>it.sellingPrice!==null);
   return (
@@ -890,11 +722,9 @@ const RateListPage = ({ items, onBack }: { items:Item[]; onBack:()=>void }) => {
   );
 };
 
-// ── Stock Summary ─────────────────────────────────────────────────────────────
 const StockSummaryPage = ({ items, onBack }: { items:Item[]; onBack:()=>void }) => {
   const [dateRange, setDateRange] = useState<DateRange>("today");
   const stockItems = items.filter(hasStock);
-  // Filter stock details by date range (shows items that had activity in range, or all items)
   const filteredItems = dateRange==="all" ? stockItems : stockItems.filter(it =>
     it.stockDetails.length===0 || it.stockDetails.some(s=>inRange(s.date, dateRange))
   );
@@ -915,7 +745,7 @@ const StockSummaryPage = ({ items, onBack }: { items:Item[]; onBack:()=>void }) 
         <thead><tr><th>Item Name</th><th>Batch Number</th><th>Item Code</th><th>Purchase Price</th><th>Selling Price</th><th>Stock Quantity</th><th>Stock Value</th></tr></thead>
         <tbody>
           {filteredItems.map(it=>{
-            const qty=parseQty(it.stockQty); const unit=it.stockQty.includes("ACS")?"ACS":"PCS"; const val=itemStockValue(it);
+            const qty=it.stockNumber; const unit=it.stockQty.includes("ACS")?"ACS":"PCS"; const val=itemStockValue(it);
             return <tr key={it.id}><td className="rpt-td-name">{it.itemName}</td><td className="rpt-td-sec">-</td><td className="rpt-td-sec">{it.itemCode||"-"}</td><td className="rpt-td-sec">{it.purchasePrice!==null?`₹${it.purchasePrice.toLocaleString("en-IN")}`:"₹0"}</td><td className="rpt-td-sec">{it.sellingPrice!==null?`₹${it.sellingPrice.toLocaleString("en-IN")}`:"₹0"}</td><td className="rpt-td-sec">{qty}.0 {unit}</td><td className="rpt-td-sec">{val>0?`₹${val.toLocaleString("en-IN")}`:"₹0"}</td></tr>;
           })}
           {filteredItems.length===0&&<tr><td colSpan={7} className="rpt-empty-cell">No items found for this period</td></tr>}
@@ -925,33 +755,23 @@ const StockSummaryPage = ({ items, onBack }: { items:Item[]; onBack:()=>void }) 
   );
 };
 
-// ── Low Stock Summary ─────────────────────────────────────────────────────────
 const LowStockSummaryPage = ({ items, onBack }: { items:Item[]; onBack:()=>void }) => {
   const low = lowStockItems(items);
   const totalVal = low.reduce((s,it)=>s+itemStockValue(it),0);
   return (
     <ReportShell title="Low Stock Summary" onBack={onBack}>
-      <div className="rpt-low-header">
-        <span>Total Stock Value: </span>
-        <span className="rpt-low-value">₹ {totalVal>0?totalVal.toLocaleString("en-IN"):0}</span>
-      </div>
+      <div className="rpt-low-header"><span>Total Stock Value: </span><span className="rpt-low-value">₹ {totalVal>0?totalVal.toLocaleString("en-IN"):0}</span></div>
       <table className="rpt-table">
         <thead><tr><th>ITEM NAME</th><th>ITEM CODE</th><th>STOCK QUANTITY</th><th>LOW STOCK LEVEL</th><th>STOCK VALUE</th></tr></thead>
-        <tbody>
-          {low.map(it=>(
-            <tr key={it.id}><td className="rpt-td-name">{it.itemName}</td><td className="rpt-td-sec">{it.itemCode||"-"}</td><td className={parseQty(it.stockQty)<0?"qty-neg":"rpt-td-sec"}>{it.stockQty}</td><td className="rpt-td-sec">{it.lowStockQty}</td><td className="rpt-td-sec">{fmtRs(itemStockValue(it))}</td></tr>
-          ))}
-        </tbody>
+        <tbody>{low.map(it=><tr key={it.id}><td className="rpt-td-name">{it.itemName}</td><td className="rpt-td-sec">{it.itemCode||"-"}</td><td className={it.stockNumber<0?"qty-neg":"rpt-td-sec"}>{it.stockQty}</td><td className="rpt-td-sec">{it.lowStockQty}</td><td className="rpt-td-sec">{fmtRs(itemStockValue(it))}</td></tr>)}</tbody>
       </table>
       {low.length===0&&<div className="rpt-empty-state"><IcBox /><p>No items available to generate report</p></div>}
     </ReportShell>
   );
 };
 
-// ── Item Sales Summary ────────────────────────────────────────────────────────
 const ItemSalesSummaryPage = ({ items, onBack }: { items:Item[]; onBack:()=>void }) => {
   const [dateRange, setDateRange] = useState<DateRange>("this_week");
-  // Filter partyWiseReport rows based on date (using stock details as proxy for transaction dates)
   const withTx = items.filter(it=>it.partyWiseReport.length>0);
   const filteredWithTx = dateRange==="all" ? withTx : withTx.filter(it =>
     it.stockDetails.length===0 || it.stockDetails.some(s=>inRange(s.date,dateRange))
@@ -988,14 +808,8 @@ const CreateCategoryModal = ({ onClose, onAdd }: { onClose:()=>void; onAdd:(name
   return (
     <div className="modal-overlay" style={{zIndex:1200}} onClick={onClose}>
       <div className="cat-modal" onClick={e=>e.stopPropagation()}>
-        <div className="cat-header">
-          <span className="cat-title">Create New Category</span>
-          <button className="modal-close" onClick={onClose}><IcX /></button>
-        </div>
-        <div className="cat-body">
-          <label className="cat-label">Category Name</label>
-          <input className="cat-input" placeholder="Ex: Snacks" value={name} onChange={e=>setName(e.target.value)} autoFocus/>
-        </div>
+        <div className="cat-header"><span className="cat-title">Create New Category</span><button className="modal-close" onClick={onClose}><IcX /></button></div>
+        <div className="cat-body"><label className="cat-label">Category Name</label><input className="cat-input" placeholder="Ex: Snacks" value={name} onChange={e=>setName(e.target.value)} autoFocus/></div>
         <div className="cat-footer">
           <button className="btn-secondary" onClick={onClose}>Cancel</button>
           <button className="btn-primary" disabled={!name.trim()} onClick={() => { if(name.trim()){onAdd(name.trim());onClose();} }}>Add</button>
@@ -1020,17 +834,13 @@ const CategoryDropdown = ({ categories, selectedCat, onSelect, onAddCategory }: 
     <>
       <div className="cat-dropdown-wrap" ref={ref}>
         <div className={`cat-dropdown-trigger${open?" open":""}`} onClick={()=>setOpen(v=>!v)}>
-          <IcSearch />
-          <span className="cat-dropdown-label">{selectedCat||"Search Categories"}</span>
-          <IcChevDown />
+          <IcSearch /><span className="cat-dropdown-label">{selectedCat||"Search Categories"}</span><IcChevDown />
         </div>
         {open&&(
           <div className="cat-dropdown-menu">
             {categories.length>0&&categories.map(c=>(
               <div key={c} className={`cat-dropdown-option${selectedCat===c?" active":""}`}
-                onClick={()=>{onSelect(selectedCat===c?"":c);setOpen(false);}}>
-                {c}
-              </div>
+                onClick={()=>{onSelect(selectedCat===c?"":c);setOpen(false);}}>{c}</div>
             ))}
             <div className="cat-add-option" onClick={()=>{setOpen(false);setShowCreate(true);}}>
               <span className="cat-add-dashed">+ Add Category</span>
@@ -1047,7 +857,8 @@ const CategoryDropdown = ({ categories, selectedCat, onSelect, onAddCategory }: 
 // ITEMS LIST PAGE
 // ═══════════════════════════════════════════════════════════════════════════════
 const ItemsListPage = ({ items, onItemClick, onDelete, search, setSearch,
-  lowStockFilter, setLowStockFilter, onReportNav, onOpenSettings, categories, selectedCat, onSelectCat, onAddCategory }: {
+  lowStockFilter, setLowStockFilter, onReportNav, onOpenSettings,
+  categories, selectedCat, onSelectCat, onAddCategory }: {
   items: Item[]; onItemClick:(id:string)=>void; onDelete:(id:string)=>void;
   search:string; setSearch:(v:string)=>void;
   lowStockFilter:boolean; setLowStockFilter:(v:boolean)=>void;
@@ -1062,13 +873,13 @@ const ItemsListPage = ({ items, onItemClick, onDelete, search, setSearch,
     document.addEventListener("mousedown",h); return()=>document.removeEventListener("mousedown",h);
   },[]);
 
-  const totalStockValue = calcTotalStockValue(items);
-  const lowCount        = lowStockItems(items).length;
-
-  const filtered = items.filter(it=>{
-    const matchSearch = it.itemName.toLowerCase().includes(search.toLowerCase());
-    const matchCat    = selectedCat ? it.category === selectedCat : true;
-    const matchLow    = lowStockFilter ? parseQty(it.stockQty)<0 : true;
+  const totalStockValue = items.reduce((sum, it) => sum + itemStockValue(it), 0);
+  const lowCount = lowStockItems(items).length;
+  const filtered = items.filter(it => {
+    const q = search.toLowerCase();
+    const matchSearch = !q || it.itemName.toLowerCase().includes(q) || it.itemCode.toLowerCase().includes(q);
+    const matchCat  = selectedCat ? it.category === selectedCat : true;
+    const matchLow  = lowStockFilter ? isLowStock(it) : true;
     return matchSearch && matchCat && matchLow;
   });
 
@@ -1084,17 +895,12 @@ const ItemsListPage = ({ items, onItemClick, onDelete, search, setSearch,
         <div className="page-header-actions">
           <div className="reports-wrap" ref={menuRef}>
             <button className="btn-outline" onClick={()=>setMenuOpen(v=>!v)}><IcReports /> Reports <IcChevDown /></button>
-            {menuOpen&&(
-              <div className="reports-menu">
-                {REPORTS.map(r=><div key={r.key} className="reports-menu-item" onClick={()=>{onReportNav(r.key);setMenuOpen(false);}}>{r.label}</div>)}
-              </div>
-            )}
+            {menuOpen&&<div className="reports-menu">{REPORTS.map(r=><div key={r.key} className="reports-menu-item" onClick={()=>{onReportNav(r.key);setMenuOpen(false);}}>{r.label}</div>)}</div>}
           </div>
           <button className="btn-icon-sm" onClick={onOpenSettings}><IcSettings /></button>
           <button className="btn-icon-sm"><IcChat /></button>
         </div>
       </div>
-
       <div className="stats-row">
         <div className="stat-card stat-card-clickable" onClick={()=>onReportNav("stock_summary")}>
           <div className="stat-label"><IcTrending /> Stock Value <span className="info-icon"><IcInfo /></span></div>
@@ -1107,19 +913,13 @@ const ItemsListPage = ({ items, onItemClick, onDelete, search, setSearch,
           <button className="stat-expand" onClick={e=>{e.stopPropagation();onReportNav("low_stock");}}><IcExtLink /></button>
         </div>
       </div>
-
       <div className="table-card">
         <div className="list-toolbar">
           <div className="toolbar-left">
-            <div className="search-box">
-              <IcSearch />
-              <input className="search-input" placeholder="Search by Serial No." value={search} onChange={e=>setSearch(e.target.value)}/>
-            </div>
-            {/* Category dropdown in toolbar */}
+            <div className="search-box"><IcSearch /><input className="search-input" placeholder="Search by item name or code" value={search} onChange={e=>setSearch(e.target.value)}/></div>
             <CategoryDropdown categories={categories} selectedCat={selectedCat} onSelect={onSelectCat} onAddCategory={onAddCategory}/>
           </div>
           <div className="toolbar-right">
-            {/* Low Stock toggle button — label changes */}
             <button className={`btn-filter${lowStockFilter?" active":""}`} onClick={()=>setLowStockFilter(!lowStockFilter)}>
               <IcAlert /> {lowStockFilter ? "Show All Stock" : "Low Stock"}
             </button>
@@ -1150,9 +950,7 @@ const ItemsListPage = ({ items, onItemClick, onDelete, search, setSearch,
                   <td className="td-secondary">{fmt(item.sellingPrice)}</td>
                   <td className="td-secondary">{fmt(item.purchasePrice)}</td>
                   <td className="td-actions" onClick={e=>e.stopPropagation()}>
-                    <button className="icon-btn-danger" onClick={()=>{if(confirm(`Delete ${item.itemName}?`))onDelete(item.id);}}>
-                      <IcTrash />
-                    </button>
+                    <button className="icon-btn-danger" onClick={()=>{if(confirm(`Delete ${item.itemName}?`))onDelete(item.id);}}><IcTrash /></button>
                   </td>
                 </tr>
               ))}
@@ -1171,9 +969,10 @@ const ItemsListPage = ({ items, onItemClick, onDelete, search, setSearch,
 type AppView = "list"|"detail"|"report";
 
 export default function ItemsPage() {
-  const [items,          setItems]          = useState<Item[]>(ITEMS_INIT);
+  const [items,          setItems]          = useState<Item[]>([]);
   const [view,           setView]           = useState<AppView>("list");
   const [selectedId,     setSelectedId]     = useState<string|null>(null);
+  const [detailLoading,  setDetailLoading]  = useState(false);
   const [adjustItem,     setAdjustItem]     = useState<Item|null>(null);
   const [editItem,       setEditItem]       = useState<Item|null>(null);
   const [search,         setSearch]         = useState("");
@@ -1186,40 +985,124 @@ export default function ItemsPage() {
   const [categories,     setCategories]     = useState<string[]>([]);
   const [selectedCat,    setSelectedCat]    = useState("");
 
-  const selectedItem = items.find(i=>i.id===selectedId)??null;
+  // ─── Fetch All Items ──────────────────────────────────────────────────────
+  const fetchItems = async (setter: typeof setItems) => {
+    try {
+      const res = await api.get("/items");
+      const backendItems = res.data.data || res.data;
+      const formatted = backendItems.map((item: any) => {
+        const totalStock = item.ProductStock
+          ? item.ProductStock.reduce((sum: number, s: any) => sum + (s.openingStock || 0), 0)
+          : 0;
+        return {
+          id: String(item.id),
+          itemName: item.name || "",
+          itemCode: item.itemCode || "",
+          stockQty: `${totalStock} PCS`,
+          stockNumber: totalStock,
+          sellingPrice: item.salesPrice ?? null,
+          purchasePrice: item.purchasePrice ?? null,
+          category: item.category || "",
+          gstTaxRate: item.gstRate ? `${item.gstRate}%` : "18%",
+          hsnCode: item.hsnCode || "",
+          secondaryUnit: "-",
+          lowStockQty: item.lowStockQty != null ? String(item.lowStockQty) : "-",
+          lowStockWarning: item.lowStockAlert === true ? "Enabled" : "Disabled" as "Enabled"|"Disabled",
+          itemDescription: item.description || "",
+          stockDetails: [], partyWiseReport: [], godownStock: [], partyWisePrices: [],
+        };
+      });
+      const cats: string[] = Array.from(
+        new Set(backendItems.map((i: any): string => String(i.category || "").trim()).filter((c: string) => c !== ""))
+      );
+      setter(formatted);
+      setCategories(cats);
+    } catch (error) {
+      console.error("Failed to fetch items:", error);
+    }
+  };
 
-  const goDetail   = (id:string)     => { setSelectedId(id); setView("detail"); };
+  // ─── Fetch Single Item Detail ─────────────────────────────────────────────
+  const fetchItemById = async (id: string): Promise<void> => {
+    setDetailLoading(true);
+    try {
+      const res = await api.get(`/items/${id}`);
+      const d = res.data.data;
+      const fullItem: Item = {
+        id:              String(d.id),
+        itemName:        d.itemName,
+        itemCode:        d.itemCode,
+        stockQty:        d.stockQty,
+        stockNumber:     d.stockNumber,
+        sellingPrice:    d.sellingPrice,
+        purchasePrice:   d.purchasePrice,
+        category:        d.category,
+        gstTaxRate:      d.gstTaxRate,
+        hsnCode:         d.hsnCode,
+        secondaryUnit:   d.secondaryUnit,
+        lowStockQty:     d.lowStockQty,
+        lowStockWarning: d.lowStockWarning,
+        itemDescription: d.itemDescription,
+        stockDetails:    d.stockDetails    ?? [],
+        partyWiseReport: d.partyWiseReport ?? [],
+        godownStock:     d.godownStock     ?? [],
+        partyWisePrices: d.partyWisePrices ?? [],
+      };
+      setItems(prev => prev.map(it => it.id === id ? fullItem : it));
+    } catch (err) {
+      console.error("fetchItemById error:", err);
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  useEffect(() => { fetchItems(setItems); }, []);
+
+  const selectedItem = items.find(i => i.id === selectedId) ?? null;
+
+  // ─── Navigation ───────────────────────────────────────────────────────────
+  const goDetail = async (id: string) => {
+    setSelectedId(id);
+    setView("detail");
+    await fetchItemById(id);
+  };
   const goList     = ()              => { setView("list"); setSelectedId(null); };
-  const goReport   = (r:ReportView)  => { setActiveReport(r); setView("report"); };
+  const goReport   = (r: ReportView) => { setActiveReport(r); setView("report"); };
   const backReport = ()              => { setView("list"); setActiveReport(null); };
 
-  const deleteItem = (id:string) => {
-    setItems(p=>p.filter(i=>i.id!==id));
-    setSelectedId(null); setView("list");
-    setToast("Item deleted successfully");
+  // ─── CRUD ─────────────────────────────────────────────────────────────────
+  const deleteItem = async (id: string) => {
+    try {
+      await api.delete(`/items/${id}`);
+      setItems(p => p.filter(i => i.id !== id));
+      setSelectedId(null); setView("list");
+      setToast("Item deleted successfully");
+    } catch (error) { console.error(error); }
   };
 
-  const saveEditedItem = (updated: Item) => {
-    setItems(p => p.map(it => it.id===updated.id ? updated : it));
-    setToast("Item updated successfully");
+  const saveEditedItem = async (updated: Item) => {
+    try {
+      await api.put(`/items/${updated.id}`, {
+        name: updated.itemName, itemCode: updated.itemCode,
+        category: updated.category, salesPrice: updated.sellingPrice,
+        purchasePrice: updated.purchasePrice,
+        gstRate: updated.gstTaxRate ? Number(updated.gstTaxRate.replace("%","")) : null,
+        hsnCode: updated.hsnCode, description: updated.itemDescription,
+      });
+      await fetchItemById(updated.id);
+      setToast("Item updated successfully");
+    } catch (error) { console.error("Update failed:", error); }
   };
 
-  const adjustStock = (itemId:string, adj:{type:"add"|"reduce";qty:number;godown:string;remarks:string}) => {
-    setItems(p=>p.map(it=>{
-      if(it.id!==itemId) return it;
-      const unit=it.stockQty.includes("ACS")?"ACS":"PCS";
-      const cur=parseInt(it.stockQty)||0;
-      const nq=adj.type==="add"?cur+adj.qty:cur-adj.qty;
-      const ns=`${nq} ${unit}`;
-      const today=new Date().toLocaleDateString("en-GB").replace(/\//g,"-");
-      return {...it,stockQty:ns,stockDetails:[{date:today,transactionType:"Stock Adjustment",quantity:`${adj.type==="add"?"+":"-"}${adj.qty} ${unit}`,invoiceNumber:null,closingStock:ns},...it.stockDetails]};
-    }));
+  // ─── Called by AdjustModal after successful API save ─────────────────────
+  const handleAdjustSaved = async (itemId: string) => {
     setToast("Stock adjusted successfully");
+    await fetchItems(setItems);          // refresh list-level stock counts
+    await fetchItemById(itemId);         // refresh all tabs for this item
   };
 
-  const saveSettings = (s:ItemSettings, cf:CustomField[]) => {
-    setSettings(s); setCustomFields(cf);
-    setToast("Settings saved");
+  const saveSettings = (s: ItemSettings, cf: CustomField[]) => {
+    setSettings(s); setCustomFields(cf); setToast("Settings saved");
   };
 
   return (
@@ -1230,33 +1113,35 @@ export default function ItemsPage() {
           lowStockFilter={lowStockFilter} setLowStockFilter={setLowStockFilter}
           onReportNav={goReport} onOpenSettings={()=>setShowSettings(true)}
           categories={categories} selectedCat={selectedCat}
-          onSelectCat={setSelectedCat}
-          onAddCategory={c=>setCategories(p=>[...p,c])}
+          onSelectCat={setSelectedCat} onAddCategory={c=>setCategories(p=>[...p,c])}
         />
       )}
       {view==="detail"&&selectedItem&&(
         <ItemDetailPage
-          item={items.find(i=>i.id===selectedItem.id)??selectedItem}
+          item={items.find(i=>i.id===selectedItem.id) ?? selectedItem}
           onBack={goList}
           onDelete={deleteItem}
-          onAdjust={()=>setAdjustItem(items.find(i=>i.id===selectedId)??null)}
-          onEdit={()=>setEditItem(items.find(i=>i.id===selectedId)??null)}
+          onAdjust={()=>setAdjustItem(items.find(i=>i.id===selectedId) ?? null)}
+          onEdit={()=>setEditItem(selectedItem)}
+          loading={detailLoading}
         />
       )}
-      {view==="report"&&activeReport==="rate_list"     &&<RateListPage        items={items} onBack={backReport}/>}
-      {view==="report"&&activeReport==="stock_summary" &&<StockSummaryPage    items={items} onBack={backReport}/>}
-      {view==="report"&&activeReport==="low_stock"     &&<LowStockSummaryPage items={items} onBack={backReport}/>}
+      {view==="report"&&activeReport==="rate_list"     &&<RateListPage         items={items} onBack={backReport}/>}
+      {view==="report"&&activeReport==="stock_summary" &&<StockSummaryPage     items={items} onBack={backReport}/>}
+      {view==="report"&&activeReport==="low_stock"     &&<LowStockSummaryPage  items={items} onBack={backReport}/>}
       {view==="report"&&activeReport==="item_sales"    &&<ItemSalesSummaryPage items={items} onBack={backReport}/>}
 
-      {adjustItem&&<AdjustModal item={adjustItem} onClose={()=>setAdjustItem(null)} onSave={adjustStock}/>}
-
-      {editItem&&<EditItemModal item={editItem} onClose={()=>setEditItem(null)} onSave={saveEditedItem}/>}
-
-      {showSettings&&(
-        <SettingsModal settings={settings} customFields={customFields}
-          onClose={()=>setShowSettings(false)} onSave={saveSettings}/>
+      {/* AdjustModal — now uses onSaved instead of onSave */}
+      {adjustItem&&(
+        <AdjustModal
+          item={adjustItem}
+          onClose={()=>setAdjustItem(null)}
+          onSaved={handleAdjustSaved}
+        />
       )}
 
+      {editItem&&<EditItemModal item={editItem} onClose={()=>setEditItem(null)} onSave={saveEditedItem}/>}
+      {showSettings&&<SettingsModal settings={settings} customFields={customFields} onClose={()=>setShowSettings(false)} onSave={saveSettings}/>}
       {toast&&<Toast msg={toast} onDone={()=>setToast(null)}/>}
     </>
   );
