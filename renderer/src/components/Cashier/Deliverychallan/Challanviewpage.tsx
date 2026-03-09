@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { ArrowLeft, Download, Printer, Share2, ChevronDown } from "lucide-react";
-import { ChallanItem } from "./Deliverychallan";
+import { ChallanItem } from "./DeliveryChallan";
 import "./Challanviewpage.css";
 
 interface Props {
