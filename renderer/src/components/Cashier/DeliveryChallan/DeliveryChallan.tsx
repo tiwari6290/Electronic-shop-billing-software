@@ -1,368 +1,427 @@
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
+import { Search, Calendar, ChevronDown, Settings, MessageSquare, Edit, Clock, Copy, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import {
-  DeliveryChallan as DC, getChallans, deleteChallan,
-  fmtDisplayDate, saveChallan,
-} from "./Deliverychallantype";
 import "./DeliveryChallan.css";
+import CreateDeliveryChallan from "./Createdeliverychallan";
+import ChallanViewPage from "./Challanviewpage";
 
-type StatusFilter = "Show All Challans" | "Show Open Challans" | "Show Closed Challans";
-type DateFilter = "Today" | "Yesterday" | "This Week" | "Last Week" | "Last 7 Days" |
-  "This Month" | "Previous Month" | "Current Fiscal Year" | "Previous Fiscal Year" | "Last 365 Days" | "Custom";
+// ─── Types ────────────────────────────────────────────────────────────────────
+export type ChallanStatus = "Open" | "Closed";
 
-function todayRange(): [Date, Date] {
-  const t = new Date(); t.setHours(0,0,0,0);
-  const t2 = new Date(); t2.setHours(23,59,59,999);
-  return [t, t2];
+export interface ChallanItem {
+  id: number;
+  date: string;
+  challanNumber: number;
+  partyName: string;
+  partyId?: number;
+  amount: number;
+  status: ChallanStatus;
+  items?: BillItem[];
+  notes?: string;
+  termsAndConditions?: string;
+  additionalCharges?: AdditionalCharge[];
+  discountPct?: number;
+  discountAmt?: number;
+  discountType?: "After Tax" | "Before Tax";
+  autoRoundOff?: boolean;
+  roundOffAmt?: number;
+  eWayBillNo?: string;
+  challanNoRef?: string;
+  financedBy?: string;
+  salesman?: string;
+  emailId?: string;
+  warrantyPeriod?: string;
+  shippingAddress?: string;
+  selectedBankId?: number;
 }
 
-function getDateRange(f: DateFilter, custom?: [string,string]): [Date, Date] | null {
-  const now = new Date();
-  const d = (dt: Date) => { dt.setHours(0,0,0,0); return dt; };
-  const e = (dt: Date) => { dt.setHours(23,59,59,999); return dt; };
-  if (f === "Today") return [d(new Date()), e(new Date())];
-  if (f === "Yesterday") { const y = new Date(now); y.setDate(y.getDate()-1); return [d(new Date(y)), e(new Date(y))]; }
-  if (f === "This Week") { const s = new Date(now); s.setDate(now.getDate()-now.getDay()); return [d(s), e(new Date())]; }
-  if (f === "Last Week") { const s = new Date(now); s.setDate(now.getDate()-now.getDay()-7); const e2 = new Date(s); e2.setDate(s.getDate()+6); return [d(s), e(e2)]; }
-  if (f === "Last 7 Days") { const s = new Date(now); s.setDate(s.getDate()-6); return [d(s), e(new Date())]; }
-  if (f === "This Month") { const s = new Date(now.getFullYear(), now.getMonth(), 1); return [s, e(new Date())]; }
-  if (f === "Previous Month") { const s = new Date(now.getFullYear(), now.getMonth()-1, 1); const en = new Date(now.getFullYear(), now.getMonth(), 0); return [d(s), e(en)]; }
-  if (f === "Current Fiscal Year") { const fy = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear()-1; return [d(new Date(fy,3,1)), e(new Date(fy+1,2,31))]; }
-  if (f === "Previous Fiscal Year") { const fy = (now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear()-1)-1; return [d(new Date(fy,3,1)), e(new Date(fy+1,2,31))]; }
-  if (f === "Last 365 Days") { const s = new Date(now); s.setDate(s.getDate()-364); return [d(s), e(new Date())]; }
-  if (f === "Custom" && custom) return [d(new Date(custom[0])), e(new Date(custom[1]))];
-  return null;
+export interface BillItem {
+  id: number;
+  name: string;
+  hsnSac?: string;
+  qty: number;
+  unit: string;
+  pricePerItem: number;
+  discount: { percent: number; amount: number };
+  tax: string;
+  taxRate: number;
+  amount: number;
+  description?: string;
 }
 
-function fmtShortRange(f: DateFilter, custom?: [string,string]): string {
-  const r = getDateRange(f, custom);
-  if (!r) return "";
-  const fmt = (dt: Date) => dt.toLocaleDateString("en-IN", { day:"2-digit", month:"short", year:"numeric" });
-  return `${fmt(r[0])} - ${fmt(r[1])}`;
+export interface AdditionalCharge {
+  id: number;
+  label: string;
+  amount: number;
+  tax: string;
 }
 
-interface ConfirmDeleteProps { onConfirm: () => void; onCancel: () => void; }
-function ConfirmDelete({ onConfirm, onCancel }: ConfirmDeleteProps) {
+export interface SettingsState {
+  prefixEnabled: boolean;
+  prefix: string;
+  sequenceNumber: number;
+  showItemImage: boolean;
+  priceHistory: boolean;
+}
+
+// ─── Date helpers ─────────────────────────────────────────────────────────────
+const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+const fmt = (d: Date) =>
+  d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+const fmtShort = (d: Date) =>
+  `${String(d.getDate()).padStart(2, "0")} ${["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][d.getMonth()]} ${d.getFullYear()}`;
+
+type DatePreset = "Today"|"Yesterday"|"This Week"|"Last Week"|"Last 7 Days"|"This Month"|"Previous Month"|"This Quarter"|"Previous Quarter"|"Current Fiscal Year"|"Previous Fiscal Year"|"Last 365 Days"|"Custom";
+type ChallanFilter = "Show All Challans"|"Show Open Challans"|"Show Closed Challans";
+
+function getPresetRange(preset: DatePreset): [Date, Date] {
+  const today = startOfDay(new Date());
+  const dow = today.getDay();
+  switch (preset) {
+    case "Today": return [today, today];
+    case "Yesterday": { const y = new Date(today); y.setDate(y.getDate()-1); return [y,y]; }
+    case "This Week": { const s = new Date(today); s.setDate(today.getDate()-dow); const e = new Date(s); e.setDate(s.getDate()+6); return [s,e]; }
+    case "Last Week": { const s = new Date(today); s.setDate(today.getDate()-dow-7); const e = new Date(s); e.setDate(s.getDate()+6); return [s,e]; }
+    case "Last 7 Days": { const s = new Date(today); s.setDate(today.getDate()-6); return [s,today]; }
+    case "This Month": { const s = new Date(today.getFullYear(),today.getMonth(),1); const e = new Date(today.getFullYear(),today.getMonth()+1,0); return [s,e]; }
+    case "Previous Month": { const s = new Date(today.getFullYear(),today.getMonth()-1,1); const e = new Date(today.getFullYear(),today.getMonth(),0); return [s,e]; }
+    case "This Quarter": { const q=Math.floor(today.getMonth()/3); const s=new Date(today.getFullYear(),q*3,1); const e=new Date(today.getFullYear(),q*3+3,0); return [s,e]; }
+    case "Previous Quarter": { const q=Math.floor(today.getMonth()/3)-1; const yr=q<0?today.getFullYear()-1:today.getFullYear(); const qq=((q%4)+4)%4; const s=new Date(yr,qq*3,1); const e=new Date(yr,qq*3+3,0); return [s,e]; }
+    case "Current Fiscal Year": { const fy=today.getMonth()>=3?today.getFullYear():today.getFullYear()-1; return [new Date(fy,3,1),new Date(fy+1,2,31)]; }
+    case "Previous Fiscal Year": { const fy=(today.getMonth()>=3?today.getFullYear():today.getFullYear()-1)-1; return [new Date(fy,3,1),new Date(fy+1,2,31)]; }
+    default: { const s=new Date(today); s.setDate(today.getDate()-364); return [s,today]; }
+  }
+}
+
+const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const DAYS = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+const PRESETS: DatePreset[] = ["Today","Yesterday","This Week","Last Week","Last 7 Days","This Month","Previous Month","This Quarter","Previous Quarter","Current Fiscal Year","Previous Fiscal Year","Last 365 Days","Custom"];
+
+// ─── Mini Calendar ─────────────────────────────────────────────────────────────
+function MiniCal({ value, onChange, highlight }: { value: Date|null; onChange:(d:Date)=>void; highlight?: [Date|null,Date|null] }) {
+  const [viewDate, setViewDate] = useState(value || new Date());
+  const year = viewDate.getFullYear(), month = viewDate.getMonth();
+  const firstDay = new Date(year,month,1).getDay();
+  const daysInMonth = new Date(year,month+1,0).getDate();
+  const cells: (number|null)[] = [];
+  for(let i=0;i<firstDay;i++) cells.push(null);
+  for(let d=1;d<=daysInMonth;d++) cells.push(d);
+  const isSel = (d:number) => value?.getFullYear()===year && value?.getMonth()===month && value?.getDate()===d;
+  const isInRange = (d:number) => { const [from,to]=highlight||[null,null]; if(!from||!to) return false; const cur=new Date(year,month,d); return cur>=from&&cur<=to; };
+  const isStart = (d:number) => { const [from]=highlight||[null,null]; return from?.getFullYear()===year&&from?.getMonth()===month&&from?.getDate()===d; };
+  const isEnd = (d:number) => { const [,to]=highlight||[null,null]; return to?.getFullYear()===year&&to?.getMonth()===month&&to?.getDate()===d; };
   return (
-    <div className="dc-overlay" onClick={onCancel}>
-      <div className="dc-confirm-modal" onClick={e => e.stopPropagation()}>
-        <h3>Delete Delivery Challan?</h3>
-        <p>This action cannot be undone.</p>
-        <div className="dc-confirm-btns">
-          <button className="dc-btn-cancel" onClick={onCancel}>Cancel</button>
-          <button className="dc-btn-delete" onClick={onConfirm}>Delete</button>
-        </div>
+    <div className="mini-cal">
+      <div className="mini-cal-header">
+        <button className="cal-nav" onClick={()=>{const d=new Date(viewDate);d.setMonth(d.getMonth()-1);setViewDate(d);}}>‹</button>
+        <span>{MONTHS[month]}</span>
+        <button className="cal-nav" onClick={()=>{const d=new Date(viewDate);d.setMonth(d.getMonth()+1);setViewDate(d);}}>›</button>
+      </div>
+      <div className="mini-cal-year-nav">
+        <button className="cal-nav" onClick={()=>{const d=new Date(viewDate);d.setFullYear(d.getFullYear()-1);setViewDate(d);}}>‹</button>
+        <span>{year}</span>
+        <button className="cal-nav" onClick={()=>{const d=new Date(viewDate);d.setFullYear(d.getFullYear()+1);setViewDate(d);}}>›</button>
+      </div>
+      <div className="cal-grid">
+        {DAYS.map(d=><div key={d} className="cal-day-header">{d}</div>)}
+        {cells.map((d,i)=>(
+          <div key={i} className={["cal-cell",d===null?"cal-empty":"",d!==null&&isSel(d)?"cal-selected":"",d!==null&&isInRange(d)?"cal-in-range":"",d!==null&&isStart(d)?"cal-range-start":"",d!==null&&isEnd(d)?"cal-range-end":""].join(" ")} onClick={()=>d!==null&&onChange(new Date(year,month,d))}>{d}</div>
+        ))}
       </div>
     </div>
   );
 }
 
-interface QuickSettingsProps { onClose: () => void; nextNo: number; }
-function QuickSettings({ onClose, nextNo }: QuickSettingsProps) {
-  const [prefixOn, setPrefixOn] = useState(true);
-  const [prefix, setPrefix] = useState("");
-  const [seqNo, setSeqNo] = useState(nextNo);
-  const [showItemImage, setShowItemImage] = useState(true);
-  const [priceHistory, setPriceHistory] = useState(true);
-  const Toggle = ({ on, set }: { on: boolean; set: (v: boolean) => void }) => (
-    <button className={`dc-toggle${on?" dc-toggle--on":""}`} onClick={() => set(!on)}>
-      <span className="dc-toggle-th"/>
+// ─── Date Filter ───────────────────────────────────────────────────────────────
+function DateFilter({ selected, customFrom, customTo, onSelect }: { selected:DatePreset; customFrom:Date|null; customTo:Date|null; onSelect:(p:DatePreset,from?:Date,to?:Date)=>void }) {
+  const [open,setOpen]=useState(false);
+  const [phase,setPhase]=useState<"preset"|"custom">("preset");
+  const [tempFrom,setTempFrom]=useState<Date|null>(customFrom);
+  const [tempTo,setTempTo]=useState<Date|null>(customTo);
+  const [pickingEnd,setPickingEnd]=useState(false);
+  const ref=useRef<HTMLDivElement>(null);
+  useEffect(()=>{ const h=(e:MouseEvent)=>{if(ref.current&&!ref.current.contains(e.target as Node))setOpen(false);}; document.addEventListener("mousedown",h); return()=>document.removeEventListener("mousedown",h); },[]);
+  const label = selected==="Custom"&&customFrom&&customTo ? `${fmtShort(customFrom)} - ${fmtShort(customTo)}` : selected;
+  const handlePick=(d:Date)=>{ if(!pickingEnd){setTempFrom(d);setTempTo(null);setPickingEnd(true);}else{if(tempFrom&&d<tempFrom){setTempTo(tempFrom);setTempFrom(d);}else{setTempTo(d);}setPickingEnd(false);}};
+  return (
+    <div className="date-filter-wrapper" ref={ref}>
+      <button className={`filter-btn${open?" active":""}`} onClick={()=>{setOpen(!open);setPhase("preset");}}><Calendar size={14}/><span>{label}</span><ChevronDown size={12}/></button>
+      {open&&(<div className="date-dropdown">
+        {phase==="preset"?(<ul className="preset-list">{PRESETS.map(p=>{const range=p!=="Custom"?getPresetRange(p):null;return(<li key={p} className={`preset-item${selected===p?" preset-active":""}`} onClick={()=>{if(p==="Custom"){setPhase("custom");setTempFrom(null);setTempTo(null);setPickingEnd(false);}else{const[from,to]=getPresetRange(p);onSelect(p,from,to);setOpen(false);}}}><span>{p}</span>{range&&<span className="preset-range">{fmt(range[0])} – {fmt(range[1])}</span>}</li>);})}</ul>
+        ):(<div className="custom-picker">
+          <div className="custom-picker-header"><span className={`date-badge${tempFrom?" active":""}`}>{tempFrom?fmtShort(tempFrom):"From Date"}</span><span className="date-badge-sep">→</span><span className={`date-badge${tempTo?" active":""}`}>{tempTo?fmtShort(tempTo):"To Date"}</span></div>
+          <MiniCal value={tempFrom} onChange={handlePick} highlight={[tempFrom,tempTo]}/>
+          <div className="custom-picker-actions"><button className="btn-cancel-sm" onClick={()=>setPhase("preset")}>Back</button><button className="btn-ok-sm" disabled={!tempFrom||!tempTo} onClick={()=>{if(tempFrom&&tempTo){onSelect("Custom",tempFrom,tempTo);setOpen(false);}}}>Apply</button></div>
+        </div>)}
+      </div>)}
+    </div>
+  );
+}
+
+// ─── Status Filter ─────────────────────────────────────────────────────────────
+function StatusFilter({ value, onChange }: { value:ChallanFilter; onChange:(v:ChallanFilter)=>void }) {
+  const [open,setOpen]=useState(false);
+  const ref=useRef<HTMLDivElement>(null);
+  const opts:ChallanFilter[]=["Show All Challans","Show Open Challans","Show Closed Challans"];
+  useEffect(()=>{ const h=(e:MouseEvent)=>{if(ref.current&&!ref.current.contains(e.target as Node))setOpen(false);}; document.addEventListener("mousedown",h); return()=>document.removeEventListener("mousedown",h); },[]);
+  return (
+    <div className="status-filter-wrapper" ref={ref}>
+      <button className={`filter-btn${open?" active":""}`} onClick={()=>setOpen(!open)}><span>{value}</span><ChevronDown size={12}/></button>
+      {open&&(<ul className="status-dropdown">{opts.map(o=><li key={o} className={`status-item${value===o?" status-active":""}`} onClick={()=>{onChange(o);setOpen(false);}}>{o}</li>)}</ul>)}
+    </div>
+  );
+}
+
+// ─── Toggle ────────────────────────────────────────────────────────────────────
+function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <button className={`dc-toggle${checked?" dc-toggle--on":""}`} onClick={()=>onChange(!checked)} role="switch" aria-checked={checked} type="button">
+      <span className="dc-toggle-thumb"/>
     </button>
   );
+}
+
+// ─── Settings Modal ─────────────────────────────────────────────────────────────
+function SettingsModal({ settings, onSave, onClose }: { settings: SettingsState; onSave: (s: SettingsState) => void; onClose: () => void }) {
+  const [local, setLocal] = useState({ ...settings });
+  const upd = <K extends keyof SettingsState>(k: K, v: SettingsState[K]) => setLocal(p => ({ ...p, [k]: v }));
+  const num = local.prefixEnabled ? `${local.prefix}${local.sequenceNumber}` : `${local.sequenceNumber}`;
   return (
-    <div className="dc-overlay" onClick={onClose}>
-      <div className="dc-settings-modal" onClick={e => e.stopPropagation()}>
-        <div className="dc-modal-hdr">
-          <span>Quick Delivery Challan Settings</span>
-          <button onClick={onClose}>✕</button>
-        </div>
-        <div className="dc-settings-body">
-          <div className="dc-settings-section">
-            <div className="dc-settings-row">
-              <div>
-                <div className="dc-s-label">Delivery Challan Prefix &amp; Sequence Number</div>
-                <div className="dc-s-sub">Add your custom prefix &amp; sequence for Delivery Challan Numbering</div>
-              </div>
-              <Toggle on={prefixOn} set={setPrefixOn}/>
+    <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
+      <div className="modal" style={{ maxWidth: 520 }}>
+        <div className="modal-header"><h2>Quick Delivery Challan Settings</h2><button className="modal-close" onClick={onClose}>✕</button></div>
+        <div className="modal-body">
+          <div className="settings-card">
+            <div className="settings-card-header">
+              <div><div className="settings-title">Delivery Challan Prefix &amp; Sequence Number</div><div className="settings-desc">Add your custom prefix &amp; sequence for Delivery Challan Numbering</div></div>
+              <Toggle checked={local.prefixEnabled} onChange={v => upd("prefixEnabled", v)} />
             </div>
-            {prefixOn && (
-              <div className="dc-prefix-row">
-                <div>
-                  <label>Prefix</label>
-                  <input value={prefix} onChange={e => setPrefix(e.target.value)} placeholder="Prefix" className="dc-si-inp"/>
-                </div>
-                <div>
-                  <label>Sequence Number</label>
-                  <input type="number" value={seqNo} onChange={e => setSeqNo(Number(e.target.value))} className="dc-si-inp"/>
-                </div>
-              </div>
-            )}
-            {prefixOn && <div className="dc-inv-preview">Delivery Challan Number: {seqNo}</div>}
+            {local.prefixEnabled && (<div className="settings-fields"><div className="field-group"><label>Prefix</label><input className="settings-input" value={local.prefix} onChange={e => upd("prefix", e.target.value)}/></div><div className="field-group"><label>Sequence Number</label><input className="settings-input" type="number" value={local.sequenceNumber} onChange={e => upd("sequenceNumber", Number(e.target.value))}/></div></div>)}
+            {local.prefixEnabled && <div className="challan-num-preview">Delivery Challan Number: {num}</div>}
           </div>
-          <div className="dc-settings-section">
-            <div className="dc-settings-row">
-              <div>
-                <div className="dc-s-label">Show Item Image on Invoice</div>
-                <div className="dc-s-sub">This will apply to all vouchers except for Payment In and Payment Out</div>
-              </div>
-              <Toggle on={showItemImage} set={setShowItemImage}/>
-            </div>
-          </div>
-          <div className="dc-settings-section">
-            <div className="dc-settings-row">
-              <div>
-                <div className="dc-s-label">Price History <span className="dc-badge-new">New</span></div>
-                <div className="dc-s-sub">Show last 5 sales / purchase prices of the item for the selected party in invoice</div>
-              </div>
-              <Toggle on={priceHistory} set={setPriceHistory}/>
-            </div>
-          </div>
+          <div className="settings-card"><div className="settings-card-header"><div><div className="settings-title">Show Item Image on Invoice</div><div className="settings-desc">This will apply to all vouchers except for Payment In and Payment Out</div></div><Toggle checked={local.showItemImage} onChange={v => upd("showItemImage", v)}/></div></div>
+          <div className="settings-card"><div className="settings-card-header"><div><div className="settings-title">Price History <span className="badge-new">New</span></div><div className="settings-desc">Show last 5 sales / purchase prices of the item for the selected party in invoice</div></div><Toggle checked={local.priceHistory} onChange={v => upd("priceHistory", v)}/></div></div>
         </div>
-        <div className="dc-modal-ftr">
-          <button className="dc-btn-cancel" onClick={onClose}>Cancel</button>
-          <button className="dc-btn-primary" onClick={onClose}>Save</button>
-        </div>
+        <div className="modal-footer"><button className="btn-secondary" onClick={onClose}>Cancel</button><button className="btn-primary" onClick={()=>{onSave(local);onClose();}}>Save</button></div>
       </div>
     </div>
   );
 }
 
-export default function DeliveryChallanList() {
+// ─── Row Menu ──────────────────────────────────────────────────────────────────
+function RowMenu({ challanId, onEdit, onEditHistory, onDuplicate, onDelete }: { challanId:number; onEdit:(id:number)=>void; onEditHistory:(id:number)=>void; onDuplicate:(id:number)=>void; onDelete:(id:number)=>void }) {
+  const [open,setOpen]=useState(false);
+  const ref=useRef<HTMLDivElement>(null);
+  useEffect(()=>{ const h=(e:MouseEvent)=>{if(ref.current&&!ref.current.contains(e.target as Node))setOpen(false);}; document.addEventListener("mousedown",h); return()=>document.removeEventListener("mousedown",h); },[]);
+  return (
+    <div className="row-menu-wrapper" ref={ref}>
+      <button className="row-menu-btn" onClick={e=>{e.stopPropagation();setOpen(!open);}}>⋮</button>
+      {open&&(<ul className="row-menu-dropdown">
+        <li onClick={e=>{e.stopPropagation();onEdit(challanId);setOpen(false);}}><Edit size={14}/> Edit</li>
+        <li onClick={e=>{e.stopPropagation();onEditHistory(challanId);setOpen(false);}}><Clock size={14}/> Edit History</li>
+        <li onClick={e=>{e.stopPropagation();onDuplicate(challanId);setOpen(false);}}><Copy size={14}/> Duplicate</li>
+        <li className="menu-danger" onClick={e=>{e.stopPropagation();onDelete(challanId);setOpen(false);}}><Trash2 size={14}/> Delete</li>
+      </ul>)}
+    </div>
+  );
+}
+
+// ─── Main Component ────────────────────────────────────────────────────────────
+const INITIAL_DATA: ChallanItem[] = [
+  { id: 1, date: "2026-03-01", challanNumber: 19, partyName: "Ramakant Pandit", amount: 410.96, status: "Open", items: [] },
+];
+
+type AppView = "list" | "create" | "edit" | "duplicate" | "view";
+
+export default function DeliveryChallan() {
   const navigate = useNavigate();
-  const [challans, setChallans] = useState<DC[]>([]);
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("Show Open Challans");
-  const [dateFilter, setDateFilter] = useState<DateFilter>("Last 365 Days");
-  const [customRange, setCustomRange] = useState<[string,string]>(["",""] );
-  const [showStatusDrop, setShowStatusDrop] = useState(false);
-  const [showDateDrop, setShowDateDrop] = useState(false);
-  const [showCustomCal, setShowCustomCal] = useState(false);
-  const [activeMenu, setActiveMenu] = useState<string | null>(null);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [showSettings, setShowSettings] = useState(false);
-  const [search, setSearch] = useState("");
-  const statusRef = useRef<HTMLDivElement>(null);
-  const dateRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    setChallans(getChallans());
-    const handler = () => setChallans(getChallans());
-    window.addEventListener("storage", handler);
-    return () => window.removeEventListener("storage", handler);
-  }, []);
-
-  useEffect(() => {
-    function h(e: MouseEvent) {
-      if (statusRef.current && !statusRef.current.contains(e.target as Node)) setShowStatusDrop(false);
-      if (dateRef.current && !dateRef.current.contains(e.target as Node)) setShowDateDrop(false);
-    }
-    document.addEventListener("mousedown", h);
-    return () => document.removeEventListener("mousedown", h);
-  }, []);
-
-  // Filter
-  const filtered = challans.filter(c => {
-    if (statusFilter === "Show Open Challans" && c.status !== "Open") return false;
-    if (statusFilter === "Show Closed Challans" && c.status !== "Closed") return false;
-    const range = getDateRange(dateFilter, customRange);
-    if (range) {
-      const dt = new Date(c.challanDate);
-      if (dt < range[0] || dt > range[1]) return false;
-    }
-    if (search.trim()) {
-      const s = search.toLowerCase();
-      if (!c.party?.name.toLowerCase().includes(s) && !String(c.challanNo).includes(s)) return false;
-    }
-    return true;
+  const [challans, setChallans] = useState<ChallanItem[]>(() => {
+    try { const s = localStorage.getItem("challans"); return s ? JSON.parse(s) : INITIAL_DATA; } catch { return INITIAL_DATA; }
   });
+  const [datePreset, setDatePreset] = useState<DatePreset>("Last 365 Days");
+  const [dateFrom, setDateFrom] = useState<Date|null>(() => getPresetRange("Last 365 Days")[0]);
+  const [dateTo, setDateTo] = useState<Date|null>(() => getPresetRange("Last 365 Days")[1]);
+  const [statusFilter, setStatusFilter] = useState<ChallanFilter>("Show Open Challans");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showSearch, setShowSearch] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [view, setView] = useState<AppView>("list");
+  const [activeChallan, setActiveChallan] = useState<ChallanItem | null>(null);
+  const [sortDir, setSortDir] = useState<"asc"|"desc">("desc");
+  const [settings, setSettings] = useState<SettingsState>({ prefixEnabled: true, prefix: "", sequenceNumber: 21, showItemImage: true, priceHistory: true });
 
-  function handleDelete(id: string) {
-    deleteChallan(id);
-    setChallans(getChallans());
-    setDeleteId(null);
-  }
+  useEffect(() => { localStorage.setItem("challans", JSON.stringify(challans)); }, [challans]);
 
-  function handleDuplicate(c: DC) {
-    const dupe: DC = {
-      ...c,
-      id: `dc-${Date.now()}`,
-      challanNo: Math.max(...getChallans().map(x => x.challanNo), 0) + 1,
-      createdAt: new Date().toISOString(),
+  const nextNumber = Math.max(...challans.map(c => c.challanNumber), settings.sequenceNumber - 1) + 1;
+
+  const filtered = challans
+    .filter(c => { const d = startOfDay(new Date(c.date)); if (dateFrom && d < dateFrom) return false; if (dateTo && d > dateTo) return false; return true; })
+    .filter(c => statusFilter === "Show Open Challans" ? c.status === "Open" : statusFilter === "Show Closed Challans" ? c.status === "Closed" : true)
+    .filter(c => !searchQuery || c.partyName.toLowerCase().includes(searchQuery.toLowerCase()) || c.challanNumber.toString().includes(searchQuery))
+    .sort((a, b) => sortDir === "asc" ? new Date(a.date).getTime() - new Date(b.date).getTime() : new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  const handleSaveChallan = (challan: ChallanItem) => {
+    setChallans(prev => {
+      const exists = prev.find(c => c.id === challan.id);
+      if (exists) return prev.map(c => c.id === challan.id ? challan : c);
+      return [...prev, challan];
+    });
+    setView("list");
+    setActiveChallan(null);
+  };
+
+  const handleDelete = (id: number) => setChallans(prev => prev.filter(c => c.id !== id));
+
+  const handleDuplicate = (id: number) => {
+    const orig = challans.find(c => c.id === id);
+    if (!orig) return;
+    // New id → will be inserted as a brand-new record when saved
+    const duped: ChallanItem = {
+      ...orig,
+      id: Date.now(),
+      challanNumber: Math.max(...challans.map(c => c.challanNumber)) + 1,
+      status: "Open",
     };
-    saveChallan(dupe);
-    setChallans(getChallans());
+    setActiveChallan(duped);
+    setView("duplicate");
+  };
+
+  const handleConvertToInvoice = (challan: ChallanItem) => {
+    // 1. Mark challan as Closed and persist to localStorage immediately
+    const updatedChallans = challans.map(c =>
+      c.id === challan.id ? { ...c, status: "Closed" as ChallanStatus } : c
+    );
+    setChallans(updatedChallans);
+    localStorage.setItem("challans", JSON.stringify(updatedChallans));
+
+    // 2. Build the fromChallan payload that CreateSalesInvoice expects
+    const fromChallan = {
+      party: { id: challan.partyId || 0, name: challan.partyName, mobile: "", balance: 0 },
+      billItems: (challan.items || []).map(i => ({
+        rowId: `row-${Date.now()}-${i.id}`,
+        itemId: i.id,
+        name: i.name,
+        description: i.description || "",
+        hsn: i.hsnSac || "",
+        qty: i.qty,
+        unit: i.unit,
+        price: i.pricePerItem,
+        discountPct: i.discount.percent,
+        discountAmt: i.discount.amount,
+        taxLabel: i.tax || "None",
+        taxRate: i.taxRate || 0,
+        amount: i.amount,
+      })),
+      additionalCharges: (challan.additionalCharges || []).map(c => ({
+        id: `c-${c.id}`,
+        label: c.label,
+        amount: c.amount,
+        taxLabel: c.tax || "No Tax Applicable",
+      })),
+      discountType: challan.discountType === "Before Tax"
+        ? "Discount Before Tax"
+        : "Discount After Tax",
+      discountPct: challan.discountPct || 0,
+      discountAmt: challan.discountAmt || 0,
+      roundOff: challan.autoRoundOff ? "+Add" : "none",
+      roundOffAmt: challan.roundOffAmt || 0,
+      notes: challan.notes || "",
+      termsConditions: challan.termsAndConditions || "",
+      challanNo: String(challan.challanNumber),
+    };
+
+    // 3. Navigate to Create Sales Invoice with all pre-filled data
+    setView("list");
+    setActiveChallan(null);
+    navigate("/cashier/sales-invoice", { state: { fromChallan } });
+  };
+
+  if (view === "create") {
+    return <CreateDeliveryChallan
+      challan={null} nextNumber={nextNumber} settings={settings}
+      onSave={handleSaveChallan} onBack={() => { setView("list"); setActiveChallan(null); }}
+      isEditMode={false}
+    />;
   }
 
-  const dateOptions: DateFilter[] = ["Today","Yesterday","This Week","Last Week","Last 7 Days","This Month","Previous Month","Current Fiscal Year","Previous Fiscal Year","Last 365 Days","Custom"];
-  const nextNo = challans.length > 0 ? Math.max(...challans.map(c => c.challanNo)) + 1 : 1;
+  if ((view === "edit" || view === "duplicate") && activeChallan) {
+    return <CreateDeliveryChallan
+      challan={activeChallan} nextNumber={nextNumber} settings={settings}
+      onSave={handleSaveChallan} onBack={() => { setView("list"); setActiveChallan(null); }}
+      isEditMode={view === "edit"}
+    />;
+  }
 
-  function calcTotal(c: DC): number {
-    const sub = c.billItems.reduce((s, i) => s + i.price * i.qty, 0);
-    const charges = c.additionalCharges.reduce((s, ch) => s + ch.amount, 0);
-    const taxable = sub + charges;
-    const disc = taxable * c.discountPct / 100 || c.discountAmt;
-    return taxable - disc + c.roundOffAmt;
+  if (view === "view" && activeChallan) {
+    return <ChallanViewPage
+      challan={activeChallan}
+      onBack={() => { setView("list"); setActiveChallan(null); }}
+      onEdit={() => setView("edit")}
+      onConvertToInvoice={() => handleConvertToInvoice(activeChallan)}
+    />;
   }
 
   return (
-    <div className="dc-page">
-      {/* Header */}
+    <div className="dc-container">
       <div className="dc-header">
-        <h2 className="dc-title">Delivery Challan</h2>
-        <div className="dc-header-right">
-          <button className="dc-icon-btn" onClick={() => setShowSettings(true)} title="Settings">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-            <span className="dc-notif-dot"/>
-          </button>
-          <button className="dc-icon-btn" title="Keyboard">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h8"/></svg>
-          </button>
+        <h1 className="dc-title">Delivery Challan</h1>
+        <div className="dc-header-actions">
+          <button className="icon-btn notify" onClick={() => setShowSettings(true)} title="Settings"><Settings size={16}/><span className="notif-dot"/></button>
+          <button className="icon-btn" title="Messages"><MessageSquare size={16}/></button>
         </div>
       </div>
-
-      {/* Toolbar */}
       <div className="dc-toolbar">
-        <div className="dc-toolbar-left">
-          {/* Search */}
-          <div className="dc-search-wrap">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-            <input placeholder="Search..." value={search} onChange={e => setSearch(e.target.value)} className="dc-search-inp"/>
-          </div>
-
-          {/* Date filter */}
-          <div ref={dateRef} className="dc-filter-wrap">
-            <button className="dc-filter-btn" onClick={() => setShowDateDrop(!showDateDrop)}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{width:14,height:14}}><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-              {dateFilter}
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{width:13,height:13}}><polyline points="6 9 12 15 18 9"/></svg>
-            </button>
-            {showDateDrop && (
-              <div className="dc-drop">
-                {dateOptions.map(opt => {
-                  const rangeStr = ["Last 7 Days","Last 365 Days","Current Fiscal Year","Previous Fiscal Year"].includes(opt) ? fmtShortRange(opt) : "";
-                  return (
-                    <button key={opt} className={`dc-drop-item${dateFilter===opt?" dc-drop-item--active":""}`}
-                      onClick={() => {
-                        setDateFilter(opt);
-                        setShowDateDrop(false);
-                        if (opt === "Custom") setShowCustomCal(true);
-                      }}>
-                      <span>{opt}</span>
-                      {rangeStr && <span className="dc-drop-range">{rangeStr}</span>}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* Status filter */}
-          <div ref={statusRef} className="dc-filter-wrap">
-            <button className="dc-filter-btn" onClick={() => setShowStatusDrop(!showStatusDrop)}>
-              {statusFilter}
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{width:13,height:13}}><polyline points="6 9 12 15 18 9"/></svg>
-            </button>
-            {showStatusDrop && (
-              <div className="dc-drop">
-                {(["Show All Challans","Show Open Challans","Show Closed Challans"] as StatusFilter[]).map(opt => (
-                  <button key={opt} className={`dc-drop-item${statusFilter===opt?" dc-drop-item--active":""}`}
-                    onClick={() => { setStatusFilter(opt); setShowStatusDrop(false); }}>
-                    {opt}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+        <div className="toolbar-left">
+          {showSearch ? (
+            <div className="search-box-wrapper">
+              <Search size={14} className="search-icon-inner"/>
+              <input autoFocus className="search-input" placeholder="Search challans..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} onBlur={() => { if (!searchQuery) setShowSearch(false); }}/>
+              <button className="search-clear" onClick={() => { setSearchQuery(""); setShowSearch(false); }}>✕</button>
+            </div>
+          ) : (
+            <button className="filter-btn icon-only" onClick={() => setShowSearch(true)}><Search size={15}/></button>
+          )}
+          <DateFilter selected={datePreset} customFrom={dateFrom} customTo={dateTo} onSelect={(p,f,t) => { setDatePreset(p); if(f)setDateFrom(f); if(t)setDateTo(t); }}/>
+          <StatusFilter value={statusFilter} onChange={setStatusFilter}/>
         </div>
-
-        <button className="dc-create-btn" onClick={() => navigate("/cashier/delivery-challan-create")}>
-          Create Delivery Challan
-        </button>
+        <button className="btn-create" onClick={() => { setActiveChallan(null); setView("create"); }}>Create Delivery Challan</button>
       </div>
-
-      {/* Custom Date Picker */}
-      {showCustomCal && (
-        <div className="dc-overlay" onClick={() => setShowCustomCal(false)}>
-          <div className="dc-cal-modal" onClick={e => e.stopPropagation()}>
-            <div className="dc-cal-hdr">
-              <span>{customRange[0] ? fmtDisplayDate(customRange[0]) : "Start Date"}</span>
-              <span>{customRange[1] ? fmtDisplayDate(customRange[1]) : "End Date"}</span>
-            </div>
-            <div className="dc-cal-inputs">
-              <div>
-                <label>From</label>
-                <input type="date" value={customRange[0]} onChange={e => setCustomRange([e.target.value, customRange[1]])} className="dc-cal-inp"/>
-              </div>
-              <div>
-                <label>To</label>
-                <input type="date" value={customRange[1]} onChange={e => setCustomRange([customRange[0], e.target.value])} className="dc-cal-inp"/>
-              </div>
-            </div>
-            <div className="dc-cal-ftr">
-              <button className="dc-btn-cancel" onClick={() => setShowCustomCal(false)}>CANCEL</button>
-              <button className="dc-btn-primary" onClick={() => setShowCustomCal(false)}>OK</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Table */}
-      <div className="dc-table-wrap">
+      <div className="dc-table-wrapper">
         <table className="dc-table">
           <thead>
             <tr>
-              <th>Date <span className="dc-sort-icon">⇅</span></th>
+              <th className="col-date" onClick={() => setSortDir(d => d === "asc" ? "desc" : "asc")}>Date <span className="sort-icon">{sortDir === "asc" ? "↑" : "↓"}</span></th>
               <th>Delivery Challan Number</th>
               <th>Party Name</th>
               <th>Amount</th>
               <th>Status</th>
-              <th></th>
+              <th className="col-action"></th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
-              <tr><td colSpan={6} className="dc-empty">No delivery challans found</td></tr>
+              <tr><td colSpan={6} className="empty-state">No challans found</td></tr>
             ) : filtered.map(c => (
-              <tr key={c.id} className="dc-row" onClick={() => navigate(`/cashier/delivery-challan-view/${c.id}`)}>
-                <td>{fmtDisplayDate(c.challanDate)}</td>
-                <td>{c.challanNo}</td>
-                <td>{c.party?.name ?? "–"}</td>
-                <td>₹ {calcTotal(c).toLocaleString("en-IN", { maximumFractionDigits: 2 })}</td>
-                <td>
-                  <span className={`dc-status dc-status--${c.status.toLowerCase()}`}>{c.status}</span>
-                </td>
-                <td className="dc-menu-cell" onClick={e => e.stopPropagation()}>
-                  <button className="dc-menu-btn" onClick={() => setActiveMenu(activeMenu === c.id ? null : c.id)}>
-                    <svg viewBox="0 0 24 24" fill="currentColor" style={{width:16,height:16}}><circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/></svg>
-                  </button>
-                  {activeMenu === c.id && (
-                    <div className="dc-action-menu">
-                      <button className="dc-action-item" onClick={() => { navigate(`/cashier/delivery-challan-edit/${c.id}`); setActiveMenu(null); }}>
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{width:14,height:14}}><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                        Edit
-                      </button>
-                      <button className="dc-action-item" onClick={() => setActiveMenu(null)}>
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{width:14,height:14}}><circle cx="12" cy="12" r="10"/><polyline points="12 8 12 12 14 14"/></svg>
-                        Edit History
-                      </button>
-                      <button className="dc-action-item" onClick={() => { handleDuplicate(c); setActiveMenu(null); }}>
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{width:14,height:14}}><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                        Duplicate
-                      </button>
-                      <button className="dc-action-item dc-action-item--delete" onClick={() => { setDeleteId(c.id); setActiveMenu(null); }}>
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{width:14,height:14}}><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
-                        Delete
-                      </button>
-                    </div>
-                  )}
+              <tr key={c.id} onClick={() => { setActiveChallan(c); setView("view"); }}>
+                <td>{fmt(new Date(c.date))}</td>
+                <td>{c.challanNumber}</td>
+                <td>{c.partyName}</td>
+                <td>₹ {c.amount.toFixed(2)}</td>
+                <td><span className={`status-badge status-${c.status.toLowerCase()}`}>{c.status}</span></td>
+                <td onClick={e => e.stopPropagation()}>
+                  <RowMenu challanId={c.id}
+                    onEdit={id => { const item = challans.find(ch => ch.id === id); if (item) { setActiveChallan(item); setView("edit"); } }}
+                    onEditHistory={id => alert(`Edit History for challan #${challans.find(ch => ch.id === id)?.challanNumber}`)}
+                    onDuplicate={handleDuplicate}
+                    onDelete={handleDelete}
+                  />
                 </td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-
-      {deleteId && <ConfirmDelete onConfirm={() => handleDelete(deleteId)} onCancel={() => setDeleteId(null)}/>}
-      {showSettings && <QuickSettings onClose={() => setShowSettings(false)} nextNo={nextNo}/>}
+      {showSettings && <SettingsModal settings={settings} onSave={setSettings} onClose={() => setShowSettings(false)}/>}
     </div>
   );
 }

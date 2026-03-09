@@ -12,9 +12,6 @@ import CreatePurchaseReturn from "./components/Cashier/CreatePurchaseReturn/Crea
 import PaymentOut from "./components/Cashier/PaymentOut/PaymentOut";
 import PaymentIn from "./components/Cashier/PaymentIn/PaymentIn";
 import PaymentInView from "./components/Cashier/PaymentIn/Paymentinview";
-import DeliveryChallanList from "./components/Cashier/Deliverychallan/Deliverychallan";       // FIX 1: was used as <DeliveryChallan /> in routes
-import CreateDeliveryChallan from "./components/Cashier/Deliverychallan/Createdeliverychallan";
-import DeliveryChallanViewModel from "./components/Cashier/Deliverychallan/Deliverychallanviewmodel";
 import PurchaseOrder from "./components/Cashier/PurchaseOrder/PurchaseOrder";
 import Createexpense from "./components/Cashier/Createexpense";
 import AdminSettingSidebar from "./components/Admin/AdminSettingSidebar";
@@ -43,14 +40,15 @@ import Parties from "./components/Cashier/Parties/Parties";
 import PartyDetails from "./components/Cashier/Parties/PartyDetails";
 import PartyLedger from "./components/Cashier/Parties/PartyLedger";
 import QuotationEstimate from "./components/Cashier/Quotationestimate/Quotationestimate";
-// FIX 2: Removed unused `import Purchase from "./components/Cashier/Createpurchase/Purchase"`
-//         The purchase route correctly uses <Purchases /> from Purchases/Purchases above.
+
 
 // Sales Return list + form + view
 import SalesReturn from "./components/Cashier/Salesreturn/Salesreturn";
 import CreateSalesReturn from "./components/Cashier/Salesreturn/Createsalesreturn";
 import SalesReturnViewModel from "./components/Cashier/Salesreturn/Salesreturnviewmodel";
 import CreditNote from "./components/Cashier/Creditnote/Creditnote";
+
+import DeliveryChallan from "./components/Cashier/Deliverychallan/Deliverychallan";
 
 // Sales Invoice components
 import SalesInvoiceList   from "./components/Cashier/Salesinvoices/SalesInvoiceList";
@@ -118,26 +116,8 @@ function ViewSalesReturnPage() {
   return <SalesReturnViewModel />;
 }
 
-// ─── Delivery Challan wrappers ────────────────────────────────────────────────
-function DeliveryChallanCreateNew() {
-  const navigate = useNavigate();
-  return (
-    <CreateDeliveryChallan
-      onBack={() => navigate("/cashier/delivery-challan")}
-      onSaveAndNew={() => navigate("/cashier/delivery-challan-create")}
-    />
-  );
-}
-function DeliveryChallanEditPage() {
-  const navigate = useNavigate();
-  const { id } = useParams<{ id: string }>();
-  return (
-    <CreateDeliveryChallan
-      editId={id}
-      onBack={() => navigate("/cashier/delivery-challan")}
-    />
-  );
-}
+
+
 
 // ─── Layouts ──────────────────────────────────────────────────────────────────
 const CashierLayout = () => (
@@ -214,15 +194,13 @@ function App() {
           <Route path="sales-return-edit/:id"   element={<EditSalesReturn />} />
           <Route path="sales-return-view/:id"   element={<ViewSalesReturnPage />} />
 
+          <Route path="delivery-challan" element={<DeliveryChallan />} />
+
+          
           {/* Credit Note */}
           <Route path="credit-note"             element={<CreditNote />} />
 
-          {/* Delivery Challan */}
-          {/* FIX 1: <DeliveryChallanList /> — not <DeliveryChallan /> */}
-          <Route path="delivery-challan"             element={<DeliveryChallanList />} />
-          <Route path="delivery-challan-create"      element={<DeliveryChallanCreateNew />} />
-          <Route path="delivery-challan-edit/:id"    element={<DeliveryChallanEditPage />} />
-          <Route path="delivery-challan-view/:id"    element={<DeliveryChallanViewModel />} />
+          
 
           {/* Proforma Invoice */}
           <Route path="proforma-invoice"        element={<ProformaInvoice />} />

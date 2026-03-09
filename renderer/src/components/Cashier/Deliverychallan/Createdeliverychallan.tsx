@@ -1,153 +1,299 @@
-import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
-import {
-  DeliveryChallan, BillItem, AdditionalCharge, DCBankAccount,
-  getChallans, saveChallan, getChallanById, makeBlankChallan, getNextChallanNo,
-  getDCItems, DCItem, DC_CHARGE_TAX_OPTIONS, fmtDisplayDate, todayStr,
-} from "./Deliverychallantype";
-import DCPartySelector from "./Dcpartyselector";
+import React, { useState, useRef, useEffect } from "react";
+import { ArrowLeft, Calendar, ChevronDown, Settings, Plus, Trash2, X, Search, Barcode } from "lucide-react";
+import { ChallanItem, BillItem, AdditionalCharge, SettingsState } from "./Deliverychallan";
 import "./Createdeliverychallan.css";
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
-const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-const WDAYS = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+// ─── Types ─────────────────────────────────────────────────────────────────────
+interface Party {
+  id: number;
+  name: string;
+  mobile: string;
+  balance?: number;
+  billingAddress?: string;
+  shippingAddress?: string;
+  email?: string;
+  gstin?: string;
+}
 
-function CalPicker({ value, onChange, onClose }: { value: string; onChange:(v:string)=>void; onClose:()=>void }) {
-  const today = new Date();
-  const [vm, setVm] = useState(value ? new Date(value).getMonth() : today.getMonth());
-  const [vy, setVy] = useState(value ? new Date(value).getFullYear() : today.getFullYear());
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(()=>{ function h(e:MouseEvent){if(ref.current&&!ref.current.contains(e.target as Node))onClose();} document.addEventListener("mousedown",h); return()=>document.removeEventListener("mousedown",h); },[]);
-  const dim=(m:number,y:number)=>new Date(y,m+1,0).getDate();
-  const fdo=(m:number,y:number)=>new Date(y,m,1).getDay();
-  const cells=[...Array(fdo(vm,vy)).fill(null),...Array.from({length:dim(vm,vy)},(_,i)=>i+1)];
-  while(cells.length%7!==0) cells.push(null);
-  const ds=(d:number)=>`${vy}-${String(vm+1).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+interface ItemData {
+  id: number;
+  name: string;
+  itemCode?: string;
+  stock?: string;
+  salesPrice: number;
+  purchasePrice?: number;
+  unit?: string;
+  hsn?: string;
+}
+
+interface BankAccount {
+  id: number;
+  accountNumber: string;
+  reEnter: string;
+  ifscCode: string;
+  bankBranchName: string;
+  accountHolderName: string;
+  upiId: string;
+}
+
+interface Props {
+  challan: ChallanItem | null;
+  nextNumber: number;
+  settings: SettingsState;
+  onSave: (c: ChallanItem) => void;
+  onBack: () => void;
+  isEditMode: boolean;
+}
+
+// ─── Sample Items DB ───────────────────────────────────────────────────────────
+const SAMPLE_ITEMS: ItemData[] = [
+  { id: 1, name: "BILLING SOFTWARE MOBILE APP", salesPrice: 256, unit: "PCS" },
+  { id: 2, name: "BILLING SOFTWARE WITH GST", salesPrice: 369875, unit: "PCS" },
+  { id: 3, name: "BILLING SOFTWARE WITHOUT GST", salesPrice: 3556, unit: "PCS" },
+  { id: 4, name: "GODREJ FRIDGE", itemCode: "34567", stock: "144 ACS", salesPrice: 42000, purchasePrice: 0, unit: "ACS" },
+  { id: 5, name: "HERIER AC", itemCode: "1234", stock: "94 PCS", salesPrice: 45000, purchasePrice: 38000, unit: "PCS" },
+  { id: 6, name: "HISENSE 32 INCH", stock: "39 PCS", salesPrice: 21000, purchasePrice: 18000, unit: "PCS" },
+];
+
+// ─── Helpers ───────────────────────────────────────────────────────────────────
+const todayStr = () => new Date().toISOString().split("T")[0];
+const fmtDate = (s: string) => {
+  const d = new Date(s);
+  return `${String(d.getDate()).padStart(2,"0")} ${["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][d.getMonth()]} ${d.getFullYear()}`;
+};
+
+// ─── Toggle ────────────────────────────────────────────────────────────────────
+function Toggle({ value, onChange }: { value: boolean; onChange: (v: boolean) => void }) {
   return (
-    <div ref={ref} className="cdc-cal-pop">
-      <div className="cdc-cal-sel">{value ? fmtDisplayDate(value) : "Select Date"}</div>
-      <div className="cdc-cal-nav">
-        <div className="cdc-cal-ngrp">
-          <button onClick={()=>{if(vm===0){setVm(11);setVy(y=>y-1);}else setVm(m=>m-1);}}>‹</button>
-          <span>{MONTHS[vm]}</span>
-          <button onClick={()=>{if(vm===11){setVm(0);setVy(y=>y+1);}else setVm(m=>m+1);}}>›</button>
-        </div>
-        <div className="cdc-cal-ngrp">
-          <button onClick={()=>setVy(y=>y-1)}>‹</button>
-          <span>{vy}</span>
-          <button onClick={()=>setVy(y=>y+1)}>›</button>
-        </div>
+    <button
+      className={`cdc-toggle${value ? " cdc-toggle--on" : ""}`}
+      onClick={() => onChange(!value)}
+      role="switch"
+      type="button"
+    >
+      <span className="cdc-toggle-thumb" />
+    </button>
+  );
+}
+
+// ─── Mini Date Picker ──────────────────────────────────────────────────────────
+const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const DAYS_SHORT = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+
+function InlineDatePicker({ value, onChange, onClose }: { value: string; onChange: (s: string) => void; onClose: () => void }) {
+  const d = new Date(value);
+  const [viewDate, setViewDate] = useState(new Date(d.getFullYear(), d.getMonth(), 1));
+  const year = viewDate.getFullYear(), month = viewDate.getMonth();
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const cells: (number | null)[] = [];
+  for (let i = 0; i < firstDay; i++) cells.push(null);
+  for (let dd = 1; dd <= daysInMonth; dd++) cells.push(dd);
+  const curDay = d.getDate(), curMon = d.getMonth(), curYr = d.getFullYear();
+  return (
+    <div className="inline-datepicker">
+      <div className="idp-nav">
+        <button onClick={() => { const n = new Date(viewDate); n.setMonth(n.getMonth()-1); setViewDate(n); }}>‹</button>
+        <span>{MONTHS[month]} {year}</span>
+        <button onClick={() => { const n = new Date(viewDate); n.setMonth(n.getMonth()+1); setViewDate(n); }}>›</button>
       </div>
-      <div className="cdc-cal-grid">
-        {WDAYS.map(d=><div key={d} className="cdc-cal-dh">{d}</div>)}
-        {cells.map((day,i)=>{
-          if(!day) return <div key={i}/>;
-          const s=ds(day); const isSel=s===value;
-          return <button key={i} className={`cdc-cal-day${isSel?" cdc-cal-day--sel":""}`} onClick={()=>{onChange(s);onClose();}}>{day}</button>;
-        })}
-      </div>
-      <div className="cdc-cal-ftr">
-        <button className="cdc-btn-cancel" onClick={onClose}>CANCEL</button>
-        <button className="cdc-btn-primary" onClick={onClose}>OK</button>
+      <div className="idp-grid">
+        {DAYS_SHORT.map(d => <div key={d} className="idp-header">{d}</div>)}
+        {cells.map((dd, i) => (
+          <div key={i}
+            className={`idp-cell${dd===null?" empty":""}${dd!==null&&dd===curDay&&month===curMon&&year===curYr?" selected":""}`}
+            onClick={() => { if (dd !== null) { onChange(new Date(year,month,dd).toISOString().split("T")[0]); onClose(); } }}
+          >{dd}</div>
+        ))}
       </div>
     </div>
   );
 }
 
-// ─── Add Items Modal ──────────────────────────────────────────────────────────
-function AddItemsModal({ onClose, onAdd }: { onClose: () => void; onAdd: (items: BillItem[]) => void }) {
-  const [items] = useState<DCItem[]>(getDCItems());
+// ─── Party Selector ────────────────────────────────────────────────────────────
+function PartySelector({ parties, onSelect, onCreateParty }: { parties: Party[]; onSelect: (p: Party) => void; onCreateParty: () => void }) {
   const [search, setSearch] = useState("");
-  const [selected, setSelected] = useState<Map<number, number>>(new Map());
-  const searchRef = useRef<HTMLInputElement>(null);
-  useEffect(() => { searchRef.current?.focus(); }, []);
-  const filtered = items.filter(i =>
-    i.name.toLowerCase().includes(search.toLowerCase()) || (i.itemCode||"").includes(search)
-  );
-  function setQty(id: number, qty: number) {
-    if (qty <= 0) { const m = new Map(selected); m.delete(id); setSelected(m); return; }
-    setSelected(new Map(selected).set(id, qty));
-  }
-  function handleAdd() {
-    if (selected.size === 0) return;
-    const billItems: BillItem[] = [];
-    selected.forEach((qty, itemId) => {
-      const item = items.find(i => i.id === itemId);
-      if (!item) return;
-      billItems.push({
-        rowId: `row-${Date.now()}-${itemId}`,
-        itemId, name: item.name, description: "", hsn: item.hsn || "",
-        qty, unit: item.unit, price: item.salesPrice,
-        discountPct: 0, discountAmt: 0, taxLabel: "None", taxRate: 0,
-        amount: qty * item.salesPrice,
-      });
-    });
-    onAdd(billItems);
-    onClose();
-  }
-  const total = Array.from(selected.values()).reduce((s, v) => s + v, 0);
+  const filtered = parties.filter(p => p.name.toLowerCase().includes(search.toLowerCase()));
   return (
-    <div className="cdc-overlay" onClick={onClose}>
-      <div className="cdc-aim-modal" onClick={e => e.stopPropagation()}>
-        <div className="cdc-aim-hdr">
-          <span>Add Items to Bill</span>
-          <button onClick={onClose}>✕</button>
-        </div>
-        <div className="cdc-aim-toolbar">
-          <div className="cdc-aim-search-wrap">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-            <input ref={searchRef} className="cdc-aim-search" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search by Item / Serial no. / HSN code / SKU / Category"/>
+    <div className="party-selector-dropdown">
+      <div className="party-search-box">
+        <input autoFocus placeholder="Search party by name or number" value={search} onChange={e => setSearch(e.target.value)} />
+        <ChevronDown size={14} />
+      </div>
+      <div className="party-list-header"><span>Party Name</span><span>Balance</span></div>
+      <div className="party-list">
+        {filtered.map(p => (
+          <div key={p.id} className="party-list-item" onClick={() => onSelect(p)}>
+            <span>{p.name}</span>
+            <span className="party-balance">
+              ₹ {Math.abs(p.balance || 0).toLocaleString()}
+              {(p.balance || 0) < 0 && <span className="bal-up">↑</span>}
+              {(p.balance || 0) > 0 && <span className="bal-down">↓</span>}
+            </span>
           </div>
-          <button className="cdc-aim-create">Create New Item</button>
+        ))}
+      </div>
+      <div className="party-create-btn" onClick={onCreateParty}>+ Create Party</div>
+    </div>
+  );
+}
+
+// ─── Create New Party Modal ────────────────────────────────────────────────────
+function CreatePartyModal({ onSave, onClose }: { onSave: (p: Party) => void; onClose: () => void }) {
+  const [name, setName] = useState("");
+  const [mobile, setMobile] = useState("");
+  const [showAddress, setShowAddress] = useState(false);
+  const [showGstin, setShowGstin] = useState(false);
+  const [address, setAddress] = useState("");
+  const [state, setState] = useState("");
+  const [pincode, setPincode] = useState("");
+  const [city, setCity] = useState("");
+  const [sameAsBilling, setSameAsBilling] = useState(true);
+  const [gstin, setGstin] = useState("");
+  const [nameErr, setNameErr] = useState(false);
+
+  const handleSave = () => {
+    if (!name.trim()) { setNameErr(true); return; }
+    const newParty: Party = { id: Date.now(), name: name.trim(), mobile, balance: 0, billingAddress: showAddress ? `${address}, ${city}, ${state} - ${pincode}` : "", gstin: showGstin ? gstin : "" };
+    const stored = JSON.parse(localStorage.getItem("parties") || "[]");
+    stored.push({ ...newParty, type: "Customer", category: "-" });
+    localStorage.setItem("parties", JSON.stringify(stored));
+    onSave(newParty);
+  };
+
+  return (
+    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="cdc-modal" style={{ maxWidth: 500 }}>
+        <div className="cdc-modal-header"><h2>Create New Party</h2><button onClick={onClose}><X size={18} /></button></div>
+        <div className="cdc-modal-body">
+          <div className="cdc-field"><label>Party Name <span className="req">*</span></label><input className={`cdc-input${nameErr?" error":""}`} placeholder="Enter name" value={name} onChange={e => { setName(e.target.value); setNameErr(false); }} />{nameErr && <span className="field-err">This field is mandatory</span>}</div>
+          <div className="cdc-field"><label>Mobile Number</label><input className="cdc-input" placeholder="Enter Mobile Number" value={mobile} onChange={e => setMobile(e.target.value)} /></div>
+          {!showAddress ? <button className="link-btn" onClick={() => setShowAddress(true)}>+ Add Address (Optional)</button> : (
+            <div className="optional-section">
+              <div className="optional-section-header"><span>Address (Optional)</span><button className="link-btn-sm" onClick={() => setShowAddress(false)}>Remove</button></div>
+              <div className="cdc-field"><label>BILLING ADDRESS <span className="req">*</span></label><textarea className="cdc-textarea" placeholder="Enter billing address" value={address} onChange={e => setAddress(e.target.value)} rows={3} /></div>
+              <div className="cdc-row-2">
+                <div className="cdc-field"><label>STATE</label><input className="cdc-input" placeholder="Enter State" value={state} onChange={e => setState(e.target.value)} /></div>
+                <div className="cdc-field"><label>PINCODE</label><input className="cdc-input" placeholder="Enter Pincode" value={pincode} onChange={e => setPincode(e.target.value)} /></div>
+              </div>
+              <div className="cdc-field"><label>CITY</label><input className="cdc-input" placeholder="Enter City" value={city} onChange={e => setCity(e.target.value)} /></div>
+              <label className="check-label"><input type="checkbox" checked={sameAsBilling} onChange={e => setSameAsBilling(e.target.checked)} /> Shipping address same as billing address</label>
+            </div>
+          )}
+          {!showGstin ? <button className="link-btn" onClick={() => setShowGstin(true)}>+ Add GSTIN (Optional)</button> : (
+            <div className="optional-section">
+              <div className="optional-section-header"><span>GSTIN (Optional)</span><button className="link-btn-sm" onClick={() => setShowGstin(false)}>Remove</button></div>
+              <div className="cdc-field"><label>GSTIN</label><input className="cdc-input" placeholder="ex: 29XXXXX9438X1XX" value={gstin} onChange={e => setGstin(e.target.value)} /></div>
+            </div>
+          )}
+          <div className="party-settings-note">You can add Custom Fields from <span className="link-text">Party Settings</span></div>
         </div>
-        <div className="cdc-aim-table-wrap">
-          <table className="cdc-aim-table">
-            <thead>
-              <tr>
-                <th>Item Name</th><th>Item Code</th><th>Stock</th>
-                <th>Sales Price</th><th>Purchase Price</th><th>Quantity</th>
-              </tr>
-            </thead>
+        <div className="cdc-modal-footer"><button className="btn-secondary-sm" onClick={onClose}>Cancel</button><button className="btn-primary-sm" onClick={handleSave}>Save</button></div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Change Shipping Address Modal ────────────────────────────────────────────
+function ChangeShippingModal({ partyName, addresses, onDone, onClose }: { partyName: string; addresses: string[]; onDone: (addr: string) => void; onClose: () => void }) {
+  const [selected, setSelected] = useState(0);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newName, setNewName] = useState(partyName);
+  const [newStreet, setNewStreet] = useState("");
+  const [newState, setNewState] = useState("");
+  const [newPin, setNewPin] = useState("");
+  const [newCity, setNewCity] = useState("");
+
+  if (showAddForm) {
+    return (
+      <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+        <div className="cdc-modal" style={{ maxWidth: 480 }}>
+          <div className="cdc-modal-header"><h2>Add Shipping Address</h2><button onClick={onClose}><X size={18} /></button></div>
+          <div className="cdc-modal-body">
+            <div className="cdc-field"><label>Shipping Name <span className="req">*</span></label><input className="cdc-input" value={newName} onChange={e => setNewName(e.target.value)} /></div>
+            <div className="cdc-field"><label>Street Address <span className="req">*</span></label><textarea className="cdc-textarea" placeholder="Enter Street Address" value={newStreet} onChange={e => setNewStreet(e.target.value)} rows={3} /></div>
+            <div className="cdc-row-2"><div className="cdc-field"><label>State</label><input className="cdc-input" placeholder="Enter State" value={newState} onChange={e => setNewState(e.target.value)} /></div><div className="cdc-field"><label>Pincode</label><input className="cdc-input" placeholder="Enter pin code" value={newPin} onChange={e => setNewPin(e.target.value)} /></div></div>
+            <div className="cdc-field"><label>City</label><input className="cdc-input" placeholder="Enter City" value={newCity} onChange={e => setNewCity(e.target.value)} /></div>
+          </div>
+          <div className="cdc-modal-footer"><button className="btn-secondary-sm" onClick={() => setShowAddForm(false)}>Cancel</button><button className="btn-primary-sm" onClick={() => onDone(`${newName}, ${newStreet}, ${newCity}, ${newState} - ${newPin}`)}>Save</button></div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="cdc-modal" style={{ maxWidth: 480 }}>
+        <div className="cdc-modal-header"><h2>Change Shipping Address</h2><button onClick={onClose}><X size={18} /></button></div>
+        <div className="cdc-modal-body" style={{ padding: 0 }}>
+          <div className="ship-addr-table-header"><span>Address</span><span>Edit</span><span>Select</span></div>
+          {addresses.map((addr, i) => (
+            <div key={i} className="ship-addr-row">
+              <div><div className="ship-addr-name">{partyName}</div><div className="ship-addr-text">{addr || "No Address"}</div></div>
+              <button className="ship-edit-btn">✏</button>
+              <input type="radio" checked={selected === i} onChange={() => setSelected(i)} />
+            </div>
+          ))}
+          <div className="ship-add-new" onClick={() => setShowAddForm(true)}>+ Add New Shipping Address</div>
+        </div>
+        <div className="cdc-modal-footer"><button className="btn-secondary-sm" onClick={onClose}>Cancel</button><button className="btn-primary-sm" onClick={() => onDone(addresses[selected] || "")}>Done</button></div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Add Items Modal ───────────────────────────────────────────────────────────
+function AddItemsModal({ onAddItems, onClose, onCreateItem }: { onAddItems: (items: { item: ItemData; qty: number }[]) => void; onClose: () => void; onCreateItem: () => void }) {
+  const [search, setSearch] = useState("");
+  const [quantities, setQuantities] = useState<Record<number, number>>({});
+  const [category, setCategory] = useState("");
+  const filtered = SAMPLE_ITEMS.filter(item => item.name.toLowerCase().includes(search.toLowerCase()) || (item.itemCode || "").includes(search));
+  const totalSelected = Object.values(quantities).filter(q => q > 0).length;
+  const handleAdd = () => { const sel = filtered.filter(item => (quantities[item.id] || 0) > 0).map(item => ({ item, qty: quantities[item.id] })); onAddItems(sel); };
+  const setQty = (id: number, qty: number) => setQuantities(prev => ({ ...prev, [id]: Math.max(0, qty) }));
+  return (
+    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="add-items-modal">
+        <div className="aim-header"><h2>Add Items to Bill</h2><button onClick={onClose}><X size={18} /></button></div>
+        <div className="aim-toolbar">
+          <div className="aim-search"><Search size={14}/><input placeholder="Search by Item/ Serial no./ HSN code/ SKU/ Custom Field / Category" value={search} onChange={e => setSearch(e.target.value)} /><Barcode size={18} className="barcode-icon"/></div>
+          <div className="aim-category"><select value={category} onChange={e => setCategory(e.target.value)}><option value="">Select Category</option></select></div>
+          <button className="btn-primary-sm aim-create" onClick={onCreateItem}>Create New Item</button>
+        </div>
+        <div className="aim-table-wrapper">
+          <table className="aim-table">
+            <thead><tr><th>Item Name</th><th>Item Code</th><th>Stock</th><th>Sales Price</th><th>Purchase Price</th><th>Quantity</th></tr></thead>
             <tbody>
-              {filtered.length === 0 ? (
-                <tr><td colSpan={6} className="cdc-aim-empty">Scan items to add them to your invoice</td></tr>
-              ) : filtered.map(item => {
-                const qty = selected.get(item.id) || 0;
-                return (
-                  <tr key={item.id} className={`cdc-aim-row${selected.has(item.id) ? " cdc-aim-row--sel" : ""}`}>
-                    <td className="cdc-aim-name">{item.name}</td>
-                    <td className="cdc-aim-code">{item.itemCode || "–"}</td>
-                    <td>{item.stock || "–"}</td>
-                    <td>₹{item.salesPrice.toLocaleString("en-IN")}</td>
-                    <td>{item.purchasePrice > 0 ? `₹${item.purchasePrice.toLocaleString("en-IN")}` : "–"}</td>
-                    <td className="cdc-aim-qty-cell">
-                      {qty === 0 ? (
-                        <button className="cdc-aim-add-btn" onClick={() => setQty(item.id, 1)}>+ Add</button>
-                      ) : (
-                        <div className="cdc-aim-qty-ctrl">
-                          <button onClick={() => setQty(item.id, qty-1)}>−</button>
-                          <input type="number" value={qty} onChange={e => setQty(item.id, Number(e.target.value))} className="cdc-aim-qty-inp"/>
-                          <button onClick={() => setQty(item.id, qty+1)}>+</button>
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
+              {filtered.length === 0 ? (<tr><td colSpan={6} className="aim-empty">Scan items to add them to your invoice</td></tr>) : filtered.map(item => (
+                <tr key={item.id}>
+                  <td className="aim-item-name">{item.name}</td>
+                  <td>{item.itemCode || "-"}</td>
+                  <td>{item.stock || "-"}</td>
+                  <td>₹{item.salesPrice.toLocaleString()}</td>
+                  <td>{item.purchasePrice !== undefined ? `₹${item.purchasePrice.toLocaleString()}` : "-"}</td>
+                  <td>
+                    {(quantities[item.id] || 0) > 0 ? (
+                      <div className="qty-control">
+                        <button onClick={() => setQty(item.id, (quantities[item.id] || 0) - 1)}>−</button>
+                        <span>{quantities[item.id]}</span>
+                        <button onClick={() => setQty(item.id, (quantities[item.id] || 0) + 1)}>+</button>
+                        <span className="qty-unit">{item.unit || "PCS"}</span>
+                      </div>
+                    ) : (
+                      <button className="aim-add-btn" onClick={() => setQty(item.id, 1)}>+ Add</button>
+                    )}
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
-        <div className="cdc-aim-ftr">
-          <div className="cdc-aim-shortcuts">
-            <span>Keyboard Shortcuts:</span><span>Change Quantity</span><kbd>Enter</kbd>
-            <span>Move between items</span><kbd>↑</kbd><kbd>↓</kbd>
-          </div>
-          <div className="cdc-aim-bottom">
-            <span>{total > 0 ? `Show ${total} Item(s) Selected` : "0 Item(s) Selected"}</span>
-            <div className="cdc-aim-actions">
-              <button className="cdc-btn-cancel" onClick={onClose}>Cancel [ESC]</button>
-              <button className={`cdc-btn-add-bill${selected.size === 0 ? " cdc-disabled" : ""}`} disabled={selected.size === 0} onClick={handleAdd}>Add to Bill [F7]</button>
-            </div>
+        <div className="aim-footer">
+          <div className="aim-shortcuts"><span>Keyboard Shortcuts :</span><span>Change Quantity <kbd>Enter</kbd></span><span>Move between items <kbd>↑</kbd><kbd>↓</kbd></span></div>
+          <div className="aim-footer-right">
+            <span className="aim-selected">{totalSelected} Item(s) Selected</span>
+            <button className="btn-secondary-sm" onClick={onClose}>Cancel [ESC]</button>
+            <button className={`btn-primary-sm${totalSelected===0?" disabled":""}`} onClick={handleAdd} disabled={totalSelected===0}>Add to Bill [F7]</button>
           </div>
         </div>
       </div>
@@ -155,489 +301,649 @@ function AddItemsModal({ onClose, onAdd }: { onClose: () => void; onAdd: (items:
   );
 }
 
-// ─── Bank Account Modal ───────────────────────────────────────────────────────
-function BankAccountModal({ existing, onClose, onSave }: { existing: DCBankAccount | null; onClose: () => void; onSave: (b: DCBankAccount) => void }) {
-  const [form, setForm] = useState<DCBankAccount>(existing ?? { accountNumber:"", reEnterAccountNumber:"", ifscCode:"", bankBranchName:"", accountHolderName:"", upiId:"" });
-  const [err, setErr] = useState("");
-  function handleSubmit() {
-    if (!form.accountNumber.trim()) { setErr("Account number is required"); return; }
-    if (form.accountNumber !== form.reEnterAccountNumber) { setErr("Account numbers don't match"); return; }
-    onSave(form); onClose();
-  }
+// ─── Show/Hide Columns Modal ───────────────────────────────────────────────────
+function ShowHideColumnsModal({ showPrice, showQty, onSave, onClose }: { showPrice: boolean; showQty: boolean; onSave: (price: boolean, qty: boolean) => void; onClose: () => void }) {
+  const [price, setPrice] = useState(showPrice);
+  const [qty, setQty] = useState(showQty);
   return (
-    <div className="cdc-overlay" onClick={onClose}>
-      <div className="cdc-bank-modal" onClick={e => e.stopPropagation()}>
-        <div className="cdc-cmodal-hdr">
-          <span>Add Bank Account</span>
-          <button onClick={onClose}>✕</button>
+    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="cdc-modal" style={{ maxWidth: 460 }}>
+        <div className="cdc-modal-header"><h2>Show/Hide Columns in Invoice</h2><button onClick={onClose}><X size={18} /></button></div>
+        <div className="cdc-modal-body">
+          <div className="shc-row"><span>Price/Item (₹)</span><Toggle value={price} onChange={setPrice} /></div>
+          <div className="shc-row"><span>Quantity</span><Toggle value={qty} onChange={setQty} /></div>
+          <div className="shc-divider">CUSTOM COLUMN</div>
+          <div className="shc-empty-custom"><p>No Custom Columns added</p><p>Any custom column such as Batch # &amp; Expiry Date can be added</p></div>
+          <div className="shc-note">To add Custom Item Columns - Go to <strong>Item settings</strong> from <span className="link-text">Items page (click here)</span></div>
         </div>
-        <div className="cdc-bank-body">
-          <div className="cdc-bank-grid">
-            <div>
-              <label>Bank Account Number <span className="cdc-req">*</span></label>
-              <input className="cdc-inp" placeholder="ex: 123456789" value={form.accountNumber} onChange={e=>setForm(f=>({...f,accountNumber:e.target.value}))}/>
-            </div>
-            <div>
-              <label>Re-Enter Bank Account Number <span className="cdc-req">*</span></label>
-              <input className="cdc-inp" placeholder="ex: 123456789" value={form.reEnterAccountNumber} onChange={e=>setForm(f=>({...f,reEnterAccountNumber:e.target.value}))}/>
-            </div>
-            <div>
-              <label>IFSC Code</label>
-              <input className="cdc-inp" placeholder="ex: ICIC0001234" value={form.ifscCode} onChange={e=>setForm(f=>({...f,ifscCode:e.target.value}))}/>
-            </div>
-            <div>
-              <label>Bank &amp; Branch Name</label>
-              <input className="cdc-inp" placeholder="ex: ICICI Bank, Mumbai" value={form.bankBranchName} onChange={e=>setForm(f=>({...f,bankBranchName:e.target.value}))}/>
-            </div>
-            <div>
-              <label>Account Holder's Name</label>
-              <input className="cdc-inp" placeholder="ex: Babu Lal" value={form.accountHolderName} onChange={e=>setForm(f=>({...f,accountHolderName:e.target.value}))}/>
-            </div>
-            <div>
-              <label>UPI ID</label>
-              <input className="cdc-inp" placeholder="ex: babulal@upi" value={form.upiId} onChange={e=>setForm(f=>({...f,upiId:e.target.value}))}/>
-            </div>
-          </div>
-          {err && <div className="cdc-errmsg" style={{marginTop:8}}>{err}</div>}
-        </div>
-        <div className="cdc-modal-ftr">
-          <button className="cdc-btn-cancel" onClick={onClose}>Cancel</button>
-          <button className="cdc-btn-primary" onClick={handleSubmit}>Submit</button>
-        </div>
+        <div className="cdc-modal-footer"><button className="btn-secondary-sm" onClick={onClose}>Cancel</button><button className="btn-primary-sm" onClick={() => { onSave(price, qty); onClose(); }}>Save</button></div>
       </div>
     </div>
   );
 }
 
-// ─── Quick Settings Modal ─────────────────────────────────────────────────────
-function QuickSettings({ onClose, nextNo }: { onClose: () => void; nextNo: number }) {
-  const [prefixOn, setPrefixOn] = useState(true);
-  const [prefix, setPrefix] = useState(""); const [seqNo, setSeqNo] = useState(nextNo);
-  const [showItemImage, setShowItemImage] = useState(true); const [priceHistory, setPriceHistory] = useState(true);
-  const Toggle = ({ on, set }: { on: boolean; set: (v: boolean) => void }) => (
-    <button className={`cdc-toggle${on?" cdc-toggle--on":""}`} onClick={() => set(!on)}><span className="cdc-toggle-th"/></button>
-  );
+// ─── Select Bank Account Modal ─────────────────────────────────────────────────
+function SelectBankModal({ onClose, onAdd, onSelect }: { onClose: () => void; onAdd: () => void; onSelect: (b: BankAccount) => void }) {
+  const [banks, setBanks] = useState<BankAccount[]>(() => { try { return JSON.parse(localStorage.getItem("bankAccounts") || "[]"); } catch { return []; } });
+  const [selected, setSelected] = useState<number | null>(null);
   return (
-    <div className="cdc-overlay" onClick={onClose}>
-      <div className="cdc-settings-modal" onClick={e => e.stopPropagation()}>
-        <div className="cdc-cmodal-hdr"><span>Quick Delivery Challan Settings</span><button onClick={onClose}>✕</button></div>
-        <div className="cdc-settings-body">
-          <div className="cdc-settings-section">
-            <div className="cdc-settings-row">
-              <div><div className="cdc-s-label">Delivery Challan Prefix &amp; Sequence Number</div><div className="cdc-s-sub">Add your custom prefix &amp; sequence for Delivery Challan Numbering</div></div>
-              <Toggle on={prefixOn} set={setPrefixOn}/>
-            </div>
-            {prefixOn && (
-              <div className="cdc-prefix-row">
-                <div><label>Prefix</label><input value={prefix} onChange={e=>setPrefix(e.target.value)} placeholder="Prefix" className="cdc-inp"/></div>
-                <div><label>Sequence Number</label><input type="number" value={seqNo} onChange={e=>setSeqNo(Number(e.target.value))} className="cdc-inp"/></div>
+    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="cdc-modal" style={{ maxWidth: 420 }}>
+        <div className="cdc-modal-header"><h2>Select Bank Accounts</h2><button onClick={onClose}><X size={18} /></button></div>
+        <div className="cdc-modal-body">
+          {banks.length === 0 ? (
+            <p style={{ textAlign: "center", color: "#6b7280", padding: "16px 0" }}>No bank accounts added yet.<br/><button className="link-btn" style={{ marginTop: 8 }} onClick={onAdd}>+ Add Bank Account</button></p>
+          ) : banks.map((b, i) => (
+            <div key={i} className={`bank-select-row${selected===i?" selected":""}`} onClick={() => setSelected(i)}>
+              <div className="bank-logo-icon">🏦</div>
+              <div className="bank-info">
+                <div className="bank-name">{b.bankBranchName || "Bank"}</div>
+                <div className="bank-acc">ACC No: {b.accountNumber}</div>
               </div>
-            )}
-            {prefixOn && <div className="cdc-inv-preview">Delivery Challan Number: {prefix}{seqNo}</div>}
-          </div>
-          <div className="cdc-settings-section">
-            <div className="cdc-settings-row">
-              <div><div className="cdc-s-label">Show Item Image on Invoice</div><div className="cdc-s-sub">This will apply to all vouchers except for Payment In and Payment Out</div></div>
-              <Toggle on={showItemImage} set={setShowItemImage}/>
+              <div className="bank-right">
+                <div className="bank-ifsc">IFSC: {b.ifscCode || "-"}</div>
+              </div>
+              <input type="radio" checked={selected === i} onChange={() => setSelected(i)} />
             </div>
-          </div>
-          <div className="cdc-settings-section">
-            <div className="cdc-settings-row">
-              <div><div className="cdc-s-label">Price History <span className="cdc-badge-new">New</span></div><div className="cdc-s-sub">Show last 5 sales / purchase prices of the item for the selected party in invoice</div></div>
-              <Toggle on={priceHistory} set={setPriceHistory}/>
-            </div>
-          </div>
+          ))}
+          {banks.length > 0 && (
+            <button className="link-btn" style={{ marginTop: 12 }} onClick={onAdd}>+ Add Bank Account</button>
+          )}
         </div>
-        <div className="cdc-modal-ftr">
-          <button className="cdc-btn-cancel" onClick={onClose}>Cancel</button>
-          <button className="cdc-btn-primary" onClick={onClose}>Save</button>
+        <div className="cdc-modal-footer">
+          <button className="btn-secondary-sm" onClick={onClose}>Cancel</button>
+          <button className="btn-primary-sm" onClick={() => { if (selected !== null) onSelect(banks[selected]); onClose(); }}>DONE</button>
         </div>
       </div>
     </div>
   );
 }
 
-// ─── Show/Hide Columns Modal ──────────────────────────────────────────────────
-function ShowHideColsModal({ cols, onChange, onClose }: { cols: { pricePerItem: boolean; quantity: boolean }; onChange: (c: any) => void; onClose: () => void }) {
-  const [local, setLocal] = useState(cols);
-  const Toggle = ({ on, set }: { on: boolean; set: (v: boolean) => void }) => (
-    <button className={`cdc-toggle${on?" cdc-toggle--on":""}`} onClick={() => set(!on)}><span className="cdc-toggle-th"/></button>
-  );
+// ─── Add Bank Account Modal ────────────────────────────────────────────────────
+function AddBankModal({ onClose, onSaved }: { onClose: () => void; onSaved: (b: BankAccount) => void }) {
+  const [form, setForm] = useState({ accountNumber: "", reEnter: "", ifscCode: "", bankBranchName: "", accountHolderName: "", upiId: "" });
+  const [err, setErr] = useState("");
+  const handleSubmit = () => {
+    if (!form.accountNumber) { setErr("Account number is required"); return; }
+    if (form.accountNumber !== form.reEnter) { setErr("Account numbers don't match"); return; }
+    const newBank: BankAccount = { id: Date.now(), ...form };
+    const stored = JSON.parse(localStorage.getItem("bankAccounts") || "[]");
+    stored.push(newBank);
+    localStorage.setItem("bankAccounts", JSON.stringify(stored));
+    onSaved(newBank);
+  };
   return (
-    <div className="cdc-overlay" onClick={onClose}>
-      <div className="cdc-col-modal" onClick={e => e.stopPropagation()}>
-        <div className="cdc-cmodal-hdr"><span>Show/Hide Columns in Invoice</span><button onClick={onClose}>✕</button></div>
-        <div className="cdc-col-body">
-          <div className="cdc-col-row"><span>Price/Item (₹)</span><Toggle on={local.pricePerItem} set={v => setLocal(c => ({...c,pricePerItem:v}))}/></div>
-          <div className="cdc-col-row"><span>Quantity</span><Toggle on={local.quantity} set={v => setLocal(c => ({...c,quantity:v}))}/></div>
-          <div className="cdc-col-custom-hdr">CUSTOM COLUMN</div>
-          <div className="cdc-col-empty">
-            <div>No Custom Columns added</div>
-            <div style={{fontSize:12,color:"#9ca3af"}}>Any custom column such as Batch # &amp; Expiry Date can be added</div>
-            <div style={{fontSize:12,color:"#6b7280",marginTop:8,padding:"8px",background:"#fef9c3",borderRadius:6}}>To add Custom Item Columns - Go to <strong>Item settings</strong> from <span className="cdc-link">Items page (click here)</span></div>
+    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="cdc-modal" style={{ maxWidth: 480 }}>
+        <div className="cdc-modal-header"><h2>Add Bank Account</h2><button onClick={onClose}><X size={18} /></button></div>
+        <div className="cdc-modal-body">
+          {err && <div className="field-err" style={{ marginBottom: 12 }}>{err}</div>}
+          <div className="cdc-row-2">
+            <div className="cdc-field"><label>Bank Account Number <span className="req">*</span></label><input className="cdc-input" placeholder="ex: 123456789" value={form.accountNumber} onChange={e => setForm(p => ({ ...p, accountNumber: e.target.value }))} /></div>
+            <div className="cdc-field"><label>Re-Enter Bank Account Number <span className="req">*</span></label><input className="cdc-input" placeholder="ex: 123456789" value={form.reEnter} onChange={e => setForm(p => ({ ...p, reEnter: e.target.value }))} /></div>
+          </div>
+          <div className="cdc-row-2">
+            <div className="cdc-field"><label>IFSC Code</label><input className="cdc-input" placeholder="ex: ICIC0001234" value={form.ifscCode} onChange={e => setForm(p => ({ ...p, ifscCode: e.target.value }))} /></div>
+            <div className="cdc-field"><label>Bank &amp; Branch Name</label><input className="cdc-input" placeholder="ex: ICICI Bank, Mumbai" value={form.bankBranchName} onChange={e => setForm(p => ({ ...p, bankBranchName: e.target.value }))} /></div>
+          </div>
+          <div className="cdc-row-2">
+            <div className="cdc-field"><label>Account Holder's Name</label><input className="cdc-input" placeholder="ex: Babu Lal" value={form.accountHolderName} onChange={e => setForm(p => ({ ...p, accountHolderName: e.target.value }))} /></div>
+            <div className="cdc-field"><label>UPI ID</label><input className="cdc-input" placeholder="ex: babulal@upi" value={form.upiId} onChange={e => setForm(p => ({ ...p, upiId: e.target.value }))} /></div>
           </div>
         </div>
-        <div className="cdc-modal-ftr">
-          <button className="cdc-btn-cancel" onClick={onClose}>Cancel</button>
-          <button className="cdc-btn-primary" onClick={() => { onChange(local); onClose(); }}>Save</button>
-        </div>
+        <div className="cdc-modal-footer"><button className="btn-secondary-sm" onClick={onClose}>Cancel</button><button className="btn-primary-sm" onClick={handleSubmit}>Submit</button></div>
       </div>
     </div>
   );
 }
 
-// ─── Items Table Row ──────────────────────────────────────────────────────────
-function ItemRow({ item, idx, showCols, onChange, onDelete }: {
-  item: BillItem; idx: number;
-  showCols: { pricePerItem: boolean; quantity: boolean };
-  onChange: (i: BillItem) => void; onDelete: () => void;
+// ─── Quick Settings Modal ──────────────────────────────────────────────────────
+function QuickSettingsModal({ settings, onSave, onClose }: { settings: SettingsState; onSave: (s: SettingsState) => void; onClose: () => void }) {
+  const [local, setLocal] = useState({ ...settings });
+  const upd = <K extends keyof SettingsState>(k: K, v: SettingsState[K]) => setLocal(p => ({ ...p, [k]: v }));
+  const num = local.prefixEnabled ? `${local.prefix}${local.sequenceNumber}` : `${local.sequenceNumber}`;
+  return (
+    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="cdc-modal" style={{ maxWidth: 520 }}>
+        <div className="cdc-modal-header"><h2>Quick Delivery Challan Settings</h2><button onClick={onClose}><X size={18} /></button></div>
+        <div className="cdc-modal-body">
+          <div className="settings-card"><div className="settings-card-header"><div><div className="settings-title">Delivery Challan Prefix &amp; Sequence Number</div><div className="settings-desc">Add your custom prefix &amp; sequence for Delivery Challan Numbering</div></div><Toggle value={local.prefixEnabled} onChange={v => upd("prefixEnabled", v)}/></div>
+            {local.prefixEnabled && (<div className="settings-fields"><div className="cdc-field"><label>Prefix</label><input className="cdc-input" placeholder="Prefix" value={local.prefix} onChange={e => upd("prefix", e.target.value)}/></div><div className="cdc-field"><label>Sequence Number</label><input className="cdc-input" type="number" value={local.sequenceNumber} onChange={e => upd("sequenceNumber", Number(e.target.value))}/></div></div>)}
+            {local.prefixEnabled && <div className="challan-num-preview">Delivery Challan Number: {num}</div>}
+          </div>
+          <div className="settings-card"><div className="settings-card-header"><div><div className="settings-title">Show Item Image on Invoice</div><div className="settings-desc">This will apply to all vouchers except for Payment In and Payment Out</div></div><Toggle value={local.showItemImage} onChange={v => upd("showItemImage", v)}/></div></div>
+          <div className="settings-card"><div className="settings-card-header"><div><div className="settings-title">Price History <span className="badge-new">New</span></div><div className="settings-desc">Show last 5 sales / purchase prices of the item for the selected party in invoice</div></div><Toggle value={local.priceHistory} onChange={v => upd("priceHistory", v)}/></div></div>
+        </div>
+        <div className="cdc-modal-footer"><button className="btn-secondary-sm" onClick={onClose}>Cancel</button><button className="btn-primary-sm" onClick={() => { onSave(local); onClose(); }}>Save</button></div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Bill Item Row ─────────────────────────────────────────────────────────────
+function BillItemRow({ item, index, onChange, onDelete, showPrice, showQty }: {
+  item: BillItem; index: number;
+  onChange: (id: number, updates: Partial<BillItem>) => void;
+  onDelete: (id: number) => void;
+  showPrice: boolean; showQty: boolean;
 }) {
-  const [showTaxDrop, setShowTaxDrop] = useState(false);
-  const taxOptions = ["None", "GST 5%", "GST 12%", "GST 18%", "GST 28%"];
-  function getTaxRate(label: string) {
-    const m: Record<string,number> = {"None":0,"GST 5%":5,"GST 12%":12,"GST 18%":18,"GST 28%":28};
-    return m[label] ?? 0;
-  }
-  const base = item.qty * item.price - (item.qty * item.price * item.discountPct / 100) - item.discountAmt;
-  const taxAmt = base * item.taxRate / 100;
-  const amount = base + taxAmt;
+  const recalcAmount = (updates: Partial<BillItem>, base: BillItem): number => {
+    const qty = updates.qty !== undefined ? updates.qty : base.qty;
+    const price = updates.pricePerItem !== undefined ? updates.pricePerItem : base.pricePerItem;
+    const discPct = updates.discount?.percent !== undefined ? updates.discount.percent : base.discount.percent;
+    const discAmt = updates.discount?.amount !== undefined ? updates.discount.amount : base.discount.amount;
+    const raw = qty * price;
+    const afterDisc = raw - (raw * discPct / 100) - discAmt;
+    const taxRate = updates.taxRate !== undefined ? updates.taxRate : base.taxRate;
+    return afterDisc + afterDisc * taxRate / 100;
+  };
 
   return (
-    <tr className="cdc-item-row">
-      <td className="cdc-td-no">{idx + 1}</td>
-      <td className="cdc-td-name">
-        <input className="cdc-item-inp" value={item.name} onChange={e => onChange({...item, name: e.target.value})} placeholder="Item name"/>
+    <tr className="bill-item-row">
+      <td>{index + 1}</td>
+      <td>
+        <div className="bill-item-name">{item.name}</div>
+        <input className="bill-item-desc" placeholder="Enter Description (optional)" value={item.description || ""} onChange={e => onChange(item.id, { description: e.target.value })} />
       </td>
-      <td className="cdc-td-hsn">
-        <input className="cdc-item-inp" value={item.hsn} onChange={e => onChange({...item, hsn: e.target.value})} placeholder="HSN"/>
-      </td>
-      {showCols.quantity && (
-        <td className="cdc-td-qty">
-          <input type="number" className="cdc-item-inp cdc-inp-num" value={item.qty} onChange={e => onChange({...item, qty: Number(e.target.value), amount: Number(e.target.value) * item.price})}/>
-        </td>
-      )}
-      {showCols.pricePerItem && (
-        <td className="cdc-td-price">
-          <input type="number" className="cdc-item-inp cdc-inp-num" value={item.price} onChange={e => onChange({...item, price: Number(e.target.value), amount: item.qty * Number(e.target.value)})}/>
-        </td>
-      )}
-      <td className="cdc-td-disc">
-        <input type="number" className="cdc-item-inp cdc-inp-num" value={item.discountPct} onChange={e => onChange({...item, discountPct: Number(e.target.value)})} placeholder="0"/>
-      </td>
-      <td className="cdc-td-tax" style={{position:"relative"}}>
-        <button className="cdc-tax-btn" onClick={() => setShowTaxDrop(!showTaxDrop)}>
-          {item.taxLabel} <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{width:10,height:10}}><polyline points="6 9 12 15 18 9"/></svg>
-        </button>
-        {showTaxDrop && (
-          <div className="cdc-tax-drop">
-            {taxOptions.map(t => (
-              <button key={t} className="cdc-tax-opt" onClick={() => { onChange({...item, taxLabel: t, taxRate: getTaxRate(t)}); setShowTaxDrop(false); }}>{t}</button>
-            ))}
+      <td><input className="bill-mini-input" value={item.hsnSac || ""} onChange={e => onChange(item.id, { hsnSac: e.target.value })} /></td>
+      {showQty && (
+        <td>
+          <div className="qty-display">
+            <input className="bill-mini-input qty-in" type="number" min="0" value={item.qty}
+              onChange={e => { const qty = Number(e.target.value); onChange(item.id, { qty, amount: recalcAmount({ qty }, item) }); }} />
+            <span className="qty-unit-badge">{item.unit}</span>
           </div>
-        )}
+        </td>
+      )}
+      {showPrice && (
+        <td>
+          <input className="bill-mini-input" type="number" min="0" value={item.pricePerItem}
+            onChange={e => { const pricePerItem = Number(e.target.value); onChange(item.id, { pricePerItem, amount: recalcAmount({ pricePerItem }, item) }); }} />
+        </td>
+      )}
+      <td>
+        <div className="discount-inputs">
+          <div className="disc-row">
+            <span className="disc-label">%</span>
+            <input className="bill-mini-input" type="number" min="0" max="100" value={item.discount.percent}
+              onChange={e => { const percent = Number(e.target.value); const disc = { ...item.discount, percent }; onChange(item.id, { discount: disc, amount: recalcAmount({ discount: disc }, item) }); }} />
+          </div>
+          <div className="disc-row">
+            <span className="disc-label">₹</span>
+            <input className="bill-mini-input" type="number" min="0" value={item.discount.amount}
+              onChange={e => { const amount = Number(e.target.value); const disc = { ...item.discount, amount }; onChange(item.id, { discount: disc, amount: recalcAmount({ discount: disc }, item) }); }} />
+          </div>
+        </div>
       </td>
-      <td className="cdc-td-amount">₹{amount.toLocaleString("en-IN", {maximumFractionDigits:2})}</td>
-      <td><button className="cdc-del-row-btn" onClick={onDelete}>✕</button></td>
+      <td>
+        <div className="tax-cell">
+          <select className="tax-select" value={item.tax}
+            onChange={e => {
+              const tax = e.target.value;
+              const taxRate = tax === "None" ? 0 : tax === "GST 5%" ? 5 : tax === "GST 12%" ? 12 : tax === "GST 18%" ? 18 : 28;
+              onChange(item.id, { tax, taxRate, amount: recalcAmount({ taxRate }, item) });
+            }}>
+            <option>None</option><option>GST 5%</option><option>GST 12%</option><option>GST 18%</option><option>GST 28%</option>
+          </select>
+        </div>
+      </td>
+      <td>
+        <div className="amount-cell">
+          <span>₹</span>
+          <span className="amount-val">{item.amount.toFixed(2)}</span>
+        </div>
+      </td>
+      <td><button className="delete-row-btn" onClick={() => onDelete(item.id)}><Trash2 size={14} /></button></td>
     </tr>
   );
 }
 
-// ─── Main Component ───────────────────────────────────────────────────────────
-interface Props { editId?: string; onBack: () => void; onSaveAndNew?: () => void; }
+// ─── Main Create Delivery Challan ──────────────────────────────────────────────
+export default function CreateDeliveryChallan({ challan, nextNumber, settings, onSave, onBack, isEditMode }: Props) {
+  const loadParties = (): Party[] => {
+    try {
+      const stored = JSON.parse(localStorage.getItem("parties") || "[]");
+      return stored.map((p: any) => ({ id: p.id, name: p.name, mobile: p.mobile || "-", balance: p.balance || 0, billingAddress: p.billingAddress || "", shippingAddress: p.shippingAddress || "" }));
+    } catch { return []; }
+  };
 
-export default function CreateDeliveryChallan({ editId, onBack, onSaveAndNew }: Props) {
-  const [form, setForm] = useState<DeliveryChallan>(() => {
-    if (editId) return getChallanById(editId) ?? makeBlankChallan(getNextChallanNo());
-    return makeBlankChallan(getNextChallanNo());
+  const [parties, setParties] = useState<Party[]>(loadParties);
+  const [selectedParty, setSelectedParty] = useState<Party | null>(() => {
+    if (challan?.partyId) { const p = loadParties().find(x => x.id === challan.partyId); return p || null; }
+    return null;
   });
+  const [showPartySelector, setShowPartySelector] = useState(false);
+  const [showCreateParty, setShowCreateParty] = useState(false);
+  const [shippingAddress, setShippingAddress] = useState(challan?.shippingAddress || "");
+  const [showShippingModal, setShowShippingModal] = useState(false);
+
+  const [challanNo, setChallanNo] = useState(challan?.challanNumber || nextNumber);
+  const [challanDate, setChallanDate] = useState(challan?.date || todayStr());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [eWayBillNo, setEWayBillNo] = useState(challan?.eWayBillNo || "");
+  const [challanNoRef, setChallanNoRef] = useState(challan?.challanNoRef || "");
+  const [financedBy, setFinancedBy] = useState(challan?.financedBy || "");
+  const [salesman, setSalesman] = useState(challan?.salesman || "");
+  const [emailId, setEmailId] = useState(challan?.emailId || "");
+  const [warrantyPeriod, setWarrantyPeriod] = useState(challan?.warrantyPeriod || "");
+
+  const [billItems, setBillItems] = useState<BillItem[]>(challan?.items || []);
   const [showAddItems, setShowAddItems] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
-  const [showColModal, setShowColModal] = useState(false);
+  const [showHideColumns, setShowHideColumns] = useState(false);
+  const [showPrice, setShowPrice] = useState(true);
+  const [showQty, setShowQty] = useState(true);
+
+  const [notes, setNotes] = useState(challan?.notes || "");
+  const [termsAndConditions, setTermsAndConditions] = useState(challan?.termsAndConditions || "1. Goods once sold will not be taken back or exchanged\n2. All disputes are subject to [ENTER_YOUR_CITY_NAME] jurisdiction only");
+  const [showNotes, setShowNotes] = useState(!!challan?.notes);
+  const [showTerms, setShowTerms] = useState(true);
+
+  const [additionalCharges, setAdditionalCharges] = useState<AdditionalCharge[]>(challan?.additionalCharges || []);
+  const [showAdditionalCharges, setShowAdditionalCharges] = useState((challan?.additionalCharges?.length || 0) > 0);
+
+  // Discount state: both % and ₹ amount, plus type
+  const [discountType, setDiscountType] = useState<"After Tax" | "Before Tax">(challan?.discountType || "After Tax");
+  const [discountPct, setDiscountPct] = useState(challan?.discountPct || 0);
+  const [discountAmt, setDiscountAmt] = useState(challan?.discountAmt || 0);
+  const [showDiscount, setShowDiscount] = useState(!!(challan?.discountPct || challan?.discountAmt));
+  const [showDiscountMenu, setShowDiscountMenu] = useState(false);
+
+  const [autoRoundOff, setAutoRoundOff] = useState(challan?.autoRoundOff || false);
+  const [roundOffAmt, setRoundOffAmt] = useState(challan?.roundOffAmt || 0);
+
+  // Bank account
+  const [selectedBank, setSelectedBank] = useState<BankAccount | null>(null);
   const [showBankModal, setShowBankModal] = useState(false);
-  const [showDateCal, setShowDateCal] = useState(false);
-  const [showNotes, setShowNotes] = useState(!!form.notes);
-  const [showDiscount, setShowDiscount] = useState(form.discountPct > 0 || form.discountAmt > 0);
-  const [showChargeTaxDrop, setShowChargeTaxDrop] = useState<string|null>(null);
+  const [showAddBankModal, setShowAddBankModal] = useState(false);
+
+  const [showSettings, setShowSettings] = useState(false);
+  const [paymentAmount, setPaymentAmount] = useState("");
+
+  const dateRef = useRef<HTMLDivElement>(null);
+  const partySelectorRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (editId) {
-      const ex = getChallanById(editId);
-      if (ex) { setForm(ex); setShowNotes(!!ex.notes); setShowDiscount(ex.discountPct > 0 || ex.discountAmt > 0); }
-    }
-  }, [editId]);
-
-  function set<K extends keyof DeliveryChallan>(field: K, value: DeliveryChallan[K]) {
-    setForm(prev => ({ ...prev, [field]: value }));
-  }
+    const h = (e: MouseEvent) => {
+      if (dateRef.current && !dateRef.current.contains(e.target as Node)) setShowDatePicker(false);
+      if (partySelectorRef.current && !partySelectorRef.current.contains(e.target as Node)) setShowPartySelector(false);
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, []);
 
   // Calculations
-  const subtotal = form.billItems.reduce((s, i) => s + i.price * i.qty, 0);
-  const chargesTotal = form.additionalCharges.reduce((s, c) => s + c.amount, 0);
-  const taxableAmount = subtotal + chargesTotal;
-  const discValue = taxableAmount * form.discountPct / 100 || form.discountAmt;
-  const total = taxableAmount - discValue + form.roundOffAmt;
+  const subtotal = billItems.reduce((s, i) => s + i.qty * i.pricePerItem, 0);
+  const totalDiscountItems = billItems.reduce((s, i) => s + (i.qty * i.pricePerItem * i.discount.percent / 100) + i.discount.amount, 0);
+  const taxableBase = subtotal - totalDiscountItems + additionalCharges.reduce((s, c) => s + c.amount, 0);
+  const taxableAmount = taxableBase;
 
-  function handleSave() { saveChallan({ ...form }); onBack(); }
-  function handleSaveAndNew() {
-    saveChallan({ ...form });
-    const next = makeBlankChallan(getNextChallanNo());
-    setForm(next);
-    setShowNotes(false); setShowDiscount(false);
-    if (onSaveAndNew) onSaveAndNew();
-  }
-  function updateItem(rowId: string, updated: BillItem) {
-    set("billItems", form.billItems.map(i => i.rowId === rowId ? updated : i));
-  }
-  function deleteItem(rowId: string) { set("billItems", form.billItems.filter(i => i.rowId !== rowId)); }
-  function addCharge() {
-    set("additionalCharges", [...form.additionalCharges, { id: `c-${Date.now()}`, label: "", amount: 0, taxLabel: "No Tax Applicable", taxRate: 0 }]);
-  }
-  function updateCharge(id: string, f: Partial<AdditionalCharge>) {
-    set("additionalCharges", form.additionalCharges.map(c => c.id === id ? {...c,...f} : c));
-  }
-  function removeCharge(id: string) { set("additionalCharges", form.additionalCharges.filter(c => c.id !== id)); }
+  // Discount value: % takes precedence, if nonzero; else flat ₹
+  const discValueFromPct = taxableAmount * discountPct / 100;
+  const effectiveDiscount = showDiscount ? (discountPct > 0 ? discValueFromPct : discountAmt) : 0;
 
-  const nextNo = getNextChallanNo();
+  const totalAmount = taxableAmount - effectiveDiscount + (autoRoundOff ? roundOffAmt : 0);
+
+  const handleAddItemsFromModal = (selected: { item: ItemData; qty: number }[]) => {
+    const newItems: BillItem[] = selected.map(({ item, qty }) => ({
+      id: Date.now() + Math.random(),
+      name: item.name,
+      hsnSac: item.hsn || "",
+      qty,
+      unit: item.unit || "PCS",
+      pricePerItem: item.salesPrice,
+      discount: { percent: 0, amount: 0 },
+      tax: "None",
+      taxRate: 0,
+      amount: qty * item.salesPrice,
+    }));
+    setBillItems(prev => [...prev, ...newItems]);
+    setShowAddItems(false);
+  };
+
+  const handleItemChange = (id: number, updates: Partial<BillItem>) => {
+    setBillItems(prev => prev.map(i => i.id === id ? { ...i, ...updates } : i));
+  };
+
+  const handleDeleteItem = (id: number) => setBillItems(prev => prev.filter(i => i.id !== id));
+
+  const handleAddCharge = () => {
+    setAdditionalCharges(prev => [...prev, { id: Date.now(), label: "", amount: 0, tax: "No Tax Applicable" }]);
+    setShowAdditionalCharges(true);
+  };
+
+  const handleSave = () => {
+    const newChallan: ChallanItem = {
+      id: isEditMode ? (challan?.id || Date.now()) : (challan?.id || Date.now()),
+      date: challanDate,
+      challanNumber: challanNo,
+      partyName: selectedParty?.name || challan?.partyName || "Unknown",
+      partyId: selectedParty?.id || challan?.partyId,
+      amount: totalAmount,
+      status: isEditMode ? (challan?.status || "Open") : "Open",
+      items: billItems,
+      notes,
+      termsAndConditions,
+      additionalCharges,
+      discountPct,
+      discountAmt,
+      discountType,
+      autoRoundOff,
+      roundOffAmt,
+      eWayBillNo,
+      challanNoRef,
+      financedBy,
+      salesman,
+      emailId,
+      warrantyPeriod,
+      shippingAddress,
+      selectedBankId: selectedBank?.id,
+    };
+    onSave(newChallan);
+  };
+
+  const handlePartySelect = (p: Party) => {
+    setSelectedParty(p);
+    if (!shippingAddress) setShippingAddress(`${p.name}\nPhone Number: ${p.mobile}`);
+    setShowPartySelector(false);
+  };
+
+  const handleCreateNewParty = (p: Party) => {
+    setParties(prev => [...prev, p]);
+    handlePartySelect(p);
+    setShowCreateParty(false);
+  };
+
+  // When % changes, clear ₹ and vice versa
+  const handleDiscountPctChange = (v: number) => {
+    setDiscountPct(v);
+    if (v > 0) setDiscountAmt(0);
+  };
+  const handleDiscountAmtChange = (v: number) => {
+    setDiscountAmt(v);
+    if (v > 0) setDiscountPct(0);
+  };
 
   return (
     <div className="cdc-page">
-      {/* Top Bar */}
-      <div className="cdc-topbar">
-        <button className="cdc-back-btn" onClick={onBack}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
-          Create Delivery Challan
-        </button>
-        <div className="cdc-topbar-right">
-          <button className="cdc-keyboard-btn" title="Keyboard Shortcuts">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h8"/></svg>
+      {/* Top Nav */}
+      <div className="cdc-topnav">
+        <div className="cdc-topnav-left">
+          <button className="back-btn" onClick={onBack}><ArrowLeft size={18} /></button>
+          <span className="cdc-page-title">{isEditMode ? "Edit Delivery Challan" : "Create Delivery Challan"}</span>
+        </div>
+        <div className="cdc-topnav-right">
+          <button className="cdc-icon-btn" title="Keyboard Shortcuts">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h8"/></svg>
           </button>
           <button className="cdc-settings-btn" onClick={() => setShowSettings(true)}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-            Settings
-            <span className="cdc-notif-dot"/>
+            <Settings size={14} /> Settings <span className="notif-dot-sm" />
           </button>
-          <button className="cdc-save-new-btn" onClick={handleSaveAndNew}>Save &amp; New</button>
-          <button className="cdc-save-btn" onClick={handleSave}>Save</button>
+          <button className="btn-save-new" onClick={handleSave}>Save &amp; New</button>
+          <button className="btn-save-main" onClick={handleSave}>Save</button>
         </div>
       </div>
 
-      {/* Body */}
       <div className="cdc-body">
-        {/* Top Panel */}
-        <div className="cdc-top-panel">
-          {/* Party */}
-          <div className="cdc-party-col">
-            <DCPartySelector
-              selectedParty={form.party}
-              shipTo={form.shipTo}
-              onSelectParty={p => set("party", p)}
-              onShipToChange={addr => set("shipTo", addr)}
-            />
+        {/* Top Split */}
+        <div className={"cdc-top-split" + (selectedParty ? " has-party" : "")}>
+          {/* Bill To */}
+          <div className="cdc-bill-section">
+            <div className="bill-to-header">
+              <span>Bill To</span>
+              {selectedParty && <button className="change-party-btn" onClick={() => setShowPartySelector(true)}>Change Party</button>}
+            </div>
+            {!selectedParty ? (
+              <div className="party-select-area" ref={partySelectorRef}>
+                <div className="add-party-box" onClick={() => setShowPartySelector(true)}>
+                  <Plus size={14} /> Add Party
+                </div>
+                {showPartySelector && (
+                  <PartySelector parties={parties} onSelect={handlePartySelect} onCreateParty={() => { setShowPartySelector(false); setShowCreateParty(true); }} />
+                )}
+              </div>
+            ) : (
+              <div className="party-info-box" ref={partySelectorRef}>
+                <div className="party-info-name">{selectedParty.name}</div>
+                <div className="party-info-detail">Phone Number: {selectedParty.mobile}</div>
+                {showPartySelector && (
+                  <PartySelector parties={parties} onSelect={handlePartySelect} onCreateParty={() => { setShowPartySelector(false); setShowCreateParty(true); }} />
+                )}
+              </div>
+            )}
           </div>
 
-          {/* Meta Fields */}
-          <div className="cdc-meta-col">
-            <div className="cdc-meta">
-              <div className="cdc-meta-row1">
-                <div className="cdc-meta-field">
-                  <label>Challan No:</label>
-                  <input className="cdc-meta-input cdc-meta-input--no" value={`${form.prefix}${form.challanNo}`} readOnly/>
-                </div>
-                <div className="cdc-meta-field">
-                  <label>Challan Date:</label>
-                  <div style={{position:"relative"}}>
-                    <button className="cdc-date-btn" onClick={() => setShowDateCal(!showDateCal)}>
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                      {fmtDisplayDate(form.challanDate)}
-                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{width:11,height:11}}><polyline points="6 9 12 15 18 9"/></svg>
-                    </button>
-                    {showDateCal && <CalPicker value={form.challanDate} onChange={v => { set("challanDate", v); setShowDateCal(false); }} onClose={() => setShowDateCal(false)}/>}
-                  </div>
-                </div>
+          {/* Ship To */}
+          {selectedParty && (
+            <div className="cdc-ship-section">
+              <div className="bill-to-header">
+                <span>Ship To</span>
+                <button className="change-party-btn" onClick={() => setShowShippingModal(true)}>Change Shipping Address</button>
               </div>
-              <div className="cdc-meta-grid4">
-                {[
-                  {label:"E-Way Bill No:", field:"eWayBillNo", val:form.eWayBillNo, info:true},
-                  {label:"Challan No.:", field:"challanRef", val:form.challanRef},
-                  {label:"Financed By:", field:"financedBy", val:form.financedBy},
-                  {label:"Salesman:", field:"salesman", val:form.salesman},
-                ].map(f => (
-                  <div key={f.field} className="cdc-meta-field">
-                    <label>{f.label}{f.info&&<span className="cdc-info-icon" title="E-Way Bill Number">ⓘ</span>}</label>
-                    <input className="cdc-meta-input" value={f.val as string} onChange={e => set(f.field as any, e.target.value)}/>
-                  </div>
+              <div className="party-info-box">
+                {shippingAddress.split("\n").map((line, i) => (
+                  <div key={i} className={i === 0 ? "party-info-name" : "party-info-detail"}>{line}</div>
                 ))}
               </div>
-              <div className="cdc-meta-grid2">
-                <div className="cdc-meta-field"><label>Email ID:</label><input className="cdc-meta-input" value={form.emailId} onChange={e => set("emailId", e.target.value)}/></div>
-                <div className="cdc-meta-field"><label>Warranty Period:</label><input className="cdc-meta-input" value={form.warrantyPeriod} onChange={e => set("warrantyPeriod", e.target.value)}/></div>
+            </div>
+          )}
+
+          {/* Challan Meta */}
+          <div className="cdc-meta-section">
+            <div className="meta-row">
+              <div className="meta-field">
+                <label>Challan No:</label>
+                <input className="meta-input" type="number" value={challanNo} onChange={e => setChallanNo(Number(e.target.value))} />
               </div>
+              <div className="meta-field" ref={dateRef}>
+                <label>Challan Date:</label>
+                <div className="date-trigger" onClick={() => setShowDatePicker(!showDatePicker)}>
+                  <Calendar size={13} />
+                  <span>{fmtDate(challanDate)}</span>
+                  <ChevronDown size={12} />
+                </div>
+                {showDatePicker && (
+                  <InlineDatePicker value={challanDate} onChange={setChallanDate} onClose={() => setShowDatePicker(false)} />
+                )}
+              </div>
+            </div>
+            <div className="meta-row-4">
+              <div className="meta-field"><label>E-Way Bill No: <span className="info-icon">ⓘ</span></label><input className="meta-input" value={eWayBillNo} onChange={e => setEWayBillNo(e.target.value)} /></div>
+              <div className="meta-field"><label>Challan No.:</label><input className="meta-input" value={challanNoRef} onChange={e => setChallanNoRef(e.target.value)} /></div>
+              <div className="meta-field"><label>Financed By:</label><input className="meta-input" value={financedBy} onChange={e => setFinancedBy(e.target.value)} /></div>
+              <div className="meta-field"><label>Salesman:</label><input className="meta-input" value={salesman} onChange={e => setSalesman(e.target.value)} /></div>
+            </div>
+            <div className="meta-row-2">
+              <div className="meta-field"><label>Email ID:</label><input className="meta-input" value={emailId} onChange={e => setEmailId(e.target.value)} /></div>
+              <div className="meta-field"><label>Warranty Period:</label><input className="meta-input" value={warrantyPeriod} onChange={e => setWarrantyPeriod(e.target.value)} /></div>
             </div>
           </div>
         </div>
 
         {/* Items Table */}
         <div className="cdc-items-section">
-          <div className="cdc-items-table-wrap">
-            <table className="cdc-items-table">
-              <thead>
-                <tr>
-                  <th className="cdc-th-no">NO</th>
-                  <th>ITEMS / SERVICES</th>
-                  <th>HSN/SAC</th>
-                  {form.showColumns.quantity && <th>QTY</th>}
-                  {form.showColumns.pricePerItem && <th>PRICE/ITEM (₹)</th>}
-                  <th>DISCOUNT</th>
-                  <th>TAX</th>
-                  <th>AMOUNT (₹)</th>
-                  <th>
-                    <button className="cdc-col-plus-btn" onClick={() => setShowColModal(true)} title="Show/Hide Columns">+</button>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {form.billItems.map((item, idx) => (
-                  <ItemRow key={item.rowId} item={item} idx={idx} showCols={form.showColumns}
-                    onChange={updated => updateItem(item.rowId, updated)}
-                    onDelete={() => deleteItem(item.rowId)}
-                  />
-                ))}
-              </tbody>
-            </table>
-            <div className="cdc-add-item-row">
-              <button className="cdc-add-item-btn" onClick={() => setShowAddItems(true)}>+ Add Item</button>
-              <button className="cdc-barcode-btn">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{width:20,height:20}}>
-                  <rect x="2" y="6" width="3" height="12"/><rect x="6" y="6" width="1.5" height="12"/>
-                  <rect x="8.5" y="6" width="2.5" height="12"/><rect x="12" y="6" width="1.5" height="12"/>
-                  <rect x="14.5" y="6" width="3" height="12"/>
-                </svg>
-                Scan Barcode
-              </button>
-            </div>
-            <div className="cdc-subtotal-row">
-              <span className="cdc-sub-label">SUBTOTAL</span>
-              <span>₹ {subtotal.toLocaleString("en-IN", {maximumFractionDigits:2})}</span>
-              <span>₹ 0</span>
-              <span>₹ {subtotal.toLocaleString("en-IN", {maximumFractionDigits:2})}</span>
-            </div>
+          <table className="cdc-items-table">
+            <thead>
+              <tr>
+                <th>NO</th>
+                <th>ITEMS/ SERVICES</th>
+                <th>HSN/ SAC</th>
+                {showQty && <th>QTY</th>}
+                {showPrice && <th>PRICE/ITEM (₹)</th>}
+                <th>DISCOUNT</th>
+                <th>TAX</th>
+                <th>AMOUNT (₹)</th>
+                <th><button className="add-col-btn" onClick={() => setShowHideColumns(true)}><Plus size={14} /></button></th>
+              </tr>
+            </thead>
+            <tbody>
+              {billItems.map((item, idx) => (
+                <BillItemRow key={item.id} item={item} index={idx} onChange={handleItemChange} onDelete={handleDeleteItem} showPrice={showPrice} showQty={showQty} />
+              ))}
+            </tbody>
+          </table>
+
+          <div className="add-item-row">
+            <div className="add-item-dashed" onClick={() => setShowAddItems(true)}>+ Add Item</div>
+            <div className="scan-barcode-btn" onClick={() => setShowAddItems(true)}><Barcode size={20} /> Scan Barcode</div>
+          </div>
+
+          <div className="subtotal-row">
+            <span className="subtotal-label">SUBTOTAL</span>
+            <span className="subtotal-val">₹ {totalDiscountItems.toFixed(0)}</span>
+            <span className="subtotal-val">₹ 0</span>
+            <span className="subtotal-val">₹ {subtotal.toFixed(0)}</span>
           </div>
         </div>
 
-        {/* Bottom Panel */}
-        <div className="cdc-bottom-panel">
-          {/* Footer left */}
-          <div className="cdc-footer-col">
+        {/* Bottom Split */}
+        <div className="cdc-bottom-split">
+          {/* Left */}
+          <div className="cdc-bottom-left">
             {!showNotes ? (
-              <button className="cdc-footer-link" onClick={() => setShowNotes(true)}>+ Add Notes</button>
+              <button className="link-action-btn" onClick={() => setShowNotes(true)}>+ Add Notes</button>
             ) : (
-              <div className="cdc-notes-section">
-                <div className="cdc-notes-hdr"><span>Notes</span><button onClick={() => { setShowNotes(false); set("notes", ""); }}>✕</button></div>
-                <textarea className="cdc-notes-ta" value={form.notes} onChange={e => set("notes", e.target.value)} placeholder="Enter your notes" rows={3}/>
+              <div className="bottom-text-section">
+                <div className="bts-header"><span>Notes</span><button className="bts-close" onClick={() => setShowNotes(false)}>⊗</button></div>
+                <textarea className="bts-textarea" placeholder="Enter your notes" value={notes} onChange={e => setNotes(e.target.value)} rows={3} />
               </div>
             )}
-            <div className="cdc-terms-section">
-              <div className="cdc-notes-hdr">
-                <span>Terms and Conditions</span>
-                <button onClick={() => set("termsConditions", "")}>✕</button>
-              </div>
-              <textarea className="cdc-notes-ta" value={form.termsConditions} onChange={e => set("termsConditions", e.target.value)} rows={4} placeholder="Enter terms and conditions"/>
-            </div>
-            {!form.bankAccount ? (
-              <button className="cdc-footer-link" onClick={() => setShowBankModal(true)}>+ Add Bank Account</button>
+
+            {!showTerms ? (
+              <button className="link-action-btn" onClick={() => setShowTerms(true)}>+ Add Terms and Conditions</button>
             ) : (
-              <div className="cdc-bank-display">
-                <div className="cdc-notes-hdr">
-                  <span>Bank Account</span>
-                  <button onClick={() => set("bankAccount", null)}>✕</button>
-                </div>
-                <div className="cdc-bank-info">
-                  <div>A/C: {form.bankAccount.accountNumber}</div>
-                  {form.bankAccount.ifscCode && <div>IFSC: {form.bankAccount.ifscCode}</div>}
-                  {form.bankAccount.bankBranchName && <div>{form.bankAccount.bankBranchName}</div>}
-                  {form.bankAccount.accountHolderName && <div>{form.bankAccount.accountHolderName}</div>}
-                  {form.bankAccount.upiId && <div>UPI: {form.bankAccount.upiId}</div>}
-                  <button className="cdc-link" style={{marginTop:4}} onClick={() => setShowBankModal(true)}>Edit</button>
-                </div>
+              <div className="bottom-text-section">
+                <div className="bts-header"><span>Terms and Conditions</span><button className="bts-close" onClick={() => setShowTerms(false)}>⊗</button></div>
+                <textarea className="bts-textarea" placeholder="Enter your terms and conditions" value={termsAndConditions} onChange={e => setTermsAndConditions(e.target.value)} rows={4} />
               </div>
+            )}
+
+            {selectedBank ? (
+              <div className="bank-selected-display">
+                <div className="bank-selected-info">
+                  <span className="bank-logo-icon">🏦</span>
+                  <div>
+                    <div className="bank-sel-name">{selectedBank.bankBranchName || "Bank"}</div>
+                    <div className="bank-sel-acc">ACC: {selectedBank.accountNumber} | IFSC: {selectedBank.ifscCode}</div>
+                  </div>
+                </div>
+                <button className="link-action-btn" onClick={() => setShowBankModal(true)}>Change</button>
+              </div>
+            ) : (
+              <button className="link-action-btn" onClick={() => setShowBankModal(true)}>+ Add Bank Account</button>
             )}
           </div>
 
-          {/* Summary right */}
-          <div className="cdc-summary-col">
-            <button className="cdc-sum-link" onClick={addCharge}>+ Add Additional Charges</button>
-            {form.additionalCharges.map(c => (
-              <div key={c.id} className="cdc-charge-row">
-                <input className="cdc-charge-input" value={c.label} onChange={e => updateCharge(c.id, {label:e.target.value})} placeholder="Enter charge (ex. Transport Charge)"/>
-                <span className="cdc-rs-sm">₹</span>
-                <input type="number" className="cdc-charge-amt" value={c.amount} onChange={e => updateCharge(c.id, {amount:Number(e.target.value)})}/>
-                <div style={{position:"relative"}}>
-                  <button className="cdc-charge-tax-btn" onClick={() => setShowChargeTaxDrop(showChargeTaxDrop===c.id?null:c.id)}>
-                    {c.taxLabel} <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{width:10,height:10}}><polyline points="6 9 12 15 18 9"/></svg>
+          {/* Right: Summary */}
+          <div className="cdc-summary">
+            {/* Additional Charges */}
+            {showAdditionalCharges && additionalCharges.map((charge, i) => (
+              <div key={charge.id} className="charge-row">
+                <input className="charge-label-input" placeholder="Enter charge (ex. Transport Charge)" value={charge.label}
+                  onChange={e => setAdditionalCharges(prev => prev.map((c, ci) => ci === i ? { ...c, label: e.target.value } : c))} />
+                <div className="charge-amount-area">
+                  <span>₹</span>
+                  <input className="charge-amount-input" type="number" value={charge.amount}
+                    onChange={e => setAdditionalCharges(prev => prev.map((c, ci) => ci === i ? { ...c, amount: Number(e.target.value) } : c))} />
+                  <div className="charge-tax-wrapper">
+                    <select className="charge-tax-select" value={charge.tax}
+                      onChange={e => setAdditionalCharges(prev => prev.map((c, ci) => ci === i ? { ...c, tax: e.target.value } : c))}>
+                      <option>No Tax Applicable</option><option>GST 5%</option><option>GST 12%</option><option>GST 18%</option>
+                    </select>
+                  </div>
+                  <button className="charge-remove" onClick={() => setAdditionalCharges(prev => prev.filter((_, ci) => ci !== i))}>⊗</button>
+                </div>
+              </div>
+            ))}
+            <button className="link-action-btn summary-link" onClick={handleAddCharge}>+ Add Additional Charges</button>
+
+            <div className="summary-line"><span>Taxable Amount</span><span>₹ {taxableAmount.toFixed(0)}</span></div>
+
+            {/* Discount */}
+            {showDiscount ? (
+              <div className="discount-row">
+                <div className="discount-type-wrapper">
+                  <button className="discount-type-btn" onClick={() => setShowDiscountMenu(!showDiscountMenu)}>
+                    Discount {discountType} <ChevronDown size={12} />
                   </button>
-                  {showChargeTaxDrop === c.id && (
-                    <div className="cdc-charge-tax-drop">
-                      {DC_CHARGE_TAX_OPTIONS.map(t => <button key={t} className="cdc-tax-opt" onClick={() => { updateCharge(c.id,{taxLabel:t, taxRate: t==="No Tax Applicable"?0:parseInt(t.replace(/\D/g,""))||0}); setShowChargeTaxDrop(null); }}>{t}</button>)}
+                  {showDiscountMenu && (
+                    <div className="discount-menu">
+                      <div className={discountType === "Before Tax" ? "discount-menu-active" : ""} onClick={() => { setDiscountType("Before Tax"); setShowDiscountMenu(false); }}>Discount Before Tax</div>
+                      <div className={discountType === "After Tax" ? "discount-menu-active" : ""} onClick={() => { setDiscountType("After Tax"); setShowDiscountMenu(false); }}>Discount After Tax</div>
                     </div>
                   )}
                 </div>
-                <button className="cdc-charge-del" onClick={() => removeCharge(c.id)}>✕</button>
-              </div>
-            ))}
-            {form.additionalCharges.length > 0 && <button className="cdc-sum-link" onClick={addCharge}>+ Add Another Charge</button>}
-            <div className="cdc-sum-row">
-              <span>Taxable Amount</span>
-              <span>₹ {taxableAmount.toLocaleString("en-IN", {maximumFractionDigits:2})}</span>
-            </div>
-            {!showDiscount ? (
-              <div className="cdc-sum-row">
-                <button className="cdc-sum-link" onClick={() => setShowDiscount(true)}>+ Add Discount</button>
-                <span className="cdc-neg">- ₹ 0</span>
+                <div className="discount-inputs-summary">
+                  <span className="disc-pct-label">%</span>
+                  <input type="number" min="0" max="100" className="disc-pct-input" value={discountPct}
+                    onChange={e => handleDiscountPctChange(Number(e.target.value))} />
+                  <span className="disc-sep">/</span>
+                  <span className="disc-cur">₹</span>
+                  <input type="number" min="0" className="disc-amt-input" value={discountAmt}
+                    onChange={e => handleDiscountAmtChange(Number(e.target.value))} />
+                  <button className="disc-remove" onClick={() => { setShowDiscount(false); setDiscountPct(0); setDiscountAmt(0); }}>⊗</button>
+                </div>
               </div>
             ) : (
-              <div className="cdc-disc-row">
-                <select className="cdc-disc-type" value={form.discountType} onChange={e => set("discountType", e.target.value as any)}>
-                  <option>Discount After Tax</option>
-                  <option>Discount Before Tax</option>
-                </select>
-                <span>%</span>
-                <input type="number" className="cdc-disc-inp" value={form.discountPct} onChange={e => set("discountPct", Number(e.target.value))}/>
-                <span>/</span><span>₹</span>
-                <input type="number" className="cdc-disc-inp" value={form.discountAmt} onChange={e => set("discountAmt", Number(e.target.value))}/>
-                <button className="cdc-charge-del" onClick={() => { setShowDiscount(false); set("discountPct",0); set("discountAmt",0); }}>✕</button>
-              </div>
+              <button className="link-action-btn summary-link" onClick={() => setShowDiscount(true)}>+ Add Discount</button>
             )}
-            <div className="cdc-sum-row">
-              <label className="cdc-check-label">
-                <input type="checkbox" checked={form.roundOff !== "none"} onChange={e => set("roundOff", e.target.checked ? "+Add" : "none")}/>
+            {showDiscount && effectiveDiscount > 0 && (
+              <div className="summary-line discount-val"><span></span><span>- ₹ {effectiveDiscount.toFixed(2)}</span></div>
+            )}
+
+            {/* Round Off */}
+            <div className="roundoff-row">
+              <label className="check-label">
+                <input type="checkbox" checked={autoRoundOff} onChange={e => setAutoRoundOff(e.target.checked)} />
                 Auto Round Off
               </label>
-              <div style={{display:"flex",gap:6,alignItems:"center"}}>
-                <span className="cdc-rs-sm">+ Add</span>
+              <div className="roundoff-right">
+                <div className="roundoff-add-btn">+ Add <ChevronDown size={12} /></div>
                 <span>₹</span>
-                <input type="number" className="cdc-disc-inp" value={form.roundOffAmt} onChange={e => set("roundOffAmt", Number(e.target.value))} disabled={form.roundOff === "none"}/>
+                <input className="roundoff-input" type="number" value={roundOffAmt} onChange={e => setRoundOffAmt(Number(e.target.value))} />
               </div>
             </div>
-            <div className="cdc-total-row">
+
+            <div className="summary-total-row">
               <span>Total Amount</span>
-              {total > 0
-                ? <span className="cdc-total-val">₹ {total.toLocaleString("en-IN", {maximumFractionDigits:2})}</span>
-                : <button className="cdc-enter-payment">Enter Payment amount</button>
-              }
+              <span>₹ {totalAmount.toFixed(0)}</span>
             </div>
-            <div className="cdc-signatory">
-              Authorized signatory for <strong>scratchweb.solutions</strong>
-              <div className="cdc-sig-box"/>
+
+            <div className="payment-input-area">
+              <input className="payment-input" placeholder="Enter Payment amount" value={paymentAmount} onChange={e => setPaymentAmount(e.target.value)} />
             </div>
+
+            <div className="authorized-sig">Authorized signatory for <strong>scratchweb.solutions</strong></div>
+            <div className="sig-box"></div>
           </div>
         </div>
       </div>
 
       {/* Modals */}
-      {showAddItems && <AddItemsModal onClose={() => setShowAddItems(false)} onAdd={items => set("billItems", [...form.billItems, ...items])}/>}
-      {showSettings && <QuickSettings onClose={() => setShowSettings(false)} nextNo={nextNo}/>}
-      {showColModal && <ShowHideColsModal cols={form.showColumns} onChange={c => set("showColumns", c)} onClose={() => setShowColModal(false)}/>}
-      {showBankModal && <BankAccountModal existing={form.bankAccount} onClose={() => setShowBankModal(false)} onSave={b => set("bankAccount", b)}/>}
+      {showCreateParty && <CreatePartyModal onSave={handleCreateNewParty} onClose={() => setShowCreateParty(false)} />}
+      {showShippingModal && selectedParty && (
+        <ChangeShippingModal
+          partyName={selectedParty.name}
+          addresses={[selectedParty.billingAddress || "", selectedParty.shippingAddress || ""]}
+          onDone={addr => { setShippingAddress(addr); setShowShippingModal(false); }}
+          onClose={() => setShowShippingModal(false)}
+        />
+      )}
+      {showAddItems && <AddItemsModal onAddItems={handleAddItemsFromModal} onClose={() => setShowAddItems(false)} onCreateItem={() => setShowAddItems(false)} />}
+      {showHideColumns && <ShowHideColumnsModal showPrice={showPrice} showQty={showQty} onSave={(p, q) => { setShowPrice(p); setShowQty(q); }} onClose={() => setShowHideColumns(false)} />}
+      {showBankModal && (
+        <SelectBankModal
+          onClose={() => setShowBankModal(false)}
+          onAdd={() => { setShowBankModal(false); setShowAddBankModal(true); }}
+          onSelect={b => setSelectedBank(b)}
+        />
+      )}
+      {showAddBankModal && (
+        <AddBankModal
+          onClose={() => setShowAddBankModal(false)}
+          onSaved={b => { setSelectedBank(b); setShowAddBankModal(false); }}
+        />
+      )}
+      {showSettings && <QuickSettingsModal settings={settings} onSave={() => {}} onClose={() => setShowSettings(false)} />}
     </div>
   );
 }
