@@ -1,0 +1,371 @@
+/* ─── Overlay ─────────────────────────────────────────────────────────────── */
+.cnvm-overlay {
+  position: fixed;
+  inset: 0;
+  background: #f0f0f0;
+  z-index: 500;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-family: "Segoe UI", Arial, sans-serif;
+}
+
+/* ─── Top Bar ─────────────────────────────────────────────────────────────── */
+.cnvm-topbar {
+  background: #fff;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 0 20px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+.cnvm-topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.cnvm-back-btn {
+  width: 32px; height: 32px;
+  display: flex; align-items: center; justify-content: center;
+  border: none; background: none; cursor: pointer;
+  color: #374151; border-radius: 6px;
+}
+.cnvm-back-btn:hover { background: #f3f4f6; }
+.cnvm-title {
+  font-size: 15px; font-weight: 600; color: #111827;
+}
+/* status badges */
+.cnvm-badge {
+  display: inline-flex; align-items: center;
+  padding: 3px 10px; border-radius: 20px;
+  font-size: 11px; font-weight: 600; letter-spacing: 0.3px;
+}
+.cnvm-badge--refunded        { background: #dbeafe; color: #1d4ed8; }
+.cnvm-badge--paid            { background: #dcfce7; color: #15803d; }
+.cnvm-badge--unpaid          { background: #fef3c7; color: #b45309; }
+.cnvm-badge--partially-paid  { background: #fce7f3; color: #be185d; }
+
+.cnvm-topbar-right {
+  display: flex; align-items: center; gap: 8px;
+}
+.cnvm-icon-btn {
+  width: 34px; height: 34px;
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid #e5e7eb; border-radius: 6px;
+  background: #fff; cursor: pointer; color: #6b7280;
+}
+.cnvm-icon-btn:hover { border-color: #d1d5db; color: #374151; }
+.cnvm-generate-btn {
+  display: flex; align-items: center; gap: 6px;
+  height: 34px; padding: 0 16px;
+  border: none; border-radius: 6px;
+  background: #4f46e5; color: #fff;
+  font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.cnvm-generate-btn:hover { background: #4338ca; }
+
+/* ─── Action Bar ──────────────────────────────────────────────────────────── */
+.cnvm-actionbar {
+  background: #fff;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 10px 20px;
+  display: flex; align-items: center; gap: 10px;
+  flex-shrink: 0;
+}
+.cnvm-action-btn {
+  display: flex; align-items: center; gap: 6px;
+  height: 32px; padding: 0 14px;
+  border: 1px solid #d1d5db; border-radius: 6px;
+  background: #fff; font-size: 13px; color: #374151;
+  cursor: pointer; font-weight: 500;
+}
+.cnvm-action-btn:hover { border-color: #9ca3af; background: #f9fafb; }
+
+/* split button */
+.cnvm-split-btn {
+  display: flex; border: 1px solid #d1d5db; border-radius: 6px;
+  background: #fff; overflow: hidden;
+}
+.cnvm-split-main {
+  display: flex; align-items: center; gap: 6px;
+  height: 32px; padding: 0 12px;
+  border: none; border-right: 1px solid #d1d5db;
+  background: transparent; font-size: 13px;
+  color: #374151; cursor: pointer; font-weight: 500;
+}
+.cnvm-split-main:hover { background: #f9fafb; }
+.cnvm-split-caret {
+  width: 28px; height: 32px;
+  border: none; background: transparent;
+  cursor: pointer; display: flex;
+  align-items: center; justify-content: center;
+  color: #6b7280; position: relative;
+}
+.cnvm-split-caret:hover { background: #f3f4f6; }
+
+/* split dropdown */
+.cnvm-split-wrap { position: relative; }
+.cnvm-split-dropdown {
+  position: absolute; top: calc(100% + 4px); left: 0;
+  background: #fff; border: 1px solid #e5e7eb;
+  border-radius: 8px; box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+  min-width: 140px; z-index: 200; padding: 4px 0;
+}
+.cnvm-split-dropdown button {
+  display: block; width: 100%; padding: 9px 14px;
+  background: none; border: none; text-align: left;
+  font-size: 13px; color: #374151; cursor: pointer;
+}
+.cnvm-split-dropdown button:hover { background: #f3f4f6; }
+.cnvm-actionbar-right { margin-left: auto; }
+
+/* ─── Body ────────────────────────────────────────────────────────────────── */
+.cnvm-body {
+  flex: 1; overflow-y: auto;
+  padding: 28px 20px;
+  display: flex; justify-content: center;
+  background: #f0f0f0;
+}
+
+/* ─── Document ────────────────────────────────────────────────────────────── */
+.cnvm-doc {
+  width: 720px;
+  background: #fff;
+  border: 1px solid #ccc;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.10);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 11.5px;
+  color: #1a1a1a;
+}
+
+/* ── Doc Header ── */
+.cnvm-doc-header {
+  display: grid; grid-template-columns: 1fr 1fr;
+  border-bottom: 1px solid #ccc;
+}
+.cnvm-doc-company {
+  padding: 14px 16px; border-right: 1px solid #ccc;
+  display: flex; gap: 12px; align-items: flex-start;
+}
+.cnvm-company-logo {
+  width: 48px; height: 48px; flex-shrink: 0;
+  border: 1px solid #ddd; border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+  background: #f9fafb; overflow: hidden;
+}
+.cnvm-company-logo img { width: 100%; height: 100%; object-fit: contain; }
+.cnvm-logo-placeholder {
+  font-size: 8px; color: #9ca3af;
+  font-weight: 700; letter-spacing: 0.5px; text-align: center;
+}
+.cnvm-company-name {
+  font-size: 12.5px; font-weight: 700;
+  color: #c47f17; text-transform: uppercase; margin-bottom: 5px;
+}
+.cnvm-company-addr {
+  font-size: 10.5px; color: #374151; line-height: 1.6;
+}
+.cnvm-doc-meta {
+  padding: 14px 16px;
+  display: flex; flex-direction: column; justify-content: center; gap: 10px;
+}
+.cnvm-meta-row { display: flex; gap: 0; }
+.cnvm-meta-field { flex: 1; }
+.cnvm-meta-field label {
+  display: block; font-size: 10px; font-weight: 700;
+  color: #6b7280; text-transform: uppercase;
+  letter-spacing: 0.4px; margin-bottom: 3px;
+}
+.cnvm-meta-field span { font-size: 11.5px; font-weight: 600; color: #111; }
+
+/* ── Party ── */
+.cnvm-doc-party {
+  padding: 9px 14px; border-bottom: 1px solid #ccc;
+}
+.cnvm-party-label {
+  font-size: 9.5px; font-weight: 700; color: #6b7280;
+  text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 4px;
+}
+.cnvm-party-name {
+  font-size: 13px; font-weight: 700; color: #111;
+  text-transform: uppercase; margin-bottom: 2px;
+}
+.cnvm-party-detail { font-size: 10.5px; color: #6b7280; line-height: 1.5; }
+
+/* ── Items Table ── */
+.cnvm-items-table {
+  width: 100%; border-collapse: collapse;
+}
+.cnvm-items-table thead tr { background: #f5f0e4; }
+.cnvm-items-table th {
+  padding: 7px 10px;
+  font-size: 10px; font-weight: 700;
+  color: #374151; text-transform: uppercase;
+  letter-spacing: 0.3px;
+  border-bottom: 1px solid #ccc;
+  border-right: 1px solid #ccc;
+  text-align: left;
+}
+.cnvm-items-table th:last-child { border-right: none; }
+.cnvm-items-table td {
+  padding: 7px 10px;
+  font-size: 11px; color: #1a1a1a;
+  border-right: 1px solid #e5e5e5;
+  vertical-align: top;
+}
+.cnvm-items-table td:last-child { border-right: none; }
+.cnvm-items-table tbody tr:not(.cnvm-empty-row) { border-bottom: 1px solid #efefef; }
+.cnvm-tax-note { font-size: 9.5px; color: #9ca3af; }
+.cnvm-item-desc { font-size: 9.5px; color: #9ca3af; margin-top: 2px; }
+.cnvm-empty-row td { height: 180px; }
+
+/* Alignment helpers */
+.ta-r { text-align: right; }
+.ta-c { text-align: center; }
+
+/* ── Totals Table ── */
+.cnvm-totals-wrap { border-top: 1px solid #ccc; }
+.cnvm-totals-table { width: 100%; border-collapse: collapse; }
+.cnvm-totals-table .totals-head-row { background: #f5f0e4; }
+.cnvm-totals-table .totals-head-row td {
+  padding: 7px 10px;
+  font-size: 10px; font-weight: 700;
+  color: #374151; text-transform: uppercase; letter-spacing: 0.3px;
+  border-right: 1px solid #ccc; border-bottom: 1px solid #ccc;
+}
+.cnvm-totals-table .totals-head-row td:last-child { border-right: none; }
+.cnvm-totals-table .totals-row td {
+  padding: 6px 10px; font-size: 11px;
+  border-top: 1px solid #e5e5e5; border-right: 1px solid #e5e5e5;
+}
+.cnvm-totals-table .totals-row td:last-child { border-right: none; }
+.cnvm-total-label {
+  font-size: 11px; font-weight: 700; color: #374151;
+  text-align: right; padding-right: 14px !important;
+  background: #faf8f4;
+}
+.cnvm-total-val {
+  font-size: 11px; font-weight: 600; color: #111;
+  text-align: right; min-width: 80px;
+}
+
+/* ── HSN Summary ── */
+.cnvm-hsn-wrap { border-top: 1px solid #ccc; }
+.cnvm-hsn-table { width: 100%; border-collapse: collapse; }
+.cnvm-hsn-table thead tr { background: #f5f0e4; }
+.cnvm-hsn-table th {
+  padding: 5px 8px; font-size: 9.5px; font-weight: 700;
+  color: #374151; text-transform: uppercase; letter-spacing: 0.3px;
+  border-bottom: 1px solid #ccc; border-right: 1px solid #ccc;
+  text-align: center;
+}
+.cnvm-hsn-table th:last-child { border-right: none; }
+.cnvm-hsn-table td {
+  padding: 5px 8px; font-size: 10.5px;
+  border-right: 1px solid #e5e5e5; text-align: center;
+}
+.cnvm-hsn-table td:last-child { border-right: none; }
+
+/* ── Amount in Words ── */
+.cnvm-words-wrap {
+  border-top: 1px solid #ccc;
+  padding: 9px 14px;
+}
+.cnvm-words-label {
+  font-size: 9.5px; font-weight: 700; color: #374151;
+  text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 3px;
+}
+.cnvm-words-value { font-size: 11px; color: #1a1a1a; font-style: italic; }
+
+/* ── Footer ── */
+.cnvm-doc-footer {
+  border-top: 1px solid #ccc;
+  display: grid; grid-template-columns: 1fr 1fr; min-height: 90px;
+}
+.cnvm-terms-wrap { padding: 10px 14px; border-right: 1px solid #ccc; }
+.cnvm-terms-label {
+  font-size: 9.5px; font-weight: 700; color: #374151;
+  text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 5px;
+}
+.cnvm-terms-text { font-size: 10.5px; color: #374151; line-height: 1.6; white-space: pre-line; }
+.cnvm-signatory-wrap {
+  padding: 10px 14px;
+  display: flex; flex-direction: column;
+  align-items: flex-end; justify-content: flex-end;
+}
+.cnvm-signatory-text { font-size: 10.5px; color: #374151; text-align: center; line-height: 1.5; }
+
+/* ─── Print ───────────────────────────────────────────────────────────────── */
+@media print {
+  .cnvm-overlay { position: static; background: #fff; }
+  .cnvm-topbar, .cnvm-actionbar { display: none !important; }
+  .cnvm-body { padding: 0; overflow: visible; background: #fff; }
+  .cnvm-doc { width: 100%; box-shadow: none; border: none; }
+}
+
+/* ─── Three-dot dropdown menu ─────────────────────────────────────────────── */
+.cnvm-dots-wrap {
+  position: relative;
+}
+
+.cnvm-dots-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.13);
+  min-width: 180px;
+  z-index: 300;
+  padding: 5px 0;
+  overflow: hidden;
+}
+
+.cnvm-dots-dropdown button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 11px 18px;
+  background: none;
+  border: none;
+  text-align: left;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #374151;
+  cursor: pointer;
+  font-family: inherit;
+}
+.cnvm-dots-dropdown button:hover {
+  background: #f3f4f6;
+}
+
+.cnvm-dots-divider {
+  height: 1px;
+  background: #f0f0f0;
+  margin: 4px 0;
+}
+
+.cnvm-dots-danger {
+  color: #dc2626 !important;
+}
+.cnvm-dots-danger svg {
+  stroke: #dc2626;
+}
+.cnvm-dots-danger:hover {
+  background: #fef2f2 !important;
+}
+
+/* ─── Document title line ─────────────────────────────────────────────────── */
+.cnvm-doc-title {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding-bottom: 6px;
+  margin-bottom: 10px;
+  text-align: right;
+}

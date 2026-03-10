@@ -1,0 +1,707 @@
+/* ─── Overlay ────────────────────────────────────────────────────────────────── */
+.pfi-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 1000;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+}
+
+.pfi-modal {
+  background: #f4f4f2;
+  width: 100%;
+  max-width: 100vw;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ─── Top Bar ─────────────────────────────────────────────────────────────────── */
+.pfi-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px;
+  background: #fff;
+  border-bottom: 1px solid #e5e7eb;
+  min-height: 52px;
+  flex-shrink: 0;
+}
+
+.pfi-topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.pfi-back-btn {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: #374151;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: background 0.15s;
+}
+.pfi-back-btn:hover { background: #f3f4f6; }
+
+.pfi-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.pfi-status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 10px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+.pfi-status--open {
+  background: #dcfce7;
+  color: #16a34a;
+}
+.pfi-status--closed {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.pfi-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 3-dot menu */
+.pfi-menu-wrap {
+  position: relative;
+}
+
+.pfi-dot-btn {
+  width: 34px;
+  height: 34px;
+  border: 1.5px solid #d1d5db;
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #374151;
+  transition: border-color 0.15s, background 0.15s;
+}
+.pfi-dot-btn:hover,
+.pfi-dot-btn.active {
+  border-color: #6366f1;
+  background: #f5f3ff;
+  color: #4f46e5;
+}
+
+/* Dropdown — exactly like Image 2 */
+.pfi-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 190px;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.13), 0 1px 4px rgba(0,0,0,0.07);
+  z-index: 100;
+  padding: 6px 0;
+  animation: pfi-drop-in 0.12s ease;
+}
+
+@keyframes pfi-drop-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.pfi-drop-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 16px;
+  font-size: 14px;
+  color: #1f2937;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  font-weight: 500;
+  transition: background 0.1s;
+}
+.pfi-drop-item:hover {
+  background: #f9fafb;
+}
+
+.pfi-drop-icon {
+  display: flex;
+  align-items: center;
+  color: #6b7280;
+}
+
+.pfi-drop-sep {
+  height: 1px;
+  background: #f3f4f6;
+  margin: 4px 0;
+}
+
+.pfi-drop-item--danger {
+  color: #dc2626;
+}
+.pfi-drop-item--danger .pfi-drop-icon {
+  color: #dc2626;
+}
+.pfi-drop-item--danger:hover {
+  background: #fff5f5;
+}
+
+.pfi-chat-btn {
+  width: 34px;
+  height: 34px;
+  border: 1.5px solid #d1d5db;
+  border-radius: 6px;
+  background: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #374151;
+  transition: border-color 0.15s;
+}
+.pfi-chat-btn:hover { border-color: #6366f1; color: #4f46e5; }
+
+/* ─── Action Bar ─────────────────────────────────────────────────────────────── */
+.pfi-actionbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 20px;
+  background: #fff;
+  border-bottom: 1px solid #e5e7eb;
+  flex-shrink: 0;
+  gap: 8px;
+}
+
+.pfi-actionbar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pfi-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border: 1.5px solid #d1d5db;
+  border-radius: 6px;
+  background: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  white-space: nowrap;
+}
+.pfi-action-btn:hover {
+  border-color: #9ca3af;
+  background: #f9fafb;
+}
+
+.pfi-action-btn--round {
+  padding: 7px 9px;
+}
+
+.pfi-action-btn--share {
+  gap: 6px;
+}
+
+.pfi-action-chevron {
+  font-size: 10px;
+  color: #9ca3af;
+  margin-left: 2px;
+}
+
+.pfi-convert-btn {
+  padding: 9px 22px;
+  background: #4f46e5;
+  color: #fff;
+  border: none;
+  border-radius: 7px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+  white-space: nowrap;
+}
+.pfi-convert-btn:hover:not(:disabled) { background: #4338ca; }
+.pfi-convert-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ─── Content Area ───────────────────────────────────────────────────────────── */
+.pfi-content-wrap {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 0;
+  display: flex;
+  justify-content: center;
+  background: #e8e8e6;
+}
+
+/* ─── Paper (the white invoice card) ────────────────────────────────────────── */
+.pfi-paper {
+  background: #fff;
+  width: 760px;
+  max-width: 96vw;
+  min-height: 900px;
+  box-shadow: 0 2px 20px rgba(0,0,0,0.10);
+  font-size: 12px;
+  color: #222;
+  padding: 0;
+}
+
+/* ─── Paper Header (business info + invoice meta) ───────────────────────────── */
+.pfi-paper-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 18px 20px 14px;
+  border-bottom: 2px solid #3b5bdb;
+}
+
+.pfi-biz-left {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  flex: 1;
+}
+
+.pfi-logo {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+.pfi-logo-placeholder {
+  width: 56px;
+  height: 56px;
+  border: 1.5px solid #3b5bdb;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f8f9ff;
+  flex-shrink: 0;
+}
+
+.pfi-biz-info { flex: 1; }
+
+.pfi-biz-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: #3b5bdb;
+  margin-bottom: 3px;
+}
+
+.pfi-biz-addr {
+  font-size: 11px;
+  color: #555;
+  line-height: 1.4;
+  margin-bottom: 2px;
+}
+
+.pfi-biz-contact {
+  font-size: 11px;
+  color: #555;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.pfi-inv-meta {
+  min-width: 180px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.pfi-inv-meta-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  margin-bottom: 8px;
+}
+
+.pfi-inv-meta-label {
+  font-size: 11px;
+  color: #888;
+  font-weight: 500;
+}
+
+.pfi-inv-meta-val {
+  font-size: 20px;
+  font-weight: 700;
+  color: #111;
+  line-height: 1.2;
+}
+
+/* ─── Doc Title ──────────────────────────────────────────────────────────────── */
+.pfi-doc-title {
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  padding: 8px 0 6px;
+  color: #3b5bdb;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+/* ─── Bill To ────────────────────────────────────────────────────────────────── */
+.pfi-bill-section {
+  padding: 10px 20px 10px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.pfi-bill-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.8px;
+  color: #888;
+  margin-bottom: 3px;
+  text-transform: uppercase;
+}
+
+.pfi-bill-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #111;
+}
+
+.pfi-bill-contact {
+  font-size: 11px;
+  color: #555;
+  margin-top: 2px;
+}
+
+.pfi-bill-addr {
+  font-size: 11px;
+  color: #555;
+}
+
+/* ─── Items Table ────────────────────────────────────────────────────────────── */
+.pfi-items-table {
+  width: 100%;
+  border-collapse: collapse;
+  border-top: 1px solid #e5e7eb;
+}
+
+.pfi-th {
+  padding: 7px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-align: center;
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.2);
+}
+
+.pfi-th--services { text-align: left; width: 45%; }
+.pfi-th--sno      { width: 7%; }
+.pfi-th--qty      { width: 12%; }
+.pfi-th--rate     { width: 10%; }
+.pfi-th--tax      { width: 10%; }
+.pfi-th--amount   { width: 12%; }
+
+.pfi-td {
+  padding: 7px 10px;
+  font-size: 11px;
+  color: #333;
+  text-align: center;
+  border: 1px solid #e5e7eb;
+  vertical-align: top;
+  height: 28px;
+}
+
+.pfi-td--services { text-align: left; text-transform: uppercase; }
+.pfi-td--sno      { text-align: center; }
+
+.pfi-tr-even { background: #fff; }
+.pfi-tr-odd  { background: #fafaf8; }
+
+.pfi-tax-pct {
+  font-size: 9px;
+  color: #888;
+}
+
+/* Footer total row */
+.pfi-tfoot-total {
+  background: #f9f9f7;
+  font-weight: 600;
+}
+.pfi-tfoot-label {
+  text-align: right !important;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  padding-right: 14px;
+}
+
+/* ─── HSN Table ──────────────────────────────────────────────────────────────── */
+.pfi-hsn-table {
+  width: 100%;
+  border-collapse: collapse;
+  border-top: none;
+}
+
+.pfi-hsn-th {
+  background: #f5f5f0;
+  padding: 5px 8px;
+  font-size: 10px;
+  font-weight: 600;
+  text-align: center;
+  border: 1px solid #ddd;
+  color: #333;
+}
+
+.pfi-hsn-th--group {
+  text-align: center;
+}
+
+.pfi-hsn-subrow {
+  display: flex;
+  justify-content: space-around;
+  font-size: 9px;
+  font-weight: 500;
+  color: #666;
+  margin-top: 2px;
+  border-top: 1px solid #ddd;
+  padding-top: 2px;
+}
+
+.pfi-hsn-td {
+  padding: 5px 8px;
+  font-size: 11px;
+  color: #333;
+  text-align: center;
+  border: 1px solid #e0e0e0;
+}
+
+/* ─── Amount in Words ────────────────────────────────────────────────────────── */
+.pfi-words-box {
+  padding: 8px 14px;
+  border-left: none;
+  border-right: none;
+  border-top: 1px solid #e0e0e0;
+}
+
+.pfi-words-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 2px;
+  letter-spacing: 0.3px;
+}
+
+.pfi-words-val {
+  font-size: 11px;
+  color: #444;
+  font-style: italic;
+}
+
+/* ─── Terms & Signature ──────────────────────────────────────────────────────── */
+.pfi-terms-row {
+  display: flex;
+  min-height: 80px;
+  border-left: none;
+  border-right: none;
+  border-top: none;
+}
+
+.pfi-terms-left {
+  flex: 1;
+  padding: 10px 14px;
+  border-right: 1px solid #e0e0e0;
+}
+
+.pfi-terms-title {
+  font-size: 10px;
+  font-weight: 700;
+  color: #333;
+  margin-bottom: 5px;
+  letter-spacing: 0.3px;
+}
+
+.pfi-terms-text {
+  font-size: 10px;
+  color: #555;
+  line-height: 1.6;
+}
+
+.pfi-sig-box {
+  width: 200px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  padding: 10px 14px;
+  text-align: center;
+}
+
+.pfi-sig-img {
+  max-height: 50px;
+  max-width: 140px;
+  object-fit: contain;
+  margin-bottom: 4px;
+}
+
+.pfi-sig-label {
+  font-size: 10px;
+  color: #555;
+  line-height: 1.5;
+}
+
+/* ─── Inner Modals (Edit History, Delete Confirm) ───────────────────────────── */
+.pfi-inner-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.35);
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pfi-inner-modal {
+  background: #fff;
+  border-radius: 12px;
+  width: 420px;
+  max-width: 94vw;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+  overflow: hidden;
+}
+
+.pfi-inner-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #f3f4f6;
+  font-size: 15px;
+  font-weight: 600;
+  color: #111;
+}
+.pfi-inner-header button {
+  background: transparent;
+  border: none;
+  font-size: 16px;
+  cursor: pointer;
+  color: #6b7280;
+  line-height: 1;
+}
+
+.pfi-inner-body {
+  padding: 18px 20px;
+}
+
+.pfi-inner-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 20px;
+  border-top: 1px solid #f3f4f6;
+}
+
+/* Edit history entries */
+.pfi-hist-item {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 8px 0;
+}
+.pfi-hist-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #4f46e5;
+  margin-top: 3px;
+  flex-shrink: 0;
+}
+.pfi-hist-action {
+  font-size: 13px;
+  font-weight: 500;
+  color: #111;
+}
+.pfi-hist-time {
+  font-size: 11px;
+  color: #9ca3af;
+  margin-top: 2px;
+}
+
+/* Buttons */
+.pfi-btn-primary {
+  padding: 8px 20px;
+  background: #4f46e5;
+  color: #fff;
+  border: none;
+  border-radius: 7px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.pfi-btn-primary:hover { background: #4338ca; }
+
+.pfi-btn-cancel {
+  padding: 8px 20px;
+  background: transparent;
+  color: #374151;
+  border: 1.5px solid #d1d5db;
+  border-radius: 7px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.pfi-btn-cancel:hover { background: #f9fafb; }
+
+.pfi-btn-danger {
+  padding: 8px 20px;
+  background: #dc2626;
+  color: #fff;
+  border: none;
+  border-radius: 7px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.pfi-btn-danger:hover { background: #b91c1c; }
+
+/* ─── Scrollbar ─────────────────────────────────────────────────────────────── */
+.pfi-content-wrap::-webkit-scrollbar { width: 6px; }
+.pfi-content-wrap::-webkit-scrollbar-track { background: #e8e8e6; }
+.pfi-content-wrap::-webkit-scrollbar-thumb { background: #c4c4c0; border-radius: 3px; }
+
+/* ─── Responsive ────────────────────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .pfi-actionbar { flex-wrap: wrap; }
+  .pfi-actionbar-left { flex-wrap: wrap; gap: 6px; }
+  .pfi-action-btn span:not(.pfi-action-chevron) { display: none; }
+  .pfi-action-btn--round { padding: 7px; }
+  .pfi-paper { min-height: unset; }
+  .pfi-topbar { padding: 8px 12px; }
+  .pfi-content-wrap { padding: 12px 0; }
+}

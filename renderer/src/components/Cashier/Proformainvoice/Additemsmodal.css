@@ -1,0 +1,129 @@
+.aim-overlay {
+  position:fixed; inset:0; background:rgba(20,20,40,0.45);
+  z-index:600; display:flex; align-items:center; justify-content:center;
+}
+.aim-modal {
+  background:#fff; border-radius:14px;
+  width:92%; max-width:900px; max-height:88vh;
+  display:flex; flex-direction:column;
+  box-shadow:0 20px 60px rgba(0,0,0,0.2);
+  animation:modalSlide 0.18s ease;
+}
+@keyframes modalSlide {
+  from{opacity:0;transform:translateY(16px) scale(0.97);}
+  to{opacity:1;transform:translateY(0) scale(1);}
+}
+.aim-header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:18px 20px 14px;
+  border-bottom:1px solid #eee;
+}
+.aim-header h2 { margin:0; font-size:17px; font-weight:700; color:#1a1a2e; }
+.aim-close {
+  width:30px; height:30px; border:none; background:transparent; cursor:pointer;
+  color:#999; border-radius:6px; display:flex; align-items:center; justify-content:center;
+  transition:background 0.1s;
+}
+.aim-close:hover { background:#f0f0f0; color:#333; }
+
+.aim-toolbar {
+  display:flex; align-items:center; gap:10px; padding:12px 16px;
+  border-bottom:1px solid #f0f0f8;
+}
+.aim-search-wrap {
+  flex:1; display:flex; align-items:center; gap:8px;
+  border:1.5px solid #5b4fcf; border-radius:8px;
+  padding:0 10px; height:38px; color:#999;
+}
+.aim-search {
+  flex:1; border:none; outline:none;
+  font-size:13px; color:#333; background:transparent;
+}
+.aim-barcode-btn {
+  background:transparent; border:none; cursor:pointer;
+  color:#888; display:flex; align-items:center;
+}
+.aim-cat-wrap { position:relative; }
+.aim-cat-select {
+  height:38px; padding:0 32px 0 12px;
+  border:1.5px solid #dde1e7; border-radius:8px;
+  font-size:13px; color:#555;
+  background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") no-repeat right 10px center;
+  appearance:none; cursor:pointer; min-width:160px;
+}
+.aim-create-btn {
+  height:38px; padding:0 16px;
+  background:#4f46e5; color:#fff;
+  border:none; border-radius:8px;
+  font-size:13px; font-weight:600; cursor:pointer;
+  white-space:nowrap;
+  transition:background 0.15s;
+}
+.aim-create-btn:hover { background:#4338ca; }
+
+.aim-table-wrap { flex:1; overflow-y:auto; }
+.aim-table { width:100%; border-collapse:collapse; }
+.aim-table thead tr { background:#f8f8fb; border-bottom:1.5px solid #e8e8f0; }
+.aim-table th {
+  padding:11px 14px; text-align:left;
+  font-size:13px; font-weight:600; color:#555;
+}
+.aim-table td {
+  padding:13px 14px; font-size:13.5px; color:#2c2c3e;
+  border-bottom:1px solid #f0f0f8;
+}
+.aim-table tbody tr:hover { background:#fafafc; }
+.aim-row-selected td { background:#f0ecfd; }
+.aim-item-name { font-weight:500; }
+.aim-empty { text-align:center; padding:60px !important; color:#aaa; font-size:14px; }
+.aim-add-btn {
+  height:32px; padding:0 16px;
+  background:#fff; border:1.5px solid #4f46e5;
+  color:#4f46e5; border-radius:6px; cursor:pointer;
+  font-size:13px; font-weight:600;
+  transition:background 0.1s;
+}
+.aim-add-btn:hover { background:#f0ecfd; }
+.aim-qty-input {
+  width:72px; height:32px; padding:0 8px;
+  border:1.5px solid #4f46e5; border-radius:6px;
+  font-size:13px; text-align:center; outline:none;
+}
+
+.aim-footer {
+  border-top:1px solid #eee;
+  padding:12px 16px;
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+}
+.aim-shortcuts {
+  display:flex; align-items:center; gap:6px;
+  font-size:12px; color:#888;
+}
+.aim-shortcuts-label { font-weight:600; color:#666; }
+kbd {
+  background:#f0f0f0; border:1px solid #ddd;
+  border-radius:4px; padding:1px 7px;
+  font-size:11px; font-family:monospace;
+}
+.aim-footer-actions {
+  display:flex; align-items:center; gap:12px;
+}
+.aim-selected-count { font-size:13px; color:#666; }
+.aim-cancel-btn {
+  height:36px; padding:0 16px;
+  background:#fff; border:1.5px solid #dde1e7;
+  border-radius:8px; font-size:13px; font-weight:500;
+  color:#555; cursor:pointer; transition:border-color 0.15s;
+}
+.aim-cancel-btn:hover { border-color:#bbb; }
+.aim-confirm-btn {
+  height:36px; padding:0 20px;
+  background:#6c63e8; color:#fff;
+  border:none; border-radius:8px;
+  font-size:13px; font-weight:600; cursor:pointer;
+  transition:background 0.15s;
+}
+.aim-confirm-btn:hover { background:#4338ca; }
+.aim-confirm-btn.disabled {
+  background:#c4c0f0; cursor:not-allowed;
+}

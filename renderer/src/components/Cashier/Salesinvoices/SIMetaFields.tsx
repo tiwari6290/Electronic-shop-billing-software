@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { addDays, fmtDisplayDate } from "./SalesInvoiceTypes";
 import "./SIMetaFields.css";
 
@@ -65,6 +66,7 @@ interface SIMetaFieldsProps {
 }
 
 export default function SIMetaFields(p: SIMetaFieldsProps) {
+  const navigate = useNavigate();
   const [showDateCal, setShowDateCal] = useState(false);
   const [showDueCal, setShowDueCal] = useState(false);
   const [showColModal, setShowColModal] = useState(false);
@@ -183,7 +185,7 @@ export default function SIMetaFields(p: SIMetaFieldsProps) {
                 <div className="si-col-empty-msg">No Custom Columns added</div>
                 <div className="si-col-empty-sub">Any custom column such as Batch # & Expiry Date can be added</div>
                 <div className="si-col-hint">
-                  To add Custom Item Columns - Go to <strong>Item settings</strong> from <span className="si-link">Items page (click here)</span>
+                  To add Custom Item Columns - Go to <strong>Item settings</strong> from <span className="si-link" onClick={() => navigate("/cashier/create-item/inventory")} style={{cursor:"pointer"}}>Items page (click here)</span>
                 </div>
               </div>
             </div>

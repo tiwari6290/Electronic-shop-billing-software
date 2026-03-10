@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { Item, BillItem, getItems } from "./SalesInvoiceTypes";
 import "./SIAddItemsModal.css";
 
@@ -8,6 +9,7 @@ interface Props {
 }
 
 export default function SIAddItemsModal({ onClose, onAddToBill }: Props) {
+  const navigate = useNavigate();
   const [items] = useState<Item[]>(getItems());
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("");
@@ -89,7 +91,7 @@ export default function SIAddItemsModal({ onClose, onAddToBill }: Props) {
             <option value="">Select Category</option>
             {categories.map(c=><option key={c}>{c}</option>)}
           </select>
-          <button className="si-aim-create">Create New Item</button>
+          <button className="si-aim-create" onClick={() => { onClose(); navigate("/cashier/create-item"); }}>Create New Item</button>
         </div>
 
         <div className="si-aim-table-wrap">
