@@ -55,30 +55,31 @@ function saveShippingAddresses(partyId: number, addrs: ShippingAddress[]) {
 /**
  * Build the initial address list for a party:
  * 1. Load saved addresses from localStorage
- * 2. If party has a shippingAddress and no entry is already seeded/saved for it,
- *    prepend it and immediately persist so it survives re-opens without duplication.
+ * 2. Always ensure a seeded entry (fromParty) exists so the address shown
+ *    in the Ship To panel is always present and editable in the modal.
+ *    If the party has no shippingAddress, the seeded entry starts blank
+ *    so the user can fill it in via the Edit button.
  */
 function buildAddressList(party: Party): ShippingAddress[] {
   const saved = loadShippingAddresses(party.id);
 
-  if (party.shippingAddress && party.shippingAddress.trim()) {
-    // Already seeded (fromParty flag) or already saved from a previous edit
-    const alreadyPresent = saved.some(a => a.fromParty);
-    if (!alreadyPresent) {
-      const seeded: ShippingAddress = {
-        id: -(party.id), // stable negative id tied to party — won't change on re-open
-        name: party.name,
-        street: party.shippingAddress.trim(),
-        state: "", pincode: "", city: "",
-        fromParty: true,
-      };
-      const merged = [seeded, ...saved];
-      // Persist immediately so next open loads it and won't duplicate
-      saveShippingAddresses(party.id, merged);
-      return merged;
-    }
-  }
-  return saved;
+  // Already seeded (fromParty flag) — list is already initialised, return as-is
+  const alreadyPresent = saved.some(a => a.fromParty);
+  if (alreadyPresent) return saved;
+
+  // Seed an entry from the party's shipping address (may be blank — that's fine,
+  // the user can click Edit to fill it in)
+  const seeded: ShippingAddress = {
+    id: -(party.id), // stable negative id tied to party — won't change on re-open
+    name: party.name,
+    street: (party.shippingAddress ?? "").trim(),
+    state: "", pincode: "", city: "",
+    fromParty: true,
+  };
+  const merged = [seeded, ...saved];
+  // Persist immediately so next open loads it and won't duplicate
+  saveShippingAddresses(party.id, merged);
+  return merged;
 }
 
 // ─── Add / Edit Shipping Address Form ─────────────────────────────────────────
@@ -279,6 +280,7 @@ function ShippingListModal({
           ) : (
             addresses.map(addr => {
               const isSel = selectedId === addr.id;
+              const displayAddr = formatShipAddress(addr);
               return (
                 <div
                   key={addr.id}
@@ -286,7 +288,9 @@ function ShippingListModal({
                 >
                   <div className="si-ship-addr-info">
                     <div className="si-ship-addr-name">{addr.name}</div>
-                    <div className="si-ship-addr-line">{formatShipAddress(addr)}</div>
+                    <div className="si-ship-addr-line">
+                      {displayAddr || <span style={{color:"#9ca3af",fontStyle:"italic"}}>No address saved — click Edit to add</span>}
+                    </div>
                   </div>
                   <div className="si-ship-addr-actions">
                     {/* Edit pencil */}

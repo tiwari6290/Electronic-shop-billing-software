@@ -2,6 +2,75 @@ import { useState, useRef, useEffect } from "react";
 import { AdditionalCharge, CHARGE_TAX_OPTIONS, TCS_RATES, PAYMENT_METHODS } from "./SalesInvoiceTypes";
 import "./SISummary.css";
 
+// ─── TCS Rate helpers ─────────────────────────────────────────────────────────
+function loadAllTcsRates(): { label: string; rate: number }[] {
+  const defaults = TCS_RATES;
+  try {
+    const custom: { label: string; rate: number }[] = JSON.parse(localStorage.getItem("customTcsRates") || "[]");
+    return [...defaults, ...custom];
+  } catch { return defaults; }
+}
+
+function saveCustomTcsRate(r: { label: string; rate: number }) {
+  try {
+    const existing: { label: string; rate: number }[] = JSON.parse(localStorage.getItem("customTcsRates") || "[]");
+    localStorage.setItem("customTcsRates", JSON.stringify([...existing, r]));
+  } catch {}
+}
+
+// ─── Add TCS Rate Modal ───────────────────────────────────────────────────────
+function AddTcsRateModal({ onClose, onSaved }: { onClose: () => void; onSaved: (r: { label: string; rate: number }) => void }) {
+  const [taxName, setTaxName] = useState("");
+  const [section, setSection] = useState("");
+  const [rate, setRate] = useState(0);
+  const canSave = taxName.trim().length > 0;
+
+  function handleSave() {
+    if (!canSave) return;
+    const label = `${rate}% ${section.trim() ? section.trim() + " " : ""}${taxName.trim()}`;
+    const r = { label, rate };
+    saveCustomTcsRate(r);
+    onSaved(r);
+  }
+
+  const inp: React.CSSProperties = {
+    width: "100%", padding: "10px 12px", border: "1px solid #e5e7eb",
+    borderRadius: 8, fontSize: 13, outline: "none", boxSizing: "border-box",
+  };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={onClose}>
+      <div style={{ background: "#fff", borderRadius: 14, width: 500, maxWidth: "95vw", boxShadow: "0 24px 60px rgba(0,0,0,.2)", fontFamily: "Segoe UI, sans-serif" }} onClick={e => e.stopPropagation()}>
+        {/* Header */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "18px 24px", borderBottom: "1px solid #f3f4f6" }}>
+          <span style={{ fontSize: 16, fontWeight: 700, color: "#111827" }}>Add Tcs Rate</span>
+          <button onClick={onClose} style={{ background: "none", border: "1px solid #e5e7eb", borderRadius: 8, width: 30, height: 30, cursor: "pointer", color: "#374151", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
+        </div>
+        {/* Body */}
+        <div style={{ padding: "22px 24px", display: "flex", flexDirection: "column", gap: 18 }}>
+          <div>
+            <label style={{ fontSize: 13, color: "#374151", fontWeight: 500, display: "block", marginBottom: 6 }}>Tax name</label>
+            <input value={taxName} onChange={e => setTaxName(e.target.value)} placeholder="Enter Tax Name" style={inp} />
+          </div>
+          <div>
+            <label style={{ fontSize: 13, color: "#374151", fontWeight: 500, display: "block", marginBottom: 6 }}>Enter Section Name</label>
+            <input value={section} onChange={e => setSection(e.target.value)} placeholder="Enter Section Name" style={inp} />
+          </div>
+          <div>
+            <label style={{ fontSize: 13, color: "#374151", fontWeight: 500, display: "block", marginBottom: 6 }}>Enter Rate (in %)</label>
+            <input type="number" value={rate} onChange={e => setRate(Number(e.target.value))} style={inp} />
+          </div>
+        </div>
+        {/* Footer */}
+        <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, padding: "16px 24px", borderTop: "1px solid #f3f4f6" }}>
+          <button onClick={onClose} style={{ padding: "9px 22px", border: "1px solid #e5e7eb", background: "#fff", borderRadius: 8, fontSize: 14, cursor: "pointer", color: "#374151", fontWeight: 500 }}>Close</button>
+          <button onClick={handleSave} disabled={!canSave} style={{ padding: "9px 22px", background: canSave ? "#4f46e5" : "#c7d2fe", color: "#fff", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: canSave ? "pointer" : "not-allowed" }}>Save</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 interface Props {
   subtotal: number;
   totalTax: number;
@@ -34,6 +103,8 @@ export default function SISummary(p: Props) {
   const [showPayDrop, setShowPayDrop] = useState(false);
   const [showDiscTypeDrop, setShowDiscTypeDrop] = useState(false);
   const [showRoundDrop, setShowRoundDrop] = useState(false);
+  const [showAddTcsModal, setShowAddTcsModal] = useState(false);
+  const [allTcsRates, setAllTcsRates] = useState<{ label: string; rate: number }[]>(loadAllTcsRates);
   const tcsRef = useRef<HTMLDivElement>(null);
   const payRef = useRef<HTMLDivElement>(null);
 
@@ -143,13 +214,13 @@ export default function SISummary(p: Props) {
               </button>
               {showTCSDropdown && (
                 <div className="si-tcs-dropdown">
-                  {TCS_RATES.map(r=>(
+                  {allTcsRates.map(r=>(
                     <button key={r.label} className="si-tcs-opt" onClick={()=>{p.onTCSChange(true,r.rate,r.label,p.tcsBase);setShowTCSDropdown(false);}}>
                       <span className="si-tcs-rate">{r.rate.toFixed(1)}%</span>
-                      <span className="si-tcs-desc">{r.label.replace(/^\d+\.\d+%\s*/,"")}</span>
+                      <span className="si-tcs-desc">{r.label.replace(/^\d+\.?\d*%\s*/,"")}</span>
                     </button>
                   ))}
-                  <button className="si-tcs-add" onClick={()=>setShowTCSDropdown(false)}>+ Add New Tcs Rate</button>
+                  <button className="si-tcs-add" onClick={()=>{setShowTCSDropdown(false);setShowAddTcsModal(true);}}>+ Add New Tcs Rate</button>
                 </div>
               )}
             </div>
@@ -253,6 +324,18 @@ export default function SISummary(p: Props) {
         <div className="si-signatory-text">Authorized signatory for <strong>scratchweb.solutions</strong></div>
         <div className="si-signatory-box"/>
       </div>
+
+      {/* Add TCS Rate Modal */}
+      {showAddTcsModal && (
+        <AddTcsRateModal
+          onClose={() => setShowAddTcsModal(false)}
+          onSaved={r => {
+            setAllTcsRates(prev => [...prev, r]);
+            p.onTCSChange(true, r.rate, r.label, p.tcsBase);
+            setShowAddTcsModal(false);
+          }}
+        />
+      )}
     </div>
   );
 }

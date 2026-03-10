@@ -422,8 +422,6 @@ function RowMenu({ onEdit, onEditHistory, onDuplicate, onCreditNote, onCancel, o
     { Icon: Icons.History,    label: "Edit History",      action: onEditHistory },
     { Icon: Icons.Duplicate,  label: "Duplicate",         action: onDuplicate },
     { Icon: Icons.CreditNote, label: "Issue Credit Note", action: onCreditNote, badge: true },
-    { Icon: Icons.Download,   label: "Download PDF",      action: () => {} },
-    { Icon: Icons.Share,      label: "Share",             action: () => {} },
     { Icon: Icons.Cancel,     label: "Cancel Invoice",    action: onCancel, warning: true },
     { Icon: Icons.Delete,     label: "Delete",            action: onDelete, danger: true },
   ];
@@ -509,6 +507,11 @@ export default function SalesInvoiceList() {
   const [sortDir, setSortDir] = useState<"asc"|"desc">("desc");
   const [sortField, setSortField] = useState<"date"|"amount">("date");
   const [deleteTarget, setDeleteTarget] = useState<string|null>(null);
+  const [cancelTarget, setCancelTarget] = useState<string|null>(null);
+  const [cancelReason, setCancelReason] = useState("");
+  const [showCancelReasonDrop, setShowCancelReasonDrop] = useState(false);
+  const [profitInvoice, setProfitInvoice] = useState<SalesInvoice|null>(null);
+  const [creditNoteInvoice, setCreditNoteInvoice] = useState<SalesInvoice|null>(null);
   const [viewInvoice, setViewInvoice] = useState<SalesInvoice|null>(null);
 
   // Load the active invoice template saved by InvoiceBuilder
@@ -629,6 +632,12 @@ export default function SalesInvoiceList() {
   }
   function handleCancel(id: string) {
     persist(invoices.map(i => i.id === id ? { ...i, status: "Cancelled" as const } : i));
+    setCancelTarget(null);
+    setCancelReason("");
+  }
+  function handleIssueCreditNote(inv: SalesInvoice) {
+    setCreditNoteInvoice(inv);
+    navigate("/cashier/credit-note", { state: { fromInvoice: inv } });
   }
 
   const dateLabel = dateFilter === "Custom" && customStart && customEnd
@@ -840,8 +849,8 @@ export default function SalesInvoiceList() {
                       onEdit={()=>navigate(`/cashier/sales-invoice/edit/${inv.id}`)}
                       onEditHistory={()=>alert("Edit History — connect to audit log")}
                       onDuplicate={()=>handleDuplicate(inv)}
-                      onCreditNote={()=>navigate("/cashier/credit-note")}
-                      onCancel={()=>handleCancel(inv.id)}
+                      onCreditNote={()=>handleIssueCreditNote(inv)}
+                      onCancel={()=>{ setCancelTarget(inv.id); setCancelReason(""); }}
                       onDelete={()=>setDeleteTarget(inv.id)}
                     />
                   </td>
@@ -858,12 +867,107 @@ export default function SalesInvoiceList() {
 
       {deleteTarget && (
         <div className="sil-overlay" onClick={()=>setDeleteTarget(null)}>
-          <div className="sil-modal sil-confirm-modal" onClick={e=>e.stopPropagation()}>
-            <div className="sil-modal-hdr"><span>Delete Invoice</span><button onClick={()=>setDeleteTarget(null)}>✕</button></div>
-            <div style={{padding:"20px 24px",fontSize:14,color:"#374151"}}>Are you sure you want to delete this invoice? This action cannot be undone.</div>
-            <div className="sil-modal-footer">
-              <button className="sil-btn-cancel" onClick={()=>setDeleteTarget(null)}>Cancel</button>
-              <button className="sil-btn-danger" onClick={()=>handleDelete(deleteTarget)}>Delete</button>
+          <div style={{ background:"#fff", borderRadius:16, width:500, maxWidth:"95vw", padding:"32px 32px 24px", boxShadow:"0 20px 60px rgba(0,0,0,.18)", position:"relative", fontFamily:"Segoe UI,sans-serif" }} onClick={e=>e.stopPropagation()}>
+            <button onClick={()=>setDeleteTarget(null)} style={{ position:"absolute", top:18, right:18, background:"none", border:"none", fontSize:18, cursor:"pointer", color:"#6b7280", lineHeight:1 }}>✕</button>
+            <h3 style={{ fontSize:18, fontWeight:700, color:"#111827", margin:"0 0 8px" }}>Are you sure you want to delete this Sales Invoice?</h3>
+            <p style={{ fontSize:14, color:"#6b7280", margin:"0 0 28px" }}>Once deleted, it cannot be recovered</p>
+            <div style={{ display:"flex", justifyContent:"flex-end", gap:12 }}>
+              <button onClick={()=>setDeleteTarget(null)} style={{ padding:"10px 28px", border:"1px solid #e5e7eb", background:"#fff", borderRadius:8, fontSize:14, cursor:"pointer", fontWeight:500, color:"#374151" }}>Cancel Invoice</button>
+              <button onClick={()=>handleDelete(deleteTarget)} style={{ padding:"10px 28px", border:"1.5px solid #dc2626", background:"#fff", borderRadius:8, fontSize:14, cursor:"pointer", fontWeight:600, color:"#dc2626" }}>Yes, Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Cancel Invoice Modal ──────────────────────────────────────── */}
+      {cancelTarget && (
+        <div className="sil-overlay" onClick={()=>{ setCancelTarget(null); setShowCancelReasonDrop(false); }}>
+          <div style={{ background:"#fff", borderRadius:16, width:500, maxWidth:"95vw", padding:"28px 28px 24px", boxShadow:"0 20px 60px rgba(0,0,0,.18)", position:"relative", fontFamily:"Segoe UI,sans-serif" }} onClick={e=>e.stopPropagation()}>
+            <button onClick={()=>{ setCancelTarget(null); setShowCancelReasonDrop(false); }} style={{ position:"absolute", top:18, right:18, background:"none", border:"1px solid #e5e7eb", borderRadius:6, width:28, height:28, cursor:"pointer", color:"#6b7280", fontSize:14, display:"flex", alignItems:"center", justifyContent:"center" }}>✕</button>
+            <h3 style={{ fontSize:17, fontWeight:700, color:"#111827", margin:"0 0 8px" }}>Are you sure you want to cancel this?</h3>
+            <p style={{ fontSize:13, color:"#9ca3af", margin:"0 0 20px" }}>Cancellation of invoice is irreversible action.</p>
+            <label style={{ fontSize:13, color:"#374151", fontWeight:500, display:"block", marginBottom:6 }}>Reason for cancellation<span style={{color:"#ef4444"}}>*</span></label>
+            <div style={{ position:"relative", marginBottom:16 }}>
+              <div onClick={()=>setShowCancelReasonDrop(v=>!v)}
+                style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"11px 14px", border:`1px solid ${showCancelReasonDrop ? "#6366f1" : "#e5e7eb"}`, borderRadius:8, cursor:"pointer", fontSize:14, color: cancelReason ? "#111827" : "#9ca3af", background:"#fff", userSelect:"none" }}>
+                <span>{cancelReason || "Select"}</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{width:16,height:16,color:"#9ca3af"}}><polyline points="6 9 12 15 18 9"/></svg>
+              </div>
+              {showCancelReasonDrop && (
+                <div style={{ position:"absolute", top:"calc(100% + 4px)", left:0, right:0, zIndex:100, background:"#fff", border:"1px solid #e5e7eb", borderRadius:8, boxShadow:"0 8px 24px rgba(0,0,0,.1)", overflow:"hidden" }}>
+                  {["Order Cancelled","Duplicate entry","Wrong entry","Other"].map(r=>(
+                    <div key={r} onClick={()=>{ setCancelReason(r); setShowCancelReasonDrop(false); }}
+                      style={{ padding:"11px 14px", fontSize:14, color:"#374151", cursor:"pointer", borderBottom:"1px solid #f9fafb", background: cancelReason===r ? "#ede9fe" : "" }}
+                      onMouseEnter={e=>{ if(cancelReason!==r)(e.currentTarget as HTMLDivElement).style.background="#f5f3ff"; }}
+                      onMouseLeave={e=>{ if(cancelReason!==r)(e.currentTarget as HTMLDivElement).style.background=""; }}>
+                      {r}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div style={{ background:"#fffbeb", border:"1px solid #fde68a", borderRadius:8, padding:"10px 14px", display:"flex", gap:8, alignItems:"flex-start", marginBottom:24 }}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" style={{width:16,height:16,flexShrink:0,marginTop:1}}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              <span style={{ fontSize:13, color:"#92400e", lineHeight:1.4 }}>For Partially-Paid/Paid invoice, Linked payments will be removed and party balance may change.</span>
+            </div>
+            <div style={{ display:"flex", justifyContent:"flex-end", gap:12 }}>
+              <button onClick={()=>{ setCancelTarget(null); setShowCancelReasonDrop(false); }} style={{ padding:"10px 24px", border:"1px solid #e5e7eb", background:"#fff", borderRadius:8, fontSize:14, cursor:"pointer", fontWeight:500, color:"#374151" }}>Close</button>
+              <button disabled={!cancelReason} onClick={()=>handleCancel(cancelTarget)} style={{ padding:"10px 24px", background: cancelReason ? "#c7d2fe" : "#e5e7eb", border:"none", borderRadius:8, fontSize:14, cursor: cancelReason ? "pointer" : "not-allowed", fontWeight:600, color: cancelReason ? "#4f46e5" : "#9ca3af" }}>Cancel invoice</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Profit Details Modal ──────────────────────────────────────── */}
+      {profitInvoice && (
+        <div className="sil-overlay" onClick={()=>setProfitInvoice(null)}>
+          <div style={{ background:"#fff", borderRadius:16, width:600, maxWidth:"95vw", boxShadow:"0 20px 60px rgba(0,0,0,.18)", fontFamily:"Segoe UI,sans-serif" }} onClick={e=>e.stopPropagation()}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"20px 24px", borderBottom:"1px solid #f3f4f6" }}>
+              <span style={{ fontSize:16, fontWeight:700, color:"#111827" }}>Profit Calculation</span>
+              <button onClick={()=>setProfitInvoice(null)} style={{ background:"none", border:"none", cursor:"pointer", color:"#6b7280", fontSize:20, lineHeight:1 }}>✕</button>
+            </div>
+            <div style={{ padding:"0 24px 24px" }}>
+              <table style={{ width:"100%", borderCollapse:"collapse", marginTop:16 }}>
+                <thead>
+                  <tr style={{ borderBottom:"2px solid #f3f4f6" }}>
+                    <th style={{ textAlign:"left", fontSize:11, fontWeight:700, color:"#6b7280", padding:"8px 0", textTransform:"uppercase", letterSpacing:"0.5px" }}>Item Name</th>
+                    <th style={{ textAlign:"center", fontSize:11, fontWeight:700, color:"#6b7280", padding:"8px 0", textTransform:"uppercase", letterSpacing:"0.5px" }}>QTY</th>
+                    <th style={{ textAlign:"center", fontSize:11, fontWeight:700, color:"#4f46e5", padding:"8px 0", textTransform:"uppercase", letterSpacing:"0.5px" }}>Purchase Price<br/><span style={{fontWeight:400}}>(Excl. Taxes)</span></th>
+                    <th style={{ textAlign:"right", fontSize:11, fontWeight:700, color:"#6b7280", padding:"8px 0", textTransform:"uppercase", letterSpacing:"0.5px" }}>Total Cost</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(profitInvoice.billItems || []).map((item: any, i: number) => (
+                    <tr key={i} style={{ borderBottom:"1px solid #f9fafb" }}>
+                      <td style={{ padding:"10px 0", fontSize:14, color:"#374151", fontWeight:600 }}>{item.name || "Item"}</td>
+                      <td style={{ textAlign:"center", padding:"10px 0", fontSize:14, color:"#374151" }}>{item.qty} {item.unit || "PCS"}</td>
+                      <td style={{ textAlign:"center", padding:"10px 0", fontSize:14, color:"#9ca3af" }}>-</td>
+                      <td style={{ textAlign:"right", padding:"10px 0", fontSize:14, color:"#9ca3af" }}>-</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <div style={{ borderTop:"1px solid #f3f4f6", marginTop:8 }}>
+                {[
+                  { label:"Sales Amount(Exl. Addn. Charges):", value:`₹ ${profitInvoice.billItems.reduce((s:number,i:any)=>s+(i.amount||0),0).toLocaleString("en-IN")}` },
+                  { label:"Total Cost:", value:"₹ 0" },
+                  { label:"Tax Payable:", value:"₹ 0" },
+                ].map(r=>(
+                  <div key={r.label} style={{ display:"flex", justifyContent:"space-between", padding:"10px 0", borderBottom:"1px solid #f9fafb", fontSize:14, color:"#374151" }}>
+                    <span>{r.label}</span><span>{r.value}</span>
+                  </div>
+                ))}
+                <div style={{ display:"flex", justifyContent:"space-between", padding:"10px 0", fontSize:14, color:"#374151", fontWeight:600 }}>
+                  <div>
+                    <div>Profit:</div>
+                    <div style={{ fontSize:12, color:"#4f46e5", fontWeight:400 }}>(Sales Amount - Total Cost - Tax Payable)</div>
+                  </div>
+                  <div style={{ display:"flex", alignItems:"center", gap:6, color:"#9ca3af" }}>
+                    <span>-</span>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" style={{width:16,height:16}}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -884,6 +988,31 @@ export default function SalesInvoiceList() {
             const url = URL.createObjectURL(blob);
             const a = document.createElement("a"); a.href=url; a.download=`invoice_${viewInvoice.invoiceNo}.csv`; a.click(); URL.revokeObjectURL(url);
           }}
+          onPaymentSaved={()=>{
+            const raw: any[] = JSON.parse(localStorage.getItem("salesInvoices") || "[]");
+            const refreshed = raw.map((r: any): SalesInvoice => ({
+              id: r.id, invoiceNo: r.invoiceNo, invoiceDate: r.invoiceDate,
+              party: r.party ?? null,
+              showDueDate: r.showDueDate ?? false, paymentTermsDays: r.paymentTermsDays ?? 0,
+              dueDate: r.dueDate ?? "", billItems: r.billItems ?? [],
+              additionalCharges: r.additionalCharges ?? [],
+              discountPct: r.discountPct ?? 0, discountAmt: r.discountAmt ?? 0,
+              applyTCS: r.applyTCS ?? false, tcsRate: r.tcsRate ?? 0,
+              tcsBase: r.tcsBase ?? "Total Amount",
+              roundOffAmt: r.roundOffAmt ?? 0,
+              amountReceived: r.amountReceived ?? 0,
+              status: r.status ?? "Unpaid",
+              createdAt: r.createdAt ?? r.invoiceDate,
+            }));
+            setInvoices(refreshed);
+            const updated = refreshed.find(i => i.id === viewInvoice.id);
+            if (updated) setViewInvoice(updated);
+          }}
+          onDuplicate={()=>{ handleDuplicate(viewInvoice); setViewInvoice(null); }}
+          onDelete={()=>{ setViewInvoice(null); setDeleteTarget(viewInvoice.id); }}
+          onCancel={()=>{ setViewInvoice(null); setCancelTarget(viewInvoice.id); setCancelReason(""); }}
+          onCreditNote={()=>{ setViewInvoice(null); handleIssueCreditNote(viewInvoice); }}
+          onProfitDetails={()=>setProfitInvoice(viewInvoice)}
         />
       )}
     </div>
