@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import {
   getCreditNotes, saveCreditNote,
   CreditNote as CreditNoteType,
@@ -381,7 +382,10 @@ function RowMenu({ onEdit, onDuplicate, onDelete }: {
 type View = "list" | "create" | "edit" | "view";
 
 export default function CreditNoteModule() {
-  const [view,setView]         = useState<View>("list");
+  const location = useLocation();
+  const prefillInvoice = (location.state as any)?.fromInvoice ?? null;
+
+  const [view,setView]         = useState<View>(prefillInvoice ? "create" : "list");
   const [editId,setEditId]     = useState<string|undefined>(undefined);
   const [notes,setNotes]       = useState<CreditNoteType[]>([]);
   const [search,setSearch]     = useState("");
@@ -399,7 +403,16 @@ export default function CreditNoteModule() {
   useEffect(()=>{ loadNotes(); },[]);
 
   // ── Navigate back from form → reload list ────────────────────────────────
-  const handleBack = () => {
+  const handleBack = (savedCreditNote?: CreditNoteType) => {
+    // If a credit note was saved from an invoice, mark that invoice as Paid
+    const srcInvoiceId = savedCreditNote?.linkedInvoiceId ?? prefillInvoice?.id;
+    if (srcInvoiceId) {
+      try {
+        const invs: any[] = JSON.parse(localStorage.getItem("salesInvoices") || "[]");
+        const updated = invs.map(i => i.id === srcInvoiceId ? { ...i, status: "Paid" } : i);
+        localStorage.setItem("salesInvoices", JSON.stringify(updated));
+      } catch {}
+    }
     setView("list");
     setEditId(undefined);
     loadNotes();           // ← refresh list after save
@@ -473,6 +486,7 @@ export default function CreditNoteModule() {
     return (
       <CreateCreditNote
         editId={view==="edit"?editId:undefined}
+        prefillInvoice={view==="create" ? prefillInvoice : undefined}
         onBack={handleBack}
       />
     );

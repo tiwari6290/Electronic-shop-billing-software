@@ -13,10 +13,11 @@ import "./CreateCreditNote.css";
 
 interface Props {
   editId?: string;
-  onBack: () => void;
+  onBack: (savedCreditNote?: any) => void;
+  prefillInvoice?: any;
 }
 
-export default function CreateCreditNote({ editId, onBack }: Props) {
+export default function CreateCreditNote({ editId, onBack, prefillInvoice }: Props) {
   const [form, setForm] = useState<CreditNote>(() => newBlankCreditNote());
   const [showAddItems, setShowAddItems] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -35,8 +36,57 @@ export default function CreateCreditNote({ editId, onBack }: Props) {
           }
         }
       } catch {}
+    } else if (prefillInvoice) {
+      // Pre-populate from the sales invoice
+      const inv = prefillInvoice;
+      const billItems: InvoiceItem[] = (inv.billItems || []).map((i: any) => ({
+        rowId: `row-${Date.now()}-${Math.random()}`,
+        itemId: i.itemId || "",
+        name: i.name || "",
+        description: i.description || "",
+        hsn: i.hsn || "",
+        qty: i.qty,
+        unit: i.unit || "PCS",
+        price: i.price,
+        discountPct: i.discountPct || 0,
+        discountAmt: i.discountAmt || 0,
+        taxLabel: i.taxLabel || "None",
+        taxRate: i.taxRate || 0,
+        amount: i.amount,
+      }));
+      setForm(prev => ({
+        ...prev,
+        party: inv.party ? {
+          id: Number(inv.party.id) || Date.now(),
+          name: inv.party.name || "",
+          mobile: inv.party.mobile || "",
+          category: inv.party.category || "Customer",
+          type: (inv.party.type as "Customer" | "Supplier" | "Both") || "Customer",
+          balance: inv.party.balance || 0,
+          email: inv.party.email,
+          gstin: inv.party.gstin,
+          billingAddress: inv.party.billingAddress,
+        } : null,
+        linkedInvoiceId: inv.id,
+        billItems,
+        additionalCharges: (inv.additionalCharges || []).map((c: any) => ({
+          id: `c-${Date.now()}-${Math.random()}`,
+          label: c.label || "",
+          amount: c.amount || 0,
+          taxLabel: c.taxLabel || "No Tax Applicable",
+        })),
+        discountPct: inv.discountPct || 0,
+        discountAmt: inv.discountAmt || 0,
+        eWayBillNo: inv.eWayBillNo || "",
+        challanNo: inv.challanNo || "",
+        financedBy: inv.financedBy || "",
+        salesman: inv.salesman || "",
+        notes: inv.notes || "",
+        termsConditions: inv.termsConditions || "",
+      }));
+      setShowDiscount((inv.discountPct || 0) > 0 || (inv.discountAmt || 0) > 0);
     }
-  }, [editId]);
+  }, [editId, prefillInvoice]);
 
   function set(field: string, value: any) {
     setForm(prev => ({ ...prev, [field]: value }));
@@ -105,15 +155,20 @@ export default function CreateCreditNote({ editId, onBack }: Props) {
 
   const doSave = (cn = form) => {
     const total = calcTotal(cn);
+    // If created from an invoice, mark as Refunded; otherwise normal status
     const status: CreditNote["status"] =
-      cn.amountPaid >= total && total > 0 ? "Paid"
+      cn.linkedInvoiceId && prefillInvoice
+        ? "Refunded"
+        : cn.amountPaid >= total && total > 0 ? "Paid"
         : cn.amountPaid > 0 ? "Partially Paid" : "Unpaid";
-    saveCreditNote({ ...cn, status });
+    const saved = { ...cn, status };
+    saveCreditNote(saved);
+    return saved;
   };
 
   const handleSave = () => {
-    doSave();
-    onBack();
+    const saved = doSave();
+    onBack(saved);
   };
 
   const handleSaveAndNew = () => {

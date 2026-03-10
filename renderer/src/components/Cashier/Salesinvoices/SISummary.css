@@ -11,7 +11,7 @@
 .si-charge-del:hover { color: #ef4444; }
 .si-rs-sm { font-size: 13px; color: #6b7280; }
 
-.si-sum-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-top: 1px solid #f3f4f6; gap: 8px; }
+.si-sum-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-top: 1px solid #f3f4f6; gap: 8px; flex-wrap: nowrap; }
 .si-sum-lbl { font-size: 13.5px; color: #374151; }
 .si-sum-val { font-size: 13.5px; color: #111827; font-weight: 500; }
 .si-sum-neg { color: #16a34a; }
@@ -31,7 +31,7 @@
 .si-disc-rm:hover { color: #ef4444; }
 
 /* TCS */
-.si-tcs-label { display: flex; align-items: center; gap: 6px; font-size: 13.5px; color: #374151; cursor: pointer; }
+.si-tcs-label { display: flex; align-items: center; gap: 6px; font-size: 13.5px; color: #374151; cursor: pointer; white-space: nowrap; flex-shrink: 0; }
 .si-tcs-right { display: flex; align-items: center; gap: 8px; }
 .si-tcs-val { font-size: 13px; color: #374151; min-width: 60px; text-align: right; }
 .si-tcs-sel-wrap { position: relative; }
