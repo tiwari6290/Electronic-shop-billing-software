@@ -6,17 +6,21 @@ import Navbar from "./components/Cashier/Navbar";
 import Createparty from "./components/Cashier/Createparty";
 import CreateItem from "./components/Cashier/CreateItem/CreateItem";
 import ProformaInvoice from "./components/Cashier/Proformainvoice/Proformainvoice";
-import Purchases from "./components/Cashier/Purchases/Purchases";
+import Purchases from "./components/Cashier/Createpurchase/Purchase";
+/* import SalesReturn from "./components/Cashier/SalesReturn"; */
+/* import ProformaInvoice from "./components/Cashier/ProformaInvoice"; */
 import CreateDebitNote from "./components/Cashier/CreateDebitNote/CreateDebitNote";
 import CreatePurchaseReturn from "./components/Cashier/CreatePurchaseReturn/CreatePurchaseReturn";
 import PaymentOut from "./components/Cashier/PaymentOut/PaymentOut";
 import PaymentIn from "./components/Cashier/PaymentIn/PaymentIn";
 import PaymentInView from "./components/Cashier/PaymentIn/Paymentinview";
-import DeliveryChallanList from "./components/Cashier/Deliverychallan/Deliverychallan";       // FIX 1: was used as <DeliveryChallan /> in routes
-import CreateDeliveryChallan from "./components/Cashier/Deliverychallan/Createdeliverychallan";
-import DeliveryChallanViewModel from "./components/Cashier/Deliverychallan/Deliverychallanviewmodel";
-import PurchaseOrder from "./components/Cashier/PurchaseOrder/PurchaseOrder";
-import Createexpense from "./components/Cashier/Createexpense";
+import DeliveryChallanList from "./components/Cashier/DeliveryChallan/DeliveryChallan";       // FIX 1: was used as <DeliveryChallan /> in routes
+import CreateDeliveryChallan from "./components/Cashier/DeliveryChallan/Createdeliverychallan";
+import DeliveryChallanViewModel from "./components/Cashier/DeliveryChallan/Deliverychallanviewmodel";
+/* import PurchaseOrder from "./components/Cashier/PurchaseOrder/PurchaseOrder"; */
+import CreateCreditNote from "./components/Cashier/CreateCreditNote/CreateCreditNote";
+/* import DeliveryChallan from "./components/Cashier/DeliveryChallan/DeliveryChallan"; */
+import Createexpense from "./components/Cashier/CreateExpenses/Expenses";
 import AdminSettingSidebar from "./components/Admin/AdminSettingSidebar";
 import ManageBusiness from "./components/Admin/ManageBuisness";
 import Account from "./components/Admin/Account/Account";
@@ -213,6 +217,19 @@ function App() {
           <Route path="sales-return-create"     element={<CreateSalesReturnNew />} />
           <Route path="sales-return-edit/:id"   element={<EditSalesReturn />} />
           <Route path="sales-return-view/:id"   element={<ViewSalesReturnPage />} />
+          <Route path="sales-return"        element={<SalesReturn />} />
+          <Route path="credit-note"         element={<CreateCreditNote />} />
+         {/*  <Route path="delivery-challan"    element={<DeliveryChallan />} /> */}
+          <Route path="proforma-invoice"    element={<ProformaInvoice />} />
+         {/*  <Route path="purchase"            element={<Purchases />} /> */}
+         {/* <Route path ="/cashier/purchase"   element={<Purchase/>} /> */}
+          <Route path="payment-out"         element={<PaymentOut />} />
+          <Route path="payment-out-list"    element={<PaymentOutList />} />
+          <Route path="purchase-return"     element={<CreatePurchaseReturn />} />
+          <Route path="debit-note"          element={<CreateDebitNote />} />
+          <Route path="purchase-orders"     element={<PurchaseOrdersPage />} />
+          <Route path="quotation-estimate"  element={<QuotationEstimate />} />
+          <Route path="create-expense"      element={<Createexpense />} />
 
           {/* Credit Note */}
           <Route path="credit-note"             element={<CreditNote />} />
@@ -231,7 +248,7 @@ function App() {
           <Route path="purchase"                element={<Purchases />} />
           <Route path="purchase-return"         element={<CreatePurchaseReturn />} />
           <Route path="debit-note"              element={<CreateDebitNote />} />
-          <Route path="purchase-orders-form"    element={<PurchaseOrder />} />
+          {/* <Route path="purchase-orders-form"    element={<PurchaseOrder />} /> */}
           <Route path="purchase-orders"         element={<PurchaseOrdersPage />} />
 
           {/* Payment Out */}
