@@ -429,3 +429,294 @@
 .action-dropdown-item + .action-dropdown-item {
   border-top: 1px solid #f0f0f0;
 }
+/* Add these styles to your PaymentOutList.css */
+/* ── PAGE ── */
+.pov-page {
+  background: #f5f6fa;
+  min-height: 100vh;
+  padding: 0 0 40px 0;
+  font-family: "Segoe UI", system-ui, sans-serif;
+}
+
+/* ── TOPBAR ── */
+.pov-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #fff;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 12px 24px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.pov-topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.pov-back-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  cursor: pointer;
+  color: #374151;
+  transition: background 0.15s;
+}
+.pov-back-btn:hover {
+  background: #f3f4f6;
+}
+
+.pov-title {
+  font-size: 17px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
+}
+
+.pov-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.pov-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 13px;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  font-size: 13px;
+  color: #374151;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+.pov-action-btn:hover {
+  background: #f9fafb;
+  border-color: #9ca3af;
+}
+
+.pov-info-btn {
+  padding: 7px 10px;
+}
+
+.pov-split-btn {
+  display: flex;
+  align-items: center;
+}
+.pov-split-btn .pov-action-btn:first-child {
+  border-radius: 6px 0 0 6px;
+  border-right: none;
+}
+.pov-split-arr {
+  border-radius: 0 6px 6px 0 !important;
+  padding: 7px 8px !important;
+  border-left: 1px solid #d1d5db !important;
+}
+
+.pov-share-dd {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+  min-width: 140px;
+  z-index: 100;
+  overflow: hidden;
+}
+.pov-share-dd-item {
+  padding: 10px 16px;
+  font-size: 13px;
+  color: #374151;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.pov-share-dd-item:hover {
+  background: #f3f4f6;
+}
+
+.pov-edit-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 13px;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  font-size: 13px;
+  color: #374151;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s;
+}
+.pov-edit-btn:hover {
+  background: #f3f4f6;
+}
+
+.pov-delete-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 6px;
+  border: 1px solid #fca5a5;
+  background: #fff5f5;
+  color: #dc2626;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.pov-delete-btn:hover {
+  background: #fee2e2;
+}
+
+/* ── CARDS ── */
+.pov-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  margin: 20px 24px 0 24px;
+  overflow: hidden;
+}
+
+.pov-card-heading {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #374151;
+  padding: 14px 20px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #fafafa;
+  letter-spacing: 0.01em;
+}
+
+/* ── DETAILS GRID ── */
+.pov-details-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  padding: 20px 20px 8px 20px;
+}
+
+.pov-detail-col {
+  flex: 1 1 180px;
+  min-width: 150px;
+  padding-bottom: 16px;
+  padding-right: 24px;
+}
+
+.pov-detail-label {
+  font-size: 11.5px;
+  color: #9ca3af;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 5px;
+}
+
+.pov-detail-value {
+  font-size: 14px;
+  color: #111827;
+  font-weight: 500;
+}
+
+.pov-notes-row {
+  padding: 0 20px 18px 20px;
+  border-top: 1px dashed #f3f4f6;
+  margin-top: 4px;
+  padding-top: 14px;
+}
+.pov-notes-val {
+  font-size: 13.5px;
+  color: #374151;
+  margin-top: 4px;
+}
+.pov-notes-empty {
+  font-size: 13px;
+  color: #9ca3af;
+  margin-top: 4px;
+}
+
+/* ── INVOICES TABLE ── */
+.pov-invoices-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.pov-invoices-table thead tr {
+  background: #f9fafb;
+}
+
+.pov-invoices-table th {
+  padding: 11px 16px;
+  text-align: left;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid #e5e7eb;
+  white-space: nowrap;
+}
+
+.pov-invoices-table td {
+  padding: 13px 16px;
+  border-bottom: 1px solid #f3f4f6;
+  color: #374151;
+}
+
+.pov-invoices-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.pov-invoices-table tbody tr:hover {
+  background: #fafafa;
+}
+
+.pov-empty-row {
+  text-align: center !important;
+  color: #9ca3af !important;
+  padding: 40px 16px !important;
+  font-size: 13.5px !important;
+}
+
+/* ── NOT FOUND ── */
+.pov-not-found {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 60vh;
+  gap: 16px;
+  color: #6b7280;
+}
+.pov-not-found button {
+  padding: 8px 18px;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+/* ── clickable row ── */
+.pol-clickable-row {
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.pol-clickable-row:hover {
+  background: #f5f7ff !important;
+}

@@ -33,11 +33,13 @@ const IC = {
   Download: ()=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>,
   Print:    ()=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>,
   Star:     ()=><svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth={1.5}><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>,
+  Share:    ()=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>,
+  Refresh:  ()=><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>,
 };
 
 /* ══════════════════════════════════════════ TYPES ══ */
 type InvoiceStatus = "paid"|"unpaid"|"";
-type PageMode = "list"|"create"|"edit"|"duplicate"|"gstr2"|"daybook";
+type PageMode = "list"|"create"|"edit"|"duplicate"|"gstr2"|"daybook"|"view";
 
 interface InvoiceItem { id:number; name:string; hsn:string; qty:number; price:number; discount:number; tax:number; }
 interface AdditionalCharge { id:number; label:string; amount:number; taxRate:string; }
@@ -71,6 +73,11 @@ const todayStr = () => { const d=new Date(); return `${d.getDate().toString().pa
 const fmtDateDDMM = (dateStr:string) => {
   const d = new Date(dateStr);
   return `${d.getDate().toString().padStart(2,"0")}-${(d.getMonth()+1).toString().padStart(2,"0")}-${d.getFullYear()}`;
+};
+const fmtDateTime = (dateStr:string) => {
+  const d = new Date(dateStr);
+  const h = d.getHours(); const m = d.getMinutes();
+  return `${d.getDate().toString().padStart(2,"0")}/${(d.getMonth()+1).toString().padStart(2,"0")}/${d.getFullYear()} ${h.toString().padStart(2,"0")}:${m.toString().padStart(2,"0")} ${h>=12?"PM":"AM"}`;
 };
 
 function getRange(f:DateFilter, from?:Date, to?:Date):[Date,Date] {
@@ -180,6 +187,510 @@ function CalendarPicker({onApply,onCancel}:{onApply:(f:Date,t:Date)=>void;onCanc
         <button className="pi-cal-cancel" onClick={onCancel}>CANCEL</button>
         <button className="pi-cal-ok" onClick={()=>{if(start&&end)onApply(start,end);}}>OK</button>
       </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════
+   SINGLE DATE PICKER
+══════════════════════════════════════════════════════════ */
+function SingleDatePicker({value,onApply,onCancel,compact}:{value:Date;onApply:(d:Date)=>void;onCancel:()=>void;compact?:boolean}) {
+  const today=new Date();
+  const [vy,setVy]=useState(value.getFullYear());
+  const [vm,setVm]=useState(value.getMonth());
+  const [sel,setSel]=useState<Date>(value);
+  const prev=()=>{ if(vm===0){setVm(11);setVy(y=>y-1);}else setVm(m=>m-1); };
+  const next=()=>{ if(vm===11){setVm(0);setVy(y=>y+1);}else setVm(m=>m+1); };
+  const cells=()=>{
+    const f=new Date(vy,vm,1),l=new Date(vy,vm+1,0),a:(Date|null)[]=[];
+    for(let i=0;i<f.getDay();i++)a.push(null);
+    for(let d=1;d<=l.getDate();d++)a.push(new Date(vy,vm,d));
+    while(a.length%7!==0)a.push(null); return a;
+  };
+  const same=(a:Date,b:Date)=>a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate();
+  const cs=cells();
+  const selLabel=`${sel.getDate().toString().padStart(2,"0")} ${["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][sel.getMonth()]} ${sel.getFullYear()}`;
+  const YEAR_OPTS=Array.from({length:10},(_,i)=>today.getFullYear()-5+i);
+  return (
+    <div className={`sdp-overlay${compact?" sdp-compact":""}`}>
+      <div className="sdp-selected-label">{selLabel}</div>
+      <div className="sdp-nav">
+        <button className="pi-cal-nav-btn" onClick={prev}><IC.ChevronL/></button>
+        <div className="sdp-month-year">
+          <select className="sdp-month-sel" value={vm} onChange={e=>{setVm(Number(e.target.value));}}>
+            {MONTHS.map((m,i)=><option key={i} value={i}>{m}</option>)}
+          </select>
+          <select className="sdp-year-sel" value={vy} onChange={e=>{setVy(Number(e.target.value));}}>
+            {YEAR_OPTS.map(y=><option key={y} value={y}>{y}</option>)}
+          </select>
+        </div>
+        <button className="pi-cal-nav-btn" onClick={next}><IC.ChevronR/></button>
+      </div>
+      <table className="pi-cal-grid">
+        <thead><tr>{DAYS.map(d=><th key={d}>{d}</th>)}</tr></thead>
+        <tbody>{Array.from({length:cs.length/7},(_,r)=>(
+          <tr key={r}>{cs.slice(r*7,r*7+7).map((d,i)=>{
+            if(!d)return<td key={i}/>;
+            const isSel=same(d,sel);
+            const isToday=same(d,today);
+            let cls="pi-cal-day";
+            if(isSel)cls+=" selected";
+            else if(isToday)cls+=" today";
+            return<td key={i}><button className={cls} onClick={()=>setSel(new Date(d))}>{d.getDate()}</button></td>;
+          })}</tr>
+        ))}</tbody>
+      </table>
+      <div className="pi-cal-footer">
+        <button className="pi-cal-cancel" onClick={onCancel}>CANCEL</button>
+        <button className="pi-cal-ok" onClick={()=>onApply(sel)}>OK</button>
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════
+   RECORD PAYMENT MODAL
+══════════════════════════════════════════════════════════ */
+interface RecordPaymentProps {
+  invoice: Invoice;
+  invoiceTotal: number;
+  onClose: () => void;
+  onSave: (amtPaid:number, discount:number, payMode:string, notes:string) => void;
+}
+
+function RecordPaymentModal({ invoice, invoiceTotal, onClose, onSave }:RecordPaymentProps) {
+  const [amtPaid, setAmtPaid] = useState(0);
+  const [discount, setDiscount] = useState(0);
+  const [payMode, setPayMode] = useState("Cash");
+  const [notes, setNotes] = useState("");
+  const [payDate, setPayDate] = useState<Date>(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const datePickerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(()=>{
+    const h=(e:MouseEvent)=>{
+      if(datePickerRef.current&&!datePickerRef.current.contains(e.target as Node))
+        setShowDatePicker(false);
+    };
+    document.addEventListener("mousedown",h);
+    return()=>document.removeEventListener("mousedown",h);
+  },[]);
+
+  const payDateStr = `${payDate.getDate().toString().padStart(2,"0")} ${["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][payDate.getMonth()]} ${payDate.getFullYear()}`;
+
+  const pendingAmt = invoiceTotal - invoice.amtPaid;
+  const balance = pendingAmt - amtPaid - discount;
+
+  const dueDateDisplay = () => {
+    if (invoice.dueIn === "-") return null;
+    const d = new Date(invoice.date);
+    const days = parseInt(invoice.dueIn) || 0;
+    d.setDate(d.getDate() + days);
+    return `${d.getDate().toString().padStart(2,"0")}-${(d.getMonth()+1).toString().padStart(2,"0")}-${d.getFullYear()}`;
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="record-payment-modal" onClick={e=>e.stopPropagation()}>
+        {/* Header */}
+        <div className="rp-modal-head">
+          <span className="rp-modal-title">Record Payment For Invoice #{invoice.invoiceNumber}</span>
+          <button className="modal-close" onClick={onClose}><IC.X/></button>
+        </div>
+
+        {/* Body */}
+        <div className="rp-modal-body">
+          {/* Left: form */}
+          <div className="rp-form-side">
+            <div className="rp-form-grid-2">
+              <div className="form-group">
+                <label>Amount Paid</label>
+                <input type="number" value={amtPaid}
+                  onChange={e=>setAmtPaid(Number(e.target.value))}
+                  className="rp-input"/>
+              </div>
+              <div className="form-group">
+                <label style={{display:"flex",alignItems:"center",gap:4}}>
+                  Payment Out Discount <span className="rp-info-icon"><IC.Info/></span>
+                </label>
+                <input type="number" value={discount}
+                  onChange={e=>setDiscount(Number(e.target.value))}
+                  className="rp-input"/>
+              </div>
+            </div>
+
+            <div className="rp-form-grid-2">
+              <div className="form-group" style={{position:"relative"}} ref={datePickerRef}>
+                <label>Payment Date</label>
+                <div className="rp-date-field" onClick={()=>setShowDatePicker(v=>!v)} style={{cursor:"pointer"}}>
+                  <span className="rp-date-icon"><IC.Calendar/></span>
+                  <span className="rp-date-val">{payDateStr}</span>
+                  <span className="rp-date-caret"><IC.Chevron/></span>
+                </div>
+                {showDatePicker&&(
+                  <SingleDatePicker
+                    value={payDate}
+                    onApply={(d)=>{setPayDate(d);setShowDatePicker(false);}}
+                    onCancel={()=>setShowDatePicker(false)}
+                    compact
+                  />
+                )}
+              </div>
+              <div className="form-group">
+                <label>Payment Mode</label>
+                <div style={{position:"relative"}}>
+                  <select value={payMode} onChange={e=>setPayMode(e.target.value)} className="rp-select">
+                    <option>Cash</option>
+                    <option>Bank</option>
+                    <option>UPI</option>
+                    <option>Cheque</option>
+                  </select>
+                  <span className="rp-select-arr"><IC.Chevron/></span>
+                </div>
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label>Notes</label>
+              <textarea value={notes} onChange={e=>setNotes(e.target.value)}
+                className="rp-notes" rows={4}/>
+            </div>
+          </div>
+
+          {/* Right: summary */}
+          <div className="rp-summary-side">
+            <div className="rp-inv-card">
+              <div className="rp-inv-card-title">Invoice #{invoice.invoiceNumber}</div>
+              <div className="rp-inv-card-row">
+                <span>Invoice Amount</span>
+                <span>₹{invoiceTotal.toLocaleString("en-IN")}</span>
+              </div>
+              <div className="rp-inv-card-party">{invoice.partyName}</div>
+              {dueDateDisplay() && (
+                <div className="rp-inv-card-due">Due Date: {dueDateDisplay()}</div>
+              )}
+            </div>
+
+            <div className="rp-calc-section">
+              <div className="rp-calc-title">Record Payment Calculation</div>
+              <div className="rp-pending-box">
+                <span className="rp-pending-label">Invoice Pending Amt.</span>
+                <span className="rp-pending-val">₹{pendingAmt.toLocaleString("en-IN")}</span>
+              </div>
+              <div className="rp-calc-row">
+                <span>Amount Paid</span>
+                <span>₹{amtPaid.toLocaleString("en-IN")}</span>
+              </div>
+              <div className="rp-calc-row">
+                <span>Payment Out Discount</span>
+                <span>₹{discount.toLocaleString("en-IN")}</span>
+              </div>
+              <div className="rp-calc-divider"/>
+              <div className="rp-calc-row rp-balance-row">
+                <span>Balance Amount</span>
+                <span>₹{Math.max(0,balance).toLocaleString("en-IN")}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="rp-modal-foot">
+          <button className="modal-btn-cancel" onClick={onClose}>Close</button>
+          <button className="modal-btn-save"
+            onClick={()=>{onSave(amtPaid,discount,payMode,notes);onClose();}}>
+            Save
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════════════
+   INVOICE BILL VIEW
+══════════════════════════════════════════════════════════ */
+interface InvoiceBillViewProps {
+  invoice: Invoice;
+  onBack: () => void;
+  onInvoiceUpdate: (inv:Invoice) => void;
+}
+
+function InvoiceBillView({ invoice, onBack, onInvoiceUpdate }:InvoiceBillViewProps) {
+  const [inv, setInv] = useState<Invoice>(invoice);
+  const [showPayModal, setShowPayModal] = useState(false);
+  const [showShareDD, setShowShareDD] = useState(false);
+  const [showPrintDD, setShowPrintDD] = useState(false);
+  const [toast, setToast] = useState<string|null>(null);
+  const shareRef = useRef<HTMLDivElement>(null);
+  const printRef = useRef<HTMLDivElement>(null);
+
+  const showT=(m:string)=>{setToast(m);setTimeout(()=>setToast(null),2400);};
+
+  useEffect(()=>{
+    const h=(e:MouseEvent)=>{
+      if(shareRef.current&&!shareRef.current.contains(e.target as Node)) setShowShareDD(false);
+      if(printRef.current&&!printRef.current.contains(e.target as Node)) setShowPrintDD(false);
+    };
+    document.addEventListener("mousedown",h);
+    return()=>document.removeEventListener("mousedown",h);
+  },[]);
+
+  const totalTax  = inv.items.reduce((s,i)=>s+(i.qty*i.price*i.tax/100),0);
+  const subtotal  = inv.items.reduce((s,i)=>s+(i.qty*i.price),0);
+  const chargesTotal = inv.additionalCharges.reduce((s,c)=>s+c.amount,0);
+  const discountAmt = inv.discountEnabled
+    ? (inv.discountType==="%"?(subtotal+chargesTotal)*inv.discountVal/100:inv.discountVal)
+    : 0;
+  const roundOffAmt = inv.roundOff?(inv.roundOffDir==="+Add"?inv.roundOffVal:-inv.roundOffVal):0;
+  const invoiceTotal = subtotal + chargesTotal - discountAmt + totalTax + roundOffAmt;
+
+  const numToWords = (n:number):string => {
+    if(n===0)return "Zero Rupees";
+    const ones=["","One","Two","Three","Four","Five","Six","Seven","Eight","Nine","Ten","Eleven","Twelve","Thirteen","Fourteen","Fifteen","Sixteen","Seventeen","Eighteen","Nineteen"];
+    const tens=["","","Twenty","Thirty","Forty","Fifty","Sixty","Seventy","Eighty","Ninety"];
+    const convert=(num:number):string=>{
+      if(num<20)return ones[num];
+      if(num<100)return tens[Math.floor(num/10)]+(num%10?" "+ones[num%10]:"");
+      if(num<1000)return ones[Math.floor(num/100)]+" Hundred"+(num%100?" "+convert(num%100):"");
+      if(num<100000)return convert(Math.floor(num/1000))+" Thousand"+(num%1000?" "+convert(num%1000):"");
+      if(num<10000000)return convert(Math.floor(num/100000))+" Lakh"+(num%100000?" "+convert(num%100000):"");
+      return convert(Math.floor(num/10000000))+" Crore"+(num%10000000?" "+convert(num%10000000):"");
+    };
+    return convert(Math.round(n))+" Rupees";
+  };
+
+  const handleSavePayment = (paid:number, disc:number, payMode:string) => {
+    const newAmtPaid = inv.amtPaid + paid;
+    const newStatus:InvoiceStatus = newAmtPaid >= invoiceTotal && invoiceTotal>0 ? "paid" : invoiceTotal>0 ? "unpaid" : "";
+    const updated:Invoice = {...inv, amtPaid:newAmtPaid, payMethod:payMode, status:newStatus, amount:invoiceTotal};
+    setInv(updated);
+    onInvoiceUpdate(updated);
+  };
+
+  return (
+    <div className="bill-view-page">
+      {/* Top action bar */}
+      <div className="bill-view-topbar">
+        <div className="bill-view-topbar-left">
+          <button className="report-back-btn" onClick={onBack}><IC.Back/></button>
+          <span className="bill-view-title">Purchase Invoice #{inv.invoiceNumber}</span>
+          {inv.status==="unpaid"&&<span className="bv-badge bv-unpaid">Unpaid</span>}
+          {inv.status==="paid"&&<span className="bv-badge bv-paid">Paid</span>}
+        </div>
+        <div className="bill-view-topbar-right">
+          <button className="report-action-btn"><IC.Download/> Download PDF</button>
+          <div className="report-action-split" ref={printRef} style={{position:"relative"}}>
+            <button className="report-action-btn"><IC.Print/> Print PDF</button>
+            <button className="report-action-btn-arr" onClick={()=>{setShowPrintDD(v=>!v);setShowShareDD(false);}}><IC.Chevron/></button>
+            {showPrintDD&&(
+              <div className="bv-dropdown">
+                <div className="bv-dd-item" onClick={()=>{setShowPrintDD(false);showT("Print Thermal");}}>Print Thermal</div>
+              </div>
+            )}
+          </div>
+          <button className="report-action-btn" onClick={()=>showT("Refreshed")}><IC.Refresh/></button>
+          <div className="report-action-split" ref={shareRef} style={{position:"relative"}}>
+            <button className="report-action-btn"><IC.Share/> Share</button>
+            <button className="report-action-btn-arr" onClick={()=>{setShowShareDD(v=>!v);setShowPrintDD(false);}}><IC.Chevron/></button>
+            {showShareDD&&(
+              <div className="bv-dropdown">
+                <div className="bv-dd-item" onClick={()=>{setShowShareDD(false);showT("Sharing via WhatsApp");}}>
+                  <span className="bv-dd-icon bv-wa-icon">
+                    <svg viewBox="0 0 24 24" fill="currentColor" style={{width:15,height:15}}><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                  </span>
+                  Whatsapp
+                </div>
+                <div className="bv-dd-item" onClick={()=>{setShowShareDD(false);showT("Sharing via SMS");}}>
+                  <span className="bv-dd-icon bv-sms-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{width:15,height:15}}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                  </span>
+                  SMS
+                </div>
+              </div>
+            )}
+          </div>
+          <button className="btn-record-payment" onClick={()=>setShowPayModal(true)}>
+            Record Payment Out
+          </button>
+        </div>
+      </div>
+
+      {/* Invoice paper */}
+      <div className="bill-paper-wrap">
+        <div className="bill-paper">
+          {/* Purchase label */}
+          <div className="bill-purchase-label">PURCHASE</div>
+
+          {/* Company + invoice meta */}
+          <div className="bill-header-row">
+            <div className="bill-company-info">
+              <div className="bill-company-logo">
+                <span>SCRATCH<br/>WEB</span>
+              </div>
+              <div>
+                <div className="bill-company-name">scratchweb.solutions</div>
+                <div className="bill-company-addr">
+                  WEST SHANTINAGAR ANANDNAGAR BALLY<br/>
+                  HOWRAH SAREE HOUSE, HOWRAH, 711227<br/>
+                  Mobile: 06289909521<br/>
+                  Email: rakeshranjantiwan11@gmail.com
+                </div>
+              </div>
+            </div>
+            <div className="bill-meta-table">
+              <table>
+                <tbody>
+                  <tr>
+                    <td className="bill-meta-label">Purchase No.</td>
+                    <td className="bill-meta-val">{inv.invoiceNumber}</td>
+                  </tr>
+                  <tr>
+                    <td className="bill-meta-label">Purchase Date</td>
+                    <td className="bill-meta-val">{fmtDateTime(inv.date)}</td>
+                  </tr>
+                  {inv.dueIn!=="-"&&(
+                    <tr>
+                      <td className="bill-meta-label">Due Date</td>
+                      <td className="bill-meta-val bill-meta-due">
+                        {(()=>{
+                          const d=new Date(inv.date); d.setDate(d.getDate()+(parseInt(inv.dueIn)||0));
+                          return `${d.getDate().toString().padStart(2,"0")}-${(d.getMonth()+1).toString().padStart(2,"0")}-${d.getFullYear()}`;
+                        })()}
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Bill From */}
+          <div className="bill-from-row">
+            <div className="bill-from-label">BILL FROM</div>
+            <div className="bill-from-name">{inv.partyName.toUpperCase()}</div>
+            {inv.partyPhone&&<div className="bill-from-detail">Mobile: {inv.partyPhone}</div>}
+            {inv.partyPan&&<div className="bill-from-detail">PAN: {inv.partyPan}</div>}
+          </div>
+
+          {/* Items table */}
+          <table className="bill-items-table">
+            <thead>
+              <tr>
+                <th style={{width:48,textAlign:"center"}}>S.NO.</th>
+                <th>SERVICES</th>
+                <th style={{width:80,textAlign:"center"}}>QTY</th>
+                <th style={{width:90,textAlign:"center"}}>RATE</th>
+                <th style={{width:90,textAlign:"center"}}>TAX</th>
+                <th style={{width:100,textAlign:"right"}}>AMOUNT</th>
+              </tr>
+            </thead>
+            <tbody>
+              {inv.items.map((item,idx)=>{
+                const amt=item.qty*item.price-item.discount;
+                const taxAmt=item.qty*item.price*item.tax/100;
+                return (
+                  <tr key={item.id}>
+                    <td style={{textAlign:"center",color:"#667085"}}>{idx+1}</td>
+                    <td style={{fontWeight:500,color:"#1a2332"}}>{item.name}</td>
+                    <td style={{textAlign:"center",color:"#344054"}}>{item.qty} PCS</td>
+                    <td style={{textAlign:"center",color:"#344054"}}>{item.price>0?item.price.toLocaleString("en-IN"):0}</td>
+                    <td style={{textAlign:"center",color:"#667085"}}>
+                      {taxAmt.toLocaleString("en-IN")}<br/>
+                      <span style={{fontSize:10}}>({item.tax}%)</span>
+                    </td>
+                    <td style={{textAlign:"right",fontWeight:600,color:"#1a2332"}}>{amt.toLocaleString("en-IN")}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+            <tfoot>
+              <tr className="bill-tfoot-total">
+                <td/>
+                <td style={{textAlign:"right",fontWeight:600,fontSize:11,color:"#667085",paddingRight:8}}>TOTAL</td>
+                <td style={{textAlign:"center",fontWeight:700,color:"#1a2332"}}>{inv.items.reduce((s,i)=>s+i.qty,0)}</td>
+                <td/>
+                <td style={{textAlign:"center",fontWeight:700,color:"#344054"}}>₹{totalTax.toLocaleString("en-IN")}</td>
+                <td style={{textAlign:"right",fontWeight:700,color:"#1a2332"}}>₹{invoiceTotal.toLocaleString("en-IN")}</td>
+              </tr>
+              <tr className="bill-tfoot-paid">
+                <td colSpan={5} style={{textAlign:"right",fontWeight:600,fontSize:12,color:"#344054",paddingRight:8}}>PAID AMOUNT</td>
+                <td style={{textAlign:"right",fontWeight:700,color:"#16a34a"}}>₹{inv.amtPaid.toLocaleString("en-IN")}</td>
+              </tr>
+            </tfoot>
+          </table>
+
+          {/* HSN/SAC tax breakdown */}
+          <div className="bill-tax-section">
+            <table className="bill-tax-table">
+              <thead>
+                <tr>
+                  <th rowSpan={2}>HSN/SAC</th>
+                  <th rowSpan={2}>Taxable Value</th>
+                  <th colSpan={2}>CGST</th>
+                  <th colSpan={2}>SGST</th>
+                  <th rowSpan={2}>Total Tax Amount</th>
+                </tr>
+                <tr>
+                  <th>Rate</th><th>Amount</th>
+                  <th>Rate</th><th>Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {inv.items.map((item,i)=>{
+                  const taxableVal=item.qty*item.price;
+                  const itemTax=taxableVal*item.tax/100;
+                  return (
+                    <tr key={i}>
+                      <td>{item.hsn||"-"}</td>
+                      <td style={{textAlign:"right"}}>{taxableVal.toLocaleString("en-IN")}</td>
+                      <td style={{textAlign:"center"}}>{item.tax/2}%</td>
+                      <td style={{textAlign:"center"}}>{(itemTax/2).toLocaleString("en-IN")}</td>
+                      <td style={{textAlign:"center"}}>{item.tax/2}%</td>
+                      <td style={{textAlign:"center"}}>{(itemTax/2).toLocaleString("en-IN")}</td>
+                      <td style={{textAlign:"right",fontWeight:600}}>₹{itemTax.toLocaleString("en-IN")}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Amount in words + T&C + Signature */}
+          <div className="bill-footer-row">
+            <div className="bill-footer-left">
+              <div className="bill-words-label">Total Amount (in words)</div>
+              <div className="bill-words-val">{numToWords(invoiceTotal)}</div>
+              <div className="bill-tc-label">Terms and Conditions</div>
+              <div className="bill-tc-text">
+                1. Goods once sold will not be taken back or exchanged<br/>
+                2. All disputes are subject to [ENTER_YOUR_CITY_NAME] jurisdiction only
+              </div>
+            </div>
+            <div className="bill-footer-right">
+              <div className="bill-auth-label">Authorised Signatory For</div>
+              <div className="bill-auth-company">scratchweb.solutions</div>
+              <div className="bill-sig-box"/>
+            </div>
+          </div>
+
+          {/* Invoice footer */}
+          <div className="bill-bottom-footer">
+            Invoice created using <strong style={{color:"#4361ee"}}>myBillBook</strong> · Download now at
+          </div>
+        </div>
+      </div>
+
+      {showPayModal&&(
+        <RecordPaymentModal
+          invoice={inv}
+          invoiceTotal={invoiceTotal}
+          onClose={()=>setShowPayModal(false)}
+          onSave={handleSavePayment}
+        />
+      )}
+
+      {toast&&<div className="pi-toast">{toast}</div>}
     </div>
   );
 }
@@ -575,12 +1086,14 @@ interface CPIProps {
   seqNo: number;
   onBack: ()=>void;
   onSaved: (inv:Invoice, isEdit:boolean)=>void;
+  onCreateItem: ()=>void; // ← NEW: navigates to create-item page
   allParties: Party[];
   setAllParties: React.Dispatch<React.SetStateAction<Party[]>>;
   settings: AppSettings;
+  setSettings: React.Dispatch<React.SetStateAction<AppSettings>>;
 }
 
-function CreatePurchaseInvoicePage({mode,editData,seqNo,onBack,onSaved,allParties,setAllParties,settings}:CPIProps) {
+function CreatePurchaseInvoicePage({mode,editData,seqNo,onBack,onSaved,onCreateItem,allParties,setAllParties,settings,setSettings}:CPIProps) {
   const isEdit = mode==="edit";
   const isDup  = mode==="duplicate";
   const isNew  = mode==="create";
@@ -593,7 +1106,11 @@ function CreatePurchaseInvoicePage({mode,editData,seqNo,onBack,onSaved,allPartie
   const [invoiceItems,setInvoiceItems]=useState<InvoiceItem[]>(editData?[...editData.items]:[]);
 
   const [invNo]=useState(isEdit?(editData!.invoiceNumber.toString()):String(seqNo));
-  const [invDate]=useState(isEdit ? fmtDate(new Date(editData!.date)) : todayStr());
+  const initInvDate = isEdit ? new Date(editData!.date) : new Date();
+  const [invDateObj, setInvDateObj] = useState<Date>(initInvDate);
+  const [showInvDatePicker, setShowInvDatePicker] = useState(false);
+  const invDateRef = useRef<HTMLDivElement>(null);
+  const invDate = `${invDateObj.getDate().toString().padStart(2,"0")} ${["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][invDateObj.getMonth()]} ${invDateObj.getFullYear()}`;
 
   const [showDueDate,setShowDueDate]=useState(editData?editData.dueIn!=="-":false);
   const [payTerms,setPayTerms]=useState("30");
@@ -635,6 +1152,7 @@ function CreatePurchaseInvoicePage({mode,editData,seqNo,onBack,onSaved,allPartie
   const [itemSearch,setItemSearch]=useState("");
   const [pendingQtys,setPendingQtys]=useState<Record<number,number>>({});
   const [addedIds,setAddedIds]=useState<number[]>([]);
+  const [showCPISettings,setShowCPISettings]=useState(false);
 
   const partyRef=useRef<HTMLDivElement>(null);
   useEffect(()=>{
@@ -712,7 +1230,7 @@ function CreatePurchaseInvoicePage({mode,editData,seqNo,onBack,onSaved,allPartie
     if(!selectedParty){showT("Please select a party first");return;}
     const inv:Invoice={
       id:isEdit?editData!.id:Date.now(),
-      date:isEdit?editData!.date:new Date().toISOString().slice(0,10),
+      date:isEdit?editData!.date:invDateObj.toISOString().slice(0,10),
       invoiceNumber:Number(invNo),
       partyName:selectedParty.name, partyId:selectedParty.id,
       partyPhone:selectedParty.phone, partyPan:selectedParty.pan,
@@ -730,7 +1248,7 @@ function CreatePurchaseInvoicePage({mode,editData,seqNo,onBack,onSaved,allPartie
 
   return (
     <div className="cpi-page">
-      {/* ── TOP BAR ── FIXED: back arrow and title are now separate elements */}
+      {/* ── TOP BAR ── */}
       <div className="cpi-topbar">
         <div className="cpi-title-wrap">
           <button className="cpi-back-btn" onClick={onBack}>
@@ -742,7 +1260,7 @@ function CreatePurchaseInvoicePage({mode,editData,seqNo,onBack,onSaved,allPartie
         </div>
         <div className="cpi-topbar-right">
           <button className="btn-upload"><IC.Upload/> Upload using Phone</button>
-          <button className="btn-topbar-settings"><IC.Settings/> Settings<span className="red-dot"/></button>
+          <button className="btn-topbar-settings" onClick={()=>setShowCPISettings(true)}><IC.Settings/> Settings<span className="red-dot"/></button>
           {!isEdit&&<button className="btn-save-new" onClick={()=>showT("Saved & new invoice")}>Save &amp; New</button>}
           <button className={isEdit?"btn-save-update":"btn-save-top"} onClick={handleSave}>
             {isEdit?"Update Purchase Invoice":"Save"}
@@ -842,12 +1360,21 @@ function CreatePurchaseInvoicePage({mode,editData,seqNo,onBack,onSaved,allPartie
             <div className="inv-fields-top-row">
               <div className="inv-field-group" style={{flex:"0 0 80px"}}><label>Purchase Inv No:</label><input value={invNo} readOnly/></div>
               <div className="inv-field-group" style={{flex:1}}><label>Purchase Inv Date:</label>
-                <div className="date-field-wrap"><span className="cal-icon"><IC.Calendar/></span><span className="date-val">{invDate}</span><span className="caret">▾</span></div>
+                <div className="date-field-wrap" ref={invDateRef} style={{position:"relative",cursor:"pointer"}} onClick={()=>setShowInvDatePicker(v=>!v)}>
+                  <span className="cal-icon"><IC.Calendar/></span><span className="date-val">{invDate}</span><span className="caret">▾</span>
+                  {showInvDatePicker&&(
+                    <SingleDatePicker
+                      value={invDateObj}
+                      onApply={(d)=>{setInvDateObj(d);setShowInvDatePicker(false);}}
+                      onCancel={()=>setShowInvDatePicker(false)}
+                    />
+                  )}
+                </div>
               </div>
               <div className="inv-field-group" style={{flex:1}}><label>Original Inv No.</label><input placeholder=""/></div>
             </div>
             {!showDueDate
-              ?<button className="add-due-date-btn" onClick={()=>setShowDueDate(true)}><IC.Plus/> + Add Due Date</button>
+              ?<button className="add-due-date-btn" onClick={()=>setShowDueDate(true)}><IC.Plus/>  Add Due Date</button>
               :<div className="due-date-row">
                   <div className="inv-field-group" style={{flex:"0 0 auto"}}><label>Payment Terms:</label>
                     <div style={{display:"flex",alignItems:"center",border:"1px solid #d0d5dd",borderRadius:6,overflow:"hidden",background:"#fff"}}>
@@ -934,7 +1461,7 @@ function CreatePurchaseInvoicePage({mode,editData,seqNo,onBack,onSaved,allPartie
           </table>
           <div className="add-item-area">
             <button className="add-item-dashed-btn" onClick={openAddItems}><IC.Plus/>  Add Item</button>
-            <div className="scan-barcode-area" onClick={()=>showT("Scan barcode")}><IC.Barcode/> Scan Barcode</div>
+            <div className="scan-barcode-area" onClick={openAddItems}><IC.Barcode/> Scan Barcode</div>
           </div>
           <div className="subtotal-row">
             <span className="sub-label">SUBTOTAL</span>
@@ -1133,7 +1660,13 @@ function CreatePurchaseInvoicePage({mode,editData,seqNo,onBack,onSaved,allPartie
                 <button className="aim-barcode-btn"><IC.Barcode/></button>
               </div>
               <div className="aim-cat-wrap"><select className="aim-cat-select"><option>Select Category</option><option>Electronics</option><option>Software</option></select></div>
-              <button className="aim-create-btn" onClick={()=>showT("Create new item")}>Create New Item</button>
+              {/* ── UPDATED: navigates to create-item path ── */}
+              <button
+                className="aim-create-btn"
+                onClick={()=>{ setShowAddItems(false); setItemSearch(""); onCreateItem(); }}
+              >
+                Create New Item
+              </button>
             </div>
             <div className="aim-table-wrap">
               <table className="aim-table">
@@ -1182,6 +1715,23 @@ function CreatePurchaseInvoicePage({mode,editData,seqNo,onBack,onSaved,allPartie
         </div>
       )}
 
+      {showCPISettings&&(<div className="pi-overlay" onClick={()=>setShowCPISettings(false)}>
+        <div className="pi-modal" onClick={e=>e.stopPropagation()}>
+          <div className="pi-modal-head"><span className="pi-modal-title">Quick Purchase Invoice Settings</span><button className="pi-modal-close" onClick={()=>setShowCPISettings(false)}><IC.X/></button></div>
+          {[{key:"prefixEnabled",label:"Purchase Invoice Prefix & Sequence Number",desc:"Add your custom prefix & sequence for Purchase Invoice Numbering"},{key:"showItemImage",label:"Show Item Image on Invoice",desc:"This will apply to all vouchers except for Payment In and Payment Out"},{key:"priceHistory",label:"Price History",desc:"Show last 5 sales / purchase prices of the item for the selected party in invoice",badge:true}].map(s=>(
+            <div key={s.key} className="pi-s-block">
+              <div className="pi-s-top"><span className="pi-s-name">{s.label}{s.badge&&<span className="badge-new">New</span>}</span><label className="toggle"><input type="checkbox" checked={(settings as any)[s.key]} onChange={e=>setSettings(p=>({...p,[s.key]:e.target.checked}))}/><span className="toggle-slider"/></label></div>
+              <p className="pi-s-desc">{s.desc}</p>
+              {s.key==="prefixEnabled"&&settings.prefixEnabled&&(<>
+                <div className="pi-s-fields"><div><label>Prefix</label><input placeholder="Prefix" value={settings.prefix} onChange={e=>setSettings(p=>({...p,prefix:e.target.value}))}/></div><div><label>Sequence Number</label><input type="number" value={settings.sequenceNumber} onChange={e=>setSettings(p=>({...p,sequenceNumber:Number(e.target.value)}))}/></div></div>
+                <p className="pi-s-note">Purchase Invoice Number: {settings.prefix}{settings.sequenceNumber}</p>
+              </>)}
+            </div>
+          ))}
+          <div className="pi-modal-foot"><button className="btn-cancel" onClick={()=>setShowCPISettings(false)}>Cancel</button><button className="btn-save" onClick={()=>{setShowCPISettings(false);showT("Settings saved");}}>Save</button></div>
+        </div>
+      </div>)}
+
       {toast&&<div className="pi-toast">{toast}</div>}
     </div>
   );
@@ -1191,11 +1741,11 @@ function CreatePurchaseInvoicePage({mode,editData,seqNo,onBack,onSaved,allPartie
    PURCHASE INVOICES LIST PAGE
 ══════════════════════════════════════════ */
 function PurchaseInvoicesPage({invoices,setInvoices,settings,setSettings,
-  onCreateNew,onEdit,onDuplicate,onGSTR2,onDaybook}:{
+  onCreateNew,onEdit,onDuplicate,onGSTR2,onDaybook,onView}:{
   invoices:Invoice[];setInvoices:React.Dispatch<React.SetStateAction<Invoice[]>>;
   settings:AppSettings;setSettings:React.Dispatch<React.SetStateAction<AppSettings>>;
   onCreateNew:()=>void; onEdit:(inv:Invoice)=>void; onDuplicate:(inv:Invoice)=>void;
-  onGSTR2:()=>void; onDaybook:()=>void;
+  onGSTR2:()=>void; onDaybook:()=>void; onView:(inv:Invoice)=>void;
 }) {
   const [activeCard,setActiveCard]=useState<"all"|"paid"|"unpaid">("all");
   const [dateFilter,setDateFilter]=useState<DateFilter>("Last 365 Days");
@@ -1319,7 +1869,7 @@ function PurchaseInvoicesPage({invoices,setInvoices,settings,setSettings,
             {displayed.length===0
               ?<tr><td colSpan={7}><div className="pi-empty">No purchase invoices found.</div></td></tr>
               :displayed.map(inv=>(
-                <tr key={inv.id}>
+                <tr key={inv.id} className="pi-table-row" onClick={()=>onView(inv)} style={{cursor:"pointer"}}>
                   <td>{fmtDate(new Date(inv.date))}</td>
                   <td>{inv.invoiceNumber}</td>
                   <td>{inv.partyName}</td>
@@ -1369,6 +1919,7 @@ function PurchaseInvoicesPage({invoices,setInvoices,settings,setSettings,
 export default function PurchaseModule() {
   const [page,setPage]=useState<PageMode>("list");
   const [editTarget,setEditTarget]=useState<Invoice|null>(null);
+  const [viewTarget,setViewTarget]=useState<Invoice|null>(null);
   const [invoices,setInvoices]=useState<Invoice[]>(SEED_INVOICES);
   const [allParties,setAllParties]=useState<Party[]>(ALL_PARTIES);
   const [settings,setSettings]=useState<AppSettings>({prefixEnabled:true,prefix:"",sequenceNumber:3,showItemImage:true,priceHistory:true});
@@ -1386,6 +1937,15 @@ export default function PurchaseModule() {
 
   const handleEdit=(inv:Invoice)=>{ setEditTarget(inv); setPage("edit"); };
   const handleDuplicate=(inv:Invoice)=>{ setEditTarget(inv); setPage("duplicate"); };
+  const handleView=(inv:Invoice)=>{ setViewTarget(inv); setPage("view"); };
+
+  const handleInvoiceUpdate=(updated:Invoice)=>{
+    setInvoices(p=>p.map(i=>i.id===updated.id?updated:i));
+    setViewTarget(updated);
+  };
+
+  // ── Shared onCreateItem handler: navigates to the create-item path ──
+  const handleCreateItem = () => { window.location.href = "/create-item"; };
 
   if(page==="gstr2"){
     return <GSTR2Page invoices={invoices} onBack={()=>setPage("list")} />;
@@ -1393,26 +1953,37 @@ export default function PurchaseModule() {
   if(page==="daybook"){
     return <DaybookPage invoices={invoices} onBack={()=>setPage("list")} />;
   }
+  if(page==="view"&&viewTarget){
+    const latest=invoices.find(i=>i.id===viewTarget.id)||viewTarget;
+    return <InvoiceBillView
+      invoice={latest}
+      onBack={()=>{ setViewTarget(null); setPage("list"); }}
+      onInvoiceUpdate={handleInvoiceUpdate}
+    />;
+  }
   if(page==="edit"&&editTarget){
     return <CreatePurchaseInvoicePage
       mode="edit" editData={editTarget} seqNo={settings.sequenceNumber}
       onBack={()=>{setEditTarget(null);setPage("list");}}
       onSaved={handleSaved}
-      allParties={allParties} setAllParties={setAllParties} settings={settings}/>;
+      onCreateItem={handleCreateItem}
+      allParties={allParties} setAllParties={setAllParties} settings={settings} setSettings={setSettings}/>;
   }
   if(page==="duplicate"&&editTarget){
     return <CreatePurchaseInvoicePage
       mode="duplicate" editData={editTarget} seqNo={settings.sequenceNumber}
       onBack={()=>{setEditTarget(null);setPage("list");}}
       onSaved={handleSaved}
-      allParties={allParties} setAllParties={setAllParties} settings={settings}/>;
+      onCreateItem={handleCreateItem}
+      allParties={allParties} setAllParties={setAllParties} settings={settings} setSettings={setSettings}/>;
   }
   if(page==="create"){
     return <CreatePurchaseInvoicePage
       mode="create" seqNo={settings.sequenceNumber}
       onBack={()=>setPage("list")}
       onSaved={handleSaved}
-      allParties={allParties} setAllParties={setAllParties} settings={settings}/>;
+      onCreateItem={handleCreateItem}
+      allParties={allParties} setAllParties={setAllParties} settings={settings} setSettings={setSettings}/>;
   }
   return <PurchaseInvoicesPage
     invoices={invoices} setInvoices={setInvoices}
@@ -1422,5 +1993,6 @@ export default function PurchaseModule() {
     onDuplicate={handleDuplicate}
     onGSTR2={()=>setPage("gstr2")}
     onDaybook={()=>setPage("daybook")}
+    onView={handleView}
   />;
 }

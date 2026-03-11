@@ -518,7 +518,7 @@ function CreatePurchaseOrderPage({mode,editData,seqNo,onBack,onSaved,onSaveAndNe
 
             {partyState==="empty"&&(
               <div className="party-add-box" onClick={openPartySearch}>
-                <div className="party-add-inner"><IC.Plus/> + Add Party</div>
+                <div className="party-add-inner"><IC.Plus/>  Add Party</div>
               </div>
             )}
 
@@ -642,8 +642,8 @@ function CreatePurchaseOrderPage({mode,editData,seqNo,onBack,onSaved,onSaveAndNe
             </tbody>
           </table>
           <div className="add-item-area">
-            <button className="add-item-dashed-btn" onClick={openAddItems}><IC.Plus/> + Add Item</button>
-            <div className="scan-barcode-area" onClick={()=>showT("Scan barcode")}><IC.Barcode/> Scan Barcode</div>
+            <button className="add-item-dashed-btn" onClick={openAddItems}><IC.Plus/>  Add Item</button>
+           <div className="scan-barcode-area" onClick={openAddItems}><IC.Barcode/> Scan Barcode</div>
           </div>
           <div className="subtotal-row">
             <span className="sub-label">SUBTOTAL</span>
@@ -696,7 +696,7 @@ function CreatePurchaseOrderPage({mode,editData,seqNo,onBack,onSaved,onSaveAndNe
             </div>
 
             {!showDiscount
-              ?<button className="btn-add-discount-link" onClick={()=>setShowDiscount(true)}>+ Add Discount</button>
+              ?<button className="btn-add-discount-link" onClick={()=>setShowDiscount(true)}> Add Discount</button>
               :<div className="discount-row">
                   <span className="discount-label">Discount</span>
                   <div className="discount-inputs">

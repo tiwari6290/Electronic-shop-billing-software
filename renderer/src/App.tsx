@@ -15,7 +15,7 @@ import PaymentOut from "./components/Cashier/PaymentOut/PaymentOut";
 import PaymentIn from "./components/Cashier/PaymentIn/PaymentIn";
 import PaymentInView from "./components/Cashier/PaymentIn/Paymentinview";
 // import PurchaseOrder from "./components/Cashier/PurchaseOrder/PurchaseOrder";
-import Createexpense from "./components/Cashier/Createexpense";
+import Createexpense from "./components/Cashier/CreateExpenses/Expenses";
 import AdminSettingSidebar from "./components/Admin/AdminSettingSidebar";
 import ManageBusiness from "./components/Admin/ManageBuisness";
 import Account from "./components/Admin/Account/Account";
@@ -50,7 +50,7 @@ import CreateSalesReturn from "./components/Cashier/Salesreturn/Createsalesretur
 import SalesReturnViewModel from "./components/Cashier/Salesreturn/Salesreturnviewmodel";
 import CreditNote from "./components/Cashier/Creditnote/Creditnote";
 
-import DeliveryChallan from "./components/Cashier/Deliverychallan/DeliveryChallan";
+import DeliveryChallan from "./components/Cashier/DeliveryChallan/DeliveryChallan";
 
 // Sales Invoice components
 import SalesInvoiceList   from "./components/Cashier/Salesinvoices/SalesInvoiceList";

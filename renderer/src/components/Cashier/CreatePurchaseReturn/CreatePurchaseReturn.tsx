@@ -233,7 +233,7 @@ function PurchaseReturnForm({
   onBack:()=>void;
   onSaved?:(r:PurchaseReturn)=>void;
   onUpdated?:(r:PurchaseReturn)=>void;
-  onSavedAndNew?:(r:PurchaseReturn)=>void;  // FIX 3
+  onSavedAndNew?:(r:PurchaseReturn)=>void;
   allParties:Party[];
   setAllParties:React.Dispatch<React.SetStateAction<Party[]>>;
   prSettings:PRSettings;
@@ -247,7 +247,6 @@ function PurchaseReturnForm({
   const [partySearch,setPartySearch]=useState("");
   const [selectedParty,setSelectedParty]=useState<Party|null>(initParty);
   const [items,setItems]=useState<PRItem[]>(initialData?.items??[]);
-  // FIX 2: seqNo always comes from prSettings.sequenceNumber (passed from root)
   const [returnNo]=useState(isEdit?String(initialData!.returnNumber):String(seqNo));
   const [returnDate]=useState(isEdit?dateToStr(initialData!.date):todayStr());
   const [linkedInvoice,setLinkedInvoice]=useState(initialData?.linkedInvoice??"");
@@ -366,7 +365,6 @@ function PurchaseReturnForm({
     }
   };
 
-  // FIX 3: Save & New — passes bill to parent which adds to list, bumps seq, remounts form
   const handleSaveAndNew=()=>{
     if(!selectedParty){showT("Please select a party first");return;}
     onSavedAndNew?.(buildReturn(Date.now(),new Date().toISOString().slice(0,10),seqNo));
@@ -374,7 +372,6 @@ function PurchaseReturnForm({
 
   return (
     <div className="cpi-page">
-      {/* ── FIX 1: back arrow is its own button; title is a separate <span> ── */}
       <div className="cpi-topbar">
         <div className="cpi-title-wrap">
           <button className="cpi-back-btn" onClick={onBack}><IC.Back/></button>
@@ -385,7 +382,6 @@ function PurchaseReturnForm({
         <div className="cpi-topbar-right">
           {isEdit&&<button className="btn-icon btn-grid-icon" onClick={()=>showT("Grid view")}><IC.Monitor/></button>}
           <button className="btn-topbar-settings" onClick={()=>setShowSettings(true)}><IC.Settings/> Settings</button>
-          {/* FIX 3: calls handleSaveAndNew (not just a toast) */}
           {!isEdit&&<button className="btn-save-new" onClick={handleSaveAndNew}>Save &amp; New</button>}
           <button className="btn-save-top" onClick={handleSave}>{isEdit?"Update Purchase Return":"Save"}</button>
         </div>
@@ -561,7 +557,8 @@ function PurchaseReturnForm({
           </table>
           <div className="add-item-area">
             <button className="add-item-dashed-btn" onClick={openAddItems}><IC.Plus/>  Add Item</button>
-            <div className="scan-barcode-area" onClick={()=>showT("Scan barcode")}><IC.Barcode/> Scan Barcode</div>
+            {/* ✅ UPDATED: Scan Barcode now opens the same Add Items modal */}
+            <div className="scan-barcode-area" onClick={openAddItems}><IC.Barcode/> Scan Barcode</div>
           </div>
           <div className="subtotal-row">
             <span className="sub-label">SUBTOTAL</span>
@@ -990,29 +987,23 @@ export default function PurchaseReturnModule() {
   const [returns,setReturns]=useState<PurchaseReturn[]>(SEED_RETURNS);
   const [allParties,setAllParties]=useState<Party[]>(PARTIES);
 
-  // FIX 2: removed the separate seqNo state that drifted from settings.
-  // prSettings.sequenceNumber IS the single source of truth for the next return number.
   const [prSettings,setPrSettings]=useState<PRSettings>({
     prefixEnabled:true, prefix:"", sequenceNumber:2, showItemImage:true
   });
 
   const [activeRecord,setActiveRecord]=useState<PurchaseReturn|null>(null);
-
-  // FIX 3: incrementing formKey causes React to fully unmount+remount the form (all state resets)
   const [formKey,setFormKey]=useState(0);
 
   const handleSaved=(r:PurchaseReturn)=>{
     setReturns(p=>[r,...p]);
-    // bump sequenceNumber so next bill starts from the right number
     setPrSettings(s=>({...s,sequenceNumber:s.sequenceNumber+1}));
     setPage("list");
   };
 
-  // FIX 3: adds bill to list, bumps seq, stays on create page with blank form
   const handleSavedAndNew=(r:PurchaseReturn)=>{
     setReturns(p=>[r,...p]);
     setPrSettings(s=>({...s,sequenceNumber:s.sequenceNumber+1}));
-    setFormKey(k=>k+1); // new key → React destroys old form, mounts fresh one
+    setFormKey(k=>k+1);
   };
 
   const handleUpdated=(r:PurchaseReturn)=>{
@@ -1036,7 +1027,6 @@ export default function PurchaseReturnModule() {
       onSaved={handleSaved} onSavedAndNew={handleSavedAndNew}/>;
 
   if(page==="create")
-    // FIX 2+3: seqNo always = prSettings.sequenceNumber; key changes on every Save&New
     return <PurchaseReturnForm key={`create-${formKey}`} {...commonProps}
       mode="create" seqNo={prSettings.sequenceNumber}
       onSaved={handleSaved} onSavedAndNew={handleSavedAndNew}/>;

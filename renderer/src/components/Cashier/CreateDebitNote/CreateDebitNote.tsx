@@ -322,7 +322,7 @@ function CreateDebitNotePage({
           <div className="cpi-bill-panel">
             {partyState==="empty"&&(
               <div ref={partyRef} className="party-add-box" onClick={()=>setPartyState("searching")}>
-                <div className="party-add-inner"><IC.Plus/> + Add Party</div>
+                <div className="party-add-inner"><IC.Plus/>  Add Party</div>
               </div>
             )}
             {partyState==="searching"&&(
@@ -474,8 +474,8 @@ function CreateDebitNotePage({
             </tbody>
           </table>
           <div className="add-item-area">
-            <button className="add-item-dashed-btn" onClick={openAddItems}><IC.Plus/> + Add Item</button>
-            <div className="scan-barcode-area" onClick={()=>showT("Scan barcode")}><IC.Barcode/> Scan Barcode</div>
+            <button className="add-item-dashed-btn" onClick={openAddItems}><IC.Plus/>  Add Item</button>
+            <div className="scan-barcode-area" onClick={openAddItems}><IC.Barcode/> Scan Barcode</div>
           </div>
           <div className="subtotal-row">
             <span className="sub-label">SUBTOTAL</span>
