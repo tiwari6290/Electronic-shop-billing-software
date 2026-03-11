@@ -1,0 +1,371 @@
+/* ════════════════════════════════
+   PURCHASE RETURN — LIST PAGE
+════════════════════════════════ */
+.pr-list-page { background:#f4f5f7; min-height:100vh; padding:20px 28px; }
+
+.pr-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+.pr-list-header-right { display:flex; align-items:center; gap:8px; }
+
+/* Toolbar: search icon + date filter + create button */
+.pr-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+/* Search icon button (circle with magnifier) */
+.pr-search-icon-btn {
+  width: 34px; height: 34px;
+  border: 1px solid #d0d5dd;
+  background: #fff;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  color: #667085;
+}
+.pr-search-icon-btn:hover { background: #f9fafb; }
+.pr-search-icon-btn svg { width:15px; height:15px; }
+
+/* Floating search popup */
+.pr-search-popup {
+  position: absolute;
+  top: 38px; left: 0;
+  display: flex;
+  align-items: center;
+  background: #fff;
+  border: 1px solid #d0d5dd;
+  border-radius: 6px;
+  height: 34px;
+  overflow: hidden;
+  z-index: 200;
+  box-shadow: 0 4px 12px rgba(16,24,40,.08);
+  min-width: 320px;
+  padding: 0 8px;
+}
+
+/* Date button — reuse pi-date-btn but slightly different */
+.pr-date-btn {
+  min-width: 160px;
+}
+
+/* Create Purchase Return button */
+.btn-create-pr {
+  background: #4361ee;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 0 18px;
+  height: 34px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  margin-left: auto;
+  font-family: inherit;
+}
+.btn-create-pr:hover { background: #3451d1; }
+
+/* PR table wrapper */
+.pr-table-wrap { background:#fff; border:1px solid #e4e7ec; border-radius:8px; overflow:hidden; }
+.pr-table-wrap table { width:100%; border-collapse:collapse; }
+.pr-table-wrap thead tr { background:#f9fafb; border-bottom:1px solid #e4e7ec; }
+.pr-table-wrap th { padding:10px 14px; text-align:left; font-size:12px; font-weight:600; color:#667085; white-space:nowrap; }
+.pr-table-wrap th.sortable { cursor:pointer; user-select:none; }
+.pr-table-wrap td { padding:12px 14px; font-size:13px; color:#344054; border-bottom:1px solid #f2f4f7; }
+.pr-table-wrap tbody tr:last-child td { border-bottom:none; }
+.pr-table-wrap tbody tr:hover { background:#fafafa; }
+
+/* "Credited" status — blue text, no background pill */
+.pr-status-credited {
+  color: #4361ee;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+/* ════════════════════════════════
+   PURCHASE RETURN — CREATE PAGE
+   (reuses cpi-*, party-*, items-*,
+    summary-panel, modal-* from Purchase.css)
+════════════════════════════════ */
+
+/* Link to Purchase Invoice search */
+.pr-link-section {
+  position: relative;
+  margin-bottom: 10px;
+}
+.pr-link-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #667085;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  margin-bottom: 4px;
+}
+.pr-link-search {
+  display: flex;
+  align-items: center;
+  border: 1px solid #d0d5dd;
+  border-radius: 6px;
+  height: 32px;
+  background: #fff;
+  cursor: text;
+  overflow: hidden;
+}
+.pr-link-icon {
+  padding: 0 8px;
+  display: flex; align-items: center;
+  color: #98a2b3;
+}
+.pr-link-icon svg { width:13px; height:13px; }
+.pr-link-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 12px;
+  color: #344054;
+  background: transparent;
+  font-family: inherit;
+}
+.pr-link-input::placeholder { color: #98a2b3; }
+
+.pr-inv-dropdown {
+  position: absolute;
+  top: calc(100% + 3px);
+  left: 0; right: 0;
+  background: #fff;
+  border: 1px solid #e4e7ec;
+  border-radius: 7px;
+  box-shadow: 0 4px 16px rgba(16,24,40,.10);
+  z-index: 300;
+  overflow: hidden;
+}
+.pr-inv-item {
+  padding: 9px 14px;
+  font-size: 13px;
+  color: #344054;
+  cursor: pointer;
+}
+.pr-inv-item:hover { background: #f5f8ff; color: #4361ee; }
+
+/* Add Bank Account button + box */
+.btn-add-bank {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  color: #4361ee;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 6px 0;
+  font-family: inherit;
+  margin-top: 8px;
+}
+.btn-add-bank:hover { text-decoration: underline; }
+.btn-add-bank svg { width:14px; height:14px; }
+
+.bank-account-box {
+  border: 1px solid #e4e7ec;
+  border-radius: 7px;
+  padding: 12px 14px;
+  margin-top: 10px;
+  background: #fafbff;
+}
+.bank-account-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.bank-account-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #344054;
+  text-transform: uppercase;
+  letter-spacing: .3px;
+}
+
+/* Settings modal — pr specific (title changes, 2 toggles only) */
+.pr-settings-modal { width: 460px; }
+/* ══════════════════════════════════════════ SETTINGS MODAL ══ */
+.pi-s-block {
+  padding: 18px 24px;
+  border-bottom: 1px solid #f0f1f3;
+}
+
+.pi-s-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.pi-s-name {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #1a2332;
+}
+
+.pi-s-desc {
+  font-size: 12px;
+  color: #667085;
+  margin: 4px 0 0;
+}
+
+.pi-s-fields {
+  display: flex;
+  gap: 16px;
+  margin-top: 14px;
+}
+
+.pi-s-fields > div {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.pi-s-fields label {
+  font-size: 11px;
+  font-weight: 500;
+  color: #667085;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.pi-s-fields input {
+  border: 1.5px solid #dde1e9;
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 13px;
+  color: #1a2332;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.pi-s-fields input:focus {
+  border-color: #4361ee;
+}
+
+.pi-s-note {
+  font-size: 12px;
+  color: #4361ee;
+  margin-top: 10px;
+  font-weight: 500;
+}
+/* ══════════════════════════════════════════ CONTEXT MENU - 4 OPTIONS ══ */
+.pi-ctx {
+  min-width: 170px;
+}
+
+.pi-ctx .pi-dd-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  color: #344054;
+}
+
+.pi-ctx .pi-dd-item svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+
+.pi-ctx .pi-dd-item:hover {
+  background: #f5f6fa;
+}
+
+.pi-ctx .pi-dd-item.danger {
+  color: #d92d20;
+}
+
+.pi-ctx .pi-dd-item.danger:hover {
+  background: #fff1f0;
+}
+
+/* ══════════════════════════════════════════ TOPBAR - GRID ICON ══ */
+.btn-grid-icon {
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid #dde1e9;
+  border-radius: 7px;
+  background: #fff;
+  cursor: pointer;
+  color: #667085;
+  padding: 0;
+}
+
+.btn-grid-icon:hover {
+  background: #f2f4f7;
+  color: #1a2332;
+}
+
+.btn-grid-icon svg {
+  width: 16px;
+  height: 16px;
+}
+/* ══════════════════════════════════════════ BILL / SHIP SPLIT ══ */
+.bill-from-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #98a2b3;
+  letter-spacing: 0.6px;
+  margin-bottom: 10px;
+}
+
+.bill-ship-split {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 0;
+}
+
+.bill-ship-pane {
+  flex: 1;
+  min-width: 0;
+  padding-right: 16px;
+}
+
+.bill-ship-pane:last-child {
+  padding-right: 0;
+  padding-left: 16px;
+}
+
+.bill-ship-divider {
+  width: 1px;
+  background: #e4e7ec;
+  align-self: stretch;
+  flex-shrink: 0;
+}
+
+.bill-ship-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.bill-ship-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #98a2b3;
+  letter-spacing: 0.6px;
+}
+
+.ship-same-label {
+  color: #98a2b3 !important;
+  font-style: italic;
+}
