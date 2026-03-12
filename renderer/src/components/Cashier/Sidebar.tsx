@@ -81,9 +81,8 @@ const Sidebar: React.FC = () => {
     },
     {
       title: 'PURCHASE TRANSACTIONS',
-      items: [
-        /* { id: 'purchase', label: 'Purchase', icon: <ShoppingCart size={18} />, path: '/cashier/purchase' }, */
-        { id: 'purchase', label: 'Purchase new', icon: <ShoppingCart size={18} />, path: '/cashier/purchase' },
+      items: [ 
+        { id: 'purchase', label: 'Purchase', icon: <ShoppingCart size={18} />, path: '/cashier/purchase' },
         { id: 'payment-out', label: 'Payment Out', icon: <ArrowLeftRight size={18} />, path: '/cashier/payment-out-list' },
         { id: 'purchase-return', label: 'Purchase Return', icon: <CornerUpLeft size={18} />, path: '/cashier/purchase-return' },
         { id: 'debit-note', label: 'Debit Note', icon: <StickyNote size={18} />, path: '/cashier/debit-note' },
