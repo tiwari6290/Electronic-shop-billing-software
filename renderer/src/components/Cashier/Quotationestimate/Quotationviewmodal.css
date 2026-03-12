@@ -181,3 +181,93 @@
 .qvm-inv-footer-note {
   margin-top:20px; text-align:center; font-size:10.5px; color:#9ca3af; letter-spacing:.05em;
 }
+/* ─── Three-dot dropdown menu ─────────────────────────────────────────────── */
+.qvm-dot-menu-wrap {
+  position: relative;
+}
+
+.qvm-dot-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 600;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.14);
+  min-width: 172px;
+  padding: 4px 0;
+  animation: qvm-dot-in 0.12s ease;
+}
+@keyframes qvm-dot-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.qvm-dot-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 16px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13.5px;
+  color: #374151;
+  text-align: left;
+  transition: background 0.1s;
+}
+.qvm-dot-item:hover { background: #f5f7ff; }
+.qvm-dot-item svg   { flex-shrink: 0; color: #6b7280; }
+
+.qvm-dot-item--danger         { color: #dc2626; }
+.qvm-dot-item--danger:hover   { background: #fff0f0; }
+.qvm-dot-item--danger svg     { color: #dc2626; }
+
+.qvm-dot-divider {
+  height: 1px;
+  background: #f3f4f6;
+  margin: 4px 0;
+}
+
+/* ─── Convert to Invoice button ───────────────────────────────────────────── */
+.qvm-convert-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 20px;
+  background: #4338ca;
+  color: #ffffff;
+  border: none;
+  border-radius: 7px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, box-shadow 0.15s;
+  box-shadow: 0 2px 8px rgba(67,56,202,0.25);
+  flex-shrink: 0;
+}
+.qvm-convert-btn:hover {
+  background: #3730a3;
+  box-shadow: 0 4px 14px rgba(67,56,202,0.35);
+}
+
+.qvm-converted-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
+  background: #f0fdf4;
+  color: #16a34a;
+  border: 1px solid #bbf7d0;
+  border-radius: 7px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+}

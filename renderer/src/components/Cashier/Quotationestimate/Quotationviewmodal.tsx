@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { QuotationData, fmtDate } from "./Quotationtypes";
+import { useEffect, useRef, useState } from "react";
+import { QuotationData, fmtDate, saveQuotation } from "./Quotationtypes";
 import "./QuotationViewModal.css";
 
 // ─── Exact SavedTemplate shape from InvoiceBuilder ───────────────────────────
@@ -38,11 +38,38 @@ interface Props {
   quotation: QuotationData;
   onClose: () => void;
   onEdit: () => void;
+  /** Called when user clicks "Convert to Invoice" — parent navigates to CreateSalesInvoice with fromQuotation */
+  onConvertToInvoice?: (quotation: QuotationData) => void;
+  /** Called after duplicate — parent re-opens list or view with new quotation */
+  onDuplicate?: (newQuotation: QuotationData) => void;
+  /** Called after delete — parent navigates back to list */
+  onDelete?: (id: string) => void;
 }
 
-export default function QuotationViewModal({ quotation, onClose, onEdit }: Props) {
-  // Read template every time modal opens — reflects latest InvoiceBuilder save
+export default function QuotationViewModal({
+  quotation,
+  onClose,
+  onEdit,
+  onConvertToInvoice,
+  onDuplicate,
+  onDelete,
+}: Props) {
   const [tpl] = useState<SavedTemplate | null>(loadTemplate);
+
+  // ── Three-dot dropdown state ──────────────────────────────────────────────
+  const [showDotMenu, setShowDotMenu] = useState(false);
+  const dotMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close dot menu on outside click
+  useEffect(() => {
+    function handleOutside(e: MouseEvent) {
+      if (dotMenuRef.current && !dotMenuRef.current.contains(e.target as Node)) {
+        setShowDotMenu(false);
+      }
+    }
+    if (showDotMenu) document.addEventListener("mousedown", handleOutside);
+    return () => document.removeEventListener("mousedown", handleOutside);
+  }, [showDotMenu]);
 
   useEffect(() => {
     const h = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
@@ -50,16 +77,63 @@ export default function QuotationViewModal({ quotation, onClose, onEdit }: Props
     return () => document.removeEventListener("keydown", h);
   }, [onClose]);
 
-  // ── Pull all styling from template (InvoiceBuilder localStorage) ──────────
-  // These exactly mirror what InvoiceBuilder writes to activeInvoiceTemplate
-  const style = tpl?.style;
-  const vis   = tpl?.vis;
-  const ts    = tpl?.ts;
-  const misc  = tpl?.misc;
-  const pv    = tpl?.pv;
-  const bizInv = tpl?.inv;   // business info: companyName, address, gstin, phone, email, pan, bank, ifsc
+  // ── Three-dot menu actions ────────────────────────────────────────────────
+  function handleMenuEdit() {
+    setShowDotMenu(false);
+    onEdit();
+  }
 
-  // Fallback values if no template saved yet
+  function handleEditHistory() {
+    setShowDotMenu(false);
+    alert("Edit History coming soon!");
+  }
+
+  function handleDuplicate() {
+    setShowDotMenu(false);
+    // Create a deep copy with a new id and next quotation number
+    const allQuotations: QuotationData[] = JSON.parse(localStorage.getItem("quotations") || "[]");
+    const maxNo = allQuotations.length > 0 ? Math.max(...allQuotations.map(q => q.quotationNo)) : 0;
+    const duplicate: QuotationData = {
+      ...JSON.parse(JSON.stringify(quotation)),
+      id: `q-${Date.now()}`,
+      quotationNo: maxNo + 1,
+      createdAt: new Date().toISOString().split("T")[0],
+      status: "Open",
+    };
+    saveQuotation(duplicate);
+    if (onDuplicate) onDuplicate(duplicate);
+    else alert(`Quotation duplicated as #${duplicate.quotationNo}`);
+  }
+
+  function handleDelete() {
+    setShowDotMenu(false);
+    if (!window.confirm(`Delete Quotation #${quotation.quotationNo}? This cannot be undone.`)) return;
+    const allQuotations: QuotationData[] = JSON.parse(localStorage.getItem("quotations") || "[]");
+    const updated = allQuotations.filter(q => q.id !== quotation.id);
+    localStorage.setItem("quotations", JSON.stringify(updated));
+    if (onDelete) onDelete(quotation.id);
+    else { alert("Quotation deleted."); onClose(); }
+  }
+
+  // ── Convert to Invoice ────────────────────────────────────────────────────
+  // NOTE: We do NOT close the quotation here.
+  // The quotation status is set to "Closed" only when the sales invoice is actually saved.
+  // The parent (CreateSalesInvoice) calls onBack which should trigger closeQuotation.
+  // We pass the quotation id via the quotation object so CreateSalesInvoice can close it on save.
+  function handleConvertToInvoice() {
+    if (onConvertToInvoice) {
+      onConvertToInvoice(quotation);
+    }
+  }
+
+  // ── Pull all styling from template ────────────────────────────────────────
+  const style  = tpl?.style;
+  const vis    = tpl?.vis;
+  const ts     = tpl?.ts;
+  const misc   = tpl?.misc;
+  const pv     = tpl?.pv;
+  const bizInv = tpl?.inv;
+
   const tc      = style?.themeColor  ?? "#4f46e5";
   const font    = style?.font        ?? "Arial";
   const tSize   = style?.textSize    ?? "13px";
@@ -72,7 +146,6 @@ export default function QuotationViewModal({ quotation, onClose, onEdit }: Props
   const bgOpac   = (ts?.backgroundOpacity ?? 15) / 100;
   const signUrl  = misc?.signatureUrl ?? "";
 
-  // Table column visibility from template
   const showSerial = ts?.cols?.["Serial Number"] !== false;
   const showHSN    = ts?.cols?.["HSN"]         !== false;
   const showMRP    = ts?.cols?.["MRP"]         === true;
@@ -81,7 +154,7 @@ export default function QuotationViewModal({ quotation, onClose, onEdit }: Props
   const showDisc   = ts?.cols?.["Discount"]    !== false;
   const showAmt    = ts?.cols?.["Amount"]      !== false;
 
-  // ── Quotation data calculations ───────────────────────────────────────────
+  // ── Calculations ──────────────────────────────────────────────────────────
   const subtotal     = quotation.billItems.reduce((s, i) => s + i.amount, 0);
   const chargesTotal = quotation.additionalCharges.reduce((s, c) => s + c.amount, 0);
   const taxableAmt   = subtotal + chargesTotal;
@@ -93,14 +166,12 @@ export default function QuotationViewModal({ quotation, onClose, onEdit }: Props
     : quotation.roundOff === "-Reduce" ? -quotation.roundOffAmt : 0;
   const grandTotal = taxableAmt - discountVal + roundVal;
 
-  // Compute CGST/SGST from bill items
   const cgstTotal = quotation.billItems.reduce((s, i) => {
     const base = i.price * i.qty - (i.discountPct > 0 ? i.price*i.qty*i.discountPct/100 : i.discountAmt);
     return s + (base * i.taxRate) / 200;
   }, 0);
   const sgstTotal = cgstTotal;
 
-  // HSN groups for summary table
   const hsnGroups = quotation.billItems.reduce<Record<string,{taxable:number;tax:number}>>((acc, item) => {
     const k = item.hsn || "-";
     if (!acc[k]) acc[k] = { taxable: 0, tax: 0 };
@@ -110,7 +181,6 @@ export default function QuotationViewModal({ quotation, onClose, onEdit }: Props
     return acc;
   }, {});
 
-  // Print handler
   function handlePrint() {
     const el = document.getElementById("qvm-paper");
     if (!el) return;
@@ -144,9 +214,56 @@ export default function QuotationViewModal({ quotation, onClose, onEdit }: Props
             <span className={`qvm-status-badge qvm-status-badge--${quotation.status.toLowerCase()}`}>{quotation.status}</span>
           </div>
           <div className="qvm-topbar-right">
-            <button className="qvm-topbar-icon-btn">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="5" cy="12" r="1.5" fill="currentColor"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/><circle cx="19" cy="12" r="1.5" fill="currentColor"/></svg>
-            </button>
+            {/* ── Three-dot menu ─────────────────────────────────── */}
+            <div className="qvm-dot-menu-wrap" ref={dotMenuRef}>
+              <button
+                className="qvm-topbar-icon-btn"
+                onClick={() => setShowDotMenu(v => !v)}
+                title="More options"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="5"  cy="12" r="1.5" fill="currentColor"/>
+                  <circle cx="12" cy="12" r="1.5" fill="currentColor"/>
+                  <circle cx="19" cy="12" r="1.5" fill="currentColor"/>
+                </svg>
+              </button>
+
+              {showDotMenu && (
+                <div className="qvm-dot-dropdown">
+                  <button className="qvm-dot-item" onClick={handleMenuEdit}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="15" height="15">
+                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                    </svg>
+                    Edit
+                  </button>
+                  <button className="qvm-dot-item" onClick={handleEditHistory}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="15" height="15">
+                      <polyline points="1 4 1 10 7 10"/>
+                      <path d="M3.51 15a9 9 0 1 0 .49-4.95"/>
+                    </svg>
+                    Edit History
+                  </button>
+                  <button className="qvm-dot-item" onClick={handleDuplicate}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="15" height="15">
+                      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                    </svg>
+                    Duplicate
+                  </button>
+                  <div className="qvm-dot-divider" />
+                  <button className="qvm-dot-item qvm-dot-item--danger" onClick={handleDelete}>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="15" height="15">
+                      <polyline points="3 6 5 6 21 6"/>
+                      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                      <path d="M10 11v6M14 11v6"/>
+                      <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+                    </svg>
+                    Delete
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -183,7 +300,7 @@ export default function QuotationViewModal({ quotation, onClose, onEdit }: Props
 
           <div className="qvm-action-spacer" />
 
-          {/* Show which InvoiceBuilder template is active */}
+          {/* Template indicator */}
           {tpl ? (
             <div className="qvm-template-tag">
               <span className="qvm-template-dot" style={{ background: tc }} />
@@ -194,16 +311,30 @@ export default function QuotationViewModal({ quotation, onClose, onEdit }: Props
               ⚠ No template — open Invoice Builder and save one
             </div>
           )}
+
+          {/* ── Convert to Invoice button ─────────────────────────── */}
+          {quotation.status !== "Closed" && (
+            <button
+              className="qvm-convert-btn"
+              onClick={handleConvertToInvoice}
+            >
+              Convert to Invoice
+            </button>
+          )}
+          {quotation.status === "Closed" && (
+            <div className="qvm-converted-badge">
+              ✓ Converted to Invoice
+            </div>
+          )}
         </div>
 
-        {/* ── Invoice Paper — styled by InvoiceBuilder template, filled by Quotation data ── */}
+        {/* ── Invoice Paper ─────────────────────────────────────────────── */}
         <div className="qvm-preview-area">
           <div
             id="qvm-paper"
             className="qvm-paper"
             style={{ fontFamily: font, fontSize: tSize }}
           >
-            {/* Background image (from template ts.backgroundUrl) */}
             {bgUrl && (
               <div aria-hidden="true" style={{
                 position:"absolute", inset:0, zIndex:0, pointerEvents:"none",
@@ -214,16 +345,14 @@ export default function QuotationViewModal({ quotation, onClose, onEdit }: Props
 
             <div style={{ position:"relative", zIndex:1 }}>
 
-              {/* ── HEADER: Business info from template inv.* + vis.* ──── */}
+              {/* ── HEADER ─────────────────────────────────────────────── */}
               <div className="qvm-inv-header-row">
                 <div className="qvm-inv-biz-block">
-                  {/* Logo from template style.logoUrl */}
                   {showLogo && logoUrl
                     ? <img src={logoUrl} alt="Logo" className="qvm-inv-logo" />
                     : <div className="qvm-inv-logo-ph" style={{ background: tc }}><span>SC</span></div>
                   }
                   <div className="qvm-inv-biz-text">
-                    {/* vis.companyName controls whether to show — value comes from template inv.companyName */}
                     {(vis?.companyName ?? true)  && <div className="qvm-inv-company-name" style={{ color: tc }}>{bizInv?.companyName ?? "Your Company"}</div>}
                     {(vis?.slogan     ?? false)  && bizInv?.slogan && <div className="qvm-inv-slogan">{bizInv.slogan}</div>}
                     {(vis?.address    ?? true)   && bizInv?.address && <div className="qvm-inv-addr">{bizInv.address}{bizInv?.city ? `, ${bizInv.city}` : ""}{bizInv?.state ? `, ${bizInv.state}` : ""}</div>}
@@ -238,7 +367,6 @@ export default function QuotationViewModal({ quotation, onClose, onEdit }: Props
                   </div>
                 </div>
 
-                {/* Meta box: quotation number + date from quotation data */}
                 <div className="qvm-inv-meta-block" style={{ border }}>
                   <div className="qvm-inv-doc-type" style={{ background: tc }}>QUOTATION</div>
                   <div className="qvm-inv-meta-grid">
@@ -280,7 +408,7 @@ export default function QuotationViewModal({ quotation, onClose, onEdit }: Props
 
               <hr className="qvm-inv-hr" style={{ borderColor: tc }} />
 
-              {/* ── BILL TO: party data from quotation + pv.* controls from template ── */}
+              {/* ── BILL TO ──────────────────────────────────────────────── */}
               {quotation.party && (
                 <div className="qvm-inv-party-row">
                   <div className="qvm-inv-party-box" style={{ border }}>
@@ -293,7 +421,7 @@ export default function QuotationViewModal({ quotation, onClose, onEdit }: Props
                 </div>
               )}
 
-              {/* ── ITEMS TABLE: columns controlled by template ts.cols ── */}
+              {/* ── ITEMS TABLE ───────────────────────────────────────────── */}
               <table className="qvm-inv-table" style={{ borderColor: bColor }}>
                 <thead>
                   <tr style={{ background: tc, color: "#fff" }}>
@@ -315,14 +443,12 @@ export default function QuotationViewModal({ quotation, onClose, onEdit }: Props
                       const base = item.price * item.qty;
                       const disc = item.discountPct > 0 ? base * item.discountPct / 100 : item.discountAmt;
                       const tax  = (base - disc) * item.taxRate / 100;
-                      // ts.capitalize from template
                       const itemName = (ts?.capitalize ?? false) ? item.name.toUpperCase() : item.name;
                       return (
                         <tr key={item.rowId} style={{ background: idx % 2 === 1 ? "#fafafa" : "#fff" }}>
                           {showSerial && <td className="qvm-inv-td qvm-inv-td--c">{idx + 1}</td>}
                           <td className="qvm-inv-td">
                             <div className="qvm-inv-item-name">{itemName}</div>
-                            {/* ts.showDesc from template */}
                             {(ts?.showDesc ?? true) && item.description && (
                               <div className="qvm-inv-item-desc">{item.description}</div>
                             )}
@@ -361,7 +487,7 @@ export default function QuotationViewModal({ quotation, onClose, onEdit }: Props
                 </tfoot>
               </table>
 
-              {/* ── HSN SUMMARY (ts.hsnSummary from template) ─────────── */}
+              {/* ── HSN SUMMARY ───────────────────────────────────────────── */}
               {(ts?.hsnSummary ?? false) && Object.keys(hsnGroups).length > 0 && (
                 <div className="qvm-inv-hsn-wrap">
                   <div className="qvm-inv-hsn-title" style={{ color: tc }}>HSN-wise Tax Summary</div>
@@ -390,7 +516,7 @@ export default function QuotationViewModal({ quotation, onClose, onEdit }: Props
                 </div>
               )}
 
-              {/* ── TOTALS + GRAND TOTAL ───────────────────────────────── */}
+              {/* ── TOTALS ────────────────────────────────────────────────── */}
               <div className="qvm-inv-totals-wrap">
                 <table className="qvm-inv-totals-tbl">
                   <tbody>
@@ -408,12 +534,12 @@ export default function QuotationViewModal({ quotation, onClose, onEdit }: Props
                 </table>
               </div>
 
-              {/* ── AMOUNT IN WORDS (misc.amountWords from template) ──── */}
+              {/* ── AMOUNT IN WORDS ───────────────────────────────────────── */}
               {(misc?.amountWords ?? true) && (
                 <p className="qvm-inv-words"><b>Amount in Words:</b> {numToWords(grandTotal)}</p>
               )}
 
-              {/* ── BANK DETAILS (from template inv.bank + inv.ifsc) ──── */}
+              {/* ── BANK DETAILS ──────────────────────────────────────────── */}
               {bizInv?.bank && (
                 <div className="qvm-inv-bank" style={{ border }}>
                   <div className="qvm-inv-bank-title" style={{ color: tc }}>Bank Details</div>
@@ -424,7 +550,7 @@ export default function QuotationViewModal({ quotation, onClose, onEdit }: Props
                 </div>
               )}
 
-              {/* ── NOTES (misc.showNotes from template, text from quotation) ── */}
+              {/* ── NOTES ─────────────────────────────────────────────────── */}
               {(misc?.showNotes ?? true) && quotation.notes && (
                 <div className="qvm-inv-section">
                   <div className="qvm-inv-section-title">Notes</div>
@@ -432,7 +558,7 @@ export default function QuotationViewModal({ quotation, onClose, onEdit }: Props
                 </div>
               )}
 
-              {/* ── TERMS (misc.showTerms from template, text from quotation) ── */}
+              {/* ── TERMS ─────────────────────────────────────────────────── */}
               {(misc?.showTerms ?? true) && quotation.termsConditions && (
                 <div className="qvm-inv-section">
                   <div className="qvm-inv-section-title">Terms &amp; Conditions</div>
@@ -440,7 +566,7 @@ export default function QuotationViewModal({ quotation, onClose, onEdit }: Props
                 </div>
               )}
 
-              {/* ── SIGNATURE (misc.signatureUrl + misc.receiverSig from template) ── */}
+              {/* ── SIGNATURE ─────────────────────────────────────────────── */}
               <div className={`qvm-inv-sig-row${(misc?.receiverSig ?? false) ? " qvm-inv-sig-row--dual" : ""}`}>
                 {(misc?.receiverSig ?? false) && (
                   <div className="qvm-inv-sig-box">
