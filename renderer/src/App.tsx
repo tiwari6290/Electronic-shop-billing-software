@@ -15,7 +15,7 @@ import PaymentOut from "./components/Cashier/PaymentOut/PaymentOut";
 import PaymentIn from "./components/Cashier/PaymentIn/PaymentIn";
 import PaymentInView from "./components/Cashier/PaymentIn/Paymentinview";
 // import PurchaseOrder from "./components/Cashier/PurchaseOrder/PurchaseOrder";
-import Createexpense from "./components/Cashier/Createexpense";
+import Createexpense from "./components/Cashier/CreateExpenses/Expenses";
 import AdminSettingSidebar from "./components/Admin/AdminSettingSidebar";
 import ManageBusiness from "./components/Admin/ManageBuisness";
 import Account from "./components/Admin/Account/Account";
