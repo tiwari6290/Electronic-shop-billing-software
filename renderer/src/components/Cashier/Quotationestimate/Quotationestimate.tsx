@@ -2106,8 +2106,45 @@ export default function QuotationEstimate() {
             ) : (
               filtered.map((q) => (
                 <tr key={q.id} className="qe-tr" onClick={() => {
+                    // First try localStorage (full data)
                     const stored = getStoredQuotations().find(s => s.id === q.id);
-                    if (stored) setViewQuotation(stored);
+                    if (stored) {
+                      setViewQuotation(stored);
+                    } else {
+                      // Fallback for sample/initial quotations that only exist
+                      // in memory (fresh install with empty localStorage).
+                      // Build a minimal StoredQuotation so the view modal opens
+                      // instead of silently doing nothing.
+                      const fallback: StoredQuotation = {
+                        id:                q.id,
+                        quotationNo:       q.quotationNumber,
+                        quotationDate:     q.date,
+                        party:             q.partyName !== "Cash Sale"
+                                             ? { id: 0, name: q.partyName, mobile: "", balance: 0 }
+                                             : null,
+                        billItems:         [],
+                        additionalCharges: [],
+                        discountType:      "Discount After Tax",
+                        discountPct:       0,
+                        discountAmt:       0,
+                        roundOff:          "none",
+                        roundOffAmt:       0,
+                        notes:             "",
+                        termsConditions:   "",
+                        eWayBillNo:        "",
+                        challanNo:         "",
+                        financedBy:        "",
+                        salesman:          "",
+                        emailId:           "",
+                        warrantyPeriod:    "",
+                        validFor:          30,
+                        validityDate:      q.dueIn || "",
+                        showDueDate:       !!q.dueIn,
+                        status:            q.status,
+                        createdAt:         q.date,
+                      };
+                      setViewQuotation(fallback);
+                    }
                   }}>
                   <td className="qe-td">{formatDate(q.date)}</td>
                   <td className="qe-td">{q.quotationNumber}</td>
@@ -2148,26 +2185,6 @@ export default function QuotationEstimate() {
           onEdit={() => {
             setViewQuotation(null);
             handleEdit(viewQuotation.id);
-          }}
-          onConvertToInvoice={(q) => {
-            // Close view modal and navigate to CreateSalesInvoice,
-            // passing all quotation data + its id so the invoice can
-            // mark the quotation Closed only after saving.
-            setViewQuotation(null);
-            navigate("/cashier/sales-invoice", {
-              state: {
-                fromQuotation: q,
-                fromQuotationId: q.id,
-              },
-            });
-          }}
-          onDuplicate={() => {
-            setViewQuotation(null);
-            refreshList();
-          }}
-          onDelete={() => {
-            setViewQuotation(null);
-            refreshList();
           }}
         />
       )}
