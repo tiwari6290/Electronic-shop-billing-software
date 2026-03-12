@@ -87,11 +87,16 @@ interface Props {
   onSaveAndNew?: () => void;
   /** Pre-fill form from a converted quotation */
   fromQuotation?: any | null;
+  /**
+   * When converting from a quotation, pass the source quotation's id here.
+   * The quotation's status will be set to "Closed" only after the invoice is saved.
+   */
+  fromQuotationId?: string | null;
   /** Pre-fill form from a converted delivery challan */
   fromChallan?: any | null;
 }
 
-export default function CreateSalesInvoice({ editId, onBack, onSaveAndNew, fromQuotation, fromChallan }: Props) {
+export default function CreateSalesInvoice({ editId, onBack, onSaveAndNew, fromQuotation, fromQuotationId, fromChallan }: Props) {
 
   // ── Convert challan data → SalesInvoice shape ──────────────────────────────
   function challanToInvoice(c: any): import("./SalesInvoiceTypes").SalesInvoice {
@@ -191,6 +196,16 @@ export default function CreateSalesInvoice({ editId, onBack, onSaveAndNew, fromQ
       : form.amountReceived > 0 ? "Partially Paid" : "Unpaid";
     const final = { ...form, status };
     saveSalesInvoice(final);
+
+    // ── Close the source quotation now that the invoice is saved ──────────
+    if (fromQuotationId) {
+      const quotations = JSON.parse(localStorage.getItem("quotations") || "[]");
+      const updated = quotations.map((q: any) =>
+        q.id === fromQuotationId ? { ...q, status: "Closed" } : q
+      );
+      localStorage.setItem("quotations", JSON.stringify(updated));
+    }
+
     onBack();
   }
 

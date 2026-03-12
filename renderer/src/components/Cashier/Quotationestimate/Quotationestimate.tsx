@@ -2149,6 +2149,26 @@ export default function QuotationEstimate() {
             setViewQuotation(null);
             handleEdit(viewQuotation.id);
           }}
+          onConvertToInvoice={(q) => {
+            // Close view modal and navigate to CreateSalesInvoice,
+            // passing all quotation data + its id so the invoice can
+            // mark the quotation Closed only after saving.
+            setViewQuotation(null);
+            navigate("/cashier/sales-invoice", {
+              state: {
+                fromQuotation: q,
+                fromQuotationId: q.id,
+              },
+            });
+          }}
+          onDuplicate={() => {
+            setViewQuotation(null);
+            refreshList();
+          }}
+          onDelete={() => {
+            setViewQuotation(null);
+            refreshList();
+          }}
         />
       )}
     </div>
