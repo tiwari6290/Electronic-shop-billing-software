@@ -5,117 +5,131 @@ import "./PartyItemWiseReport.css";
 import axios from "axios";
 
 interface TransactionItem {
-  partyId: number;
+  partyId:  number;
   itemName: string;
-  itemCode?: string;
+  itemCode: string | null;
   quantity: number;
-  unit?: string;
-  amount: number;
-  type: "Sale" | "Purchase";
-  date: string;
+  unit:     string;
+  amount:   number;
+  price:    number;
+  type:     "Sale" | "Purchase";
+  date:     string;
 }
 
 interface GroupedItem {
-  itemName: string;
-  itemCode: string;
-  salesQty: number;
-  salesUnit: string;
-  salesAmt: number;
-  purchaseQty: number;
-  purchaseUnit: string;
-  purchaseAmt: number;
+  itemName:    string;
+  itemCode:    string;
+  salesQty:    number;
+  salesUnit:   string;
+  salesAmt:    number;
+  avgPrice:    number;
+  txnCount:    number;
 }
 
 const DATE_OPTIONS = [
-  "Today","Last 7 Days","Last 30 Days","Last 365 Days","Custom",
+  "Today", "Last 7 Days", "Last 30 Days", "Last 365 Days", "Custom",
 ];
+
+const fmtQty = (n: number, unit: string) => {
+  const q = Number.isInteger(n) ? n.toString() : n.toFixed(2).replace(/\.?0+$/, "");
+  return `${q} ${unit}`;
+};
+
+const fmtAmt = (n: number) =>
+  `₹ ${n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 const PartyItemWiseReport: React.FC = () => {
   const { id } = useParams();
-  const [transactions, setTransactions] = useState<TransactionItem[]>([]);
-  const [dateFilter, setDateFilter] = useState("Last 365 Days");
-  const [showDateDropdown, setShowDateDropdown] = useState(false);
+  const [transactions,         setTransactions]         = useState<TransactionItem[]>([]);
+  const [dateFilter,           setDateFilter]           = useState("Last 365 Days");
+  const [showDateDropdown,     setShowDateDropdown]     = useState(false);
   const [showDownloadDropdown, setShowDownloadDropdown] = useState(false);
-  const [customFrom, setCustomFrom] = useState("");
-  const [customTo, setCustomTo] = useState("");
+  const [customFrom,           setCustomFrom]           = useState("");
+  const [customTo,             setCustomTo]             = useState("");
 
   useEffect(() => {
-    const fetchTransactions = async () => {
+    if (!id) return;
+    const fetch = async () => {
       try {
-        const res = await axios.get(`http://localhost:4000/api/transactions/party/${id}`);
+        const res = await axios.get(`http://localhost:4000/api/invoices/party-item-wise/${id}`);
         const formatted = res.data.data.map((t: any) => ({
-          partyId: t.partyId,
+          partyId:  t.partyId,
           itemName: t.itemName,
-          itemCode: t.itemCode,
-          quantity: t.quantity,
-          unit: t.unit || "PCS",
-          amount: t.amount,
-          type: t.type,
-          date: t.date,
+          itemCode: t.itemCode || null,
+          quantity: Number(t.quantity),
+          unit:     t.unit || "PCS",
+          amount:   Number(t.amount),
+          price:    Number(t.price),
+          type:     t.type as "Sale" | "Purchase",
+          date:     t.date,
         }));
         setTransactions(formatted);
       } catch (error) {
-        console.error("Error fetching transactions:", error);
+        console.error("Error fetching item-wise report:", error);
       }
     };
-    if (id) fetchTransactions();
+    fetch();
   }, [id]);
 
+  // ── Date filtering ────────────────────────────────────────────────────────
   const filteredByDate = useMemo(() => {
-    const now = new Date();
-    return transactions.filter((txn) => {
+    const now = new Date(); now.setHours(23, 59, 59, 999);
+    return transactions.filter(txn => {
       const d = new Date(txn.date);
       switch (dateFilter) {
-        case "Today": return d.toDateString() === now.toDateString();
-        case "Last 7 Days":  { const s = new Date(); s.setDate(now.getDate()-7);   return d >= s && d <= now; }
-        case "Last 30 Days": { const s = new Date(); s.setDate(now.getDate()-30);  return d >= s && d <= now; }
-        case "Last 365 Days":{ const s = new Date(); s.setDate(now.getDate()-365); return d >= s && d <= now; }
+        case "Today":        { const s = new Date(); s.setHours(0,0,0,0); return d >= s && d <= now; }
+        case "Last 7 Days":  { const s = new Date(); s.setDate(s.getDate()-7);   s.setHours(0,0,0,0); return d >= s && d <= now; }
+        case "Last 30 Days": { const s = new Date(); s.setDate(s.getDate()-30);  s.setHours(0,0,0,0); return d >= s && d <= now; }
+        case "Last 365 Days":{ const s = new Date(); s.setDate(s.getDate()-365); s.setHours(0,0,0,0); return d >= s && d <= now; }
         case "Custom":
           if (!customFrom || !customTo) return true;
-          return d >= new Date(customFrom) && d <= new Date(customTo);
+          return d >= new Date(customFrom) && d <= new Date(customTo + "T23:59:59");
         default: return true;
       }
     });
   }, [transactions, dateFilter, customFrom, customTo]);
 
+  // ── Group by itemName + itemCode ──────────────────────────────────────────
   const groupedItems = useMemo<GroupedItem[]>(() => {
     const map: Record<string, GroupedItem> = {};
-    filteredByDate.forEach((txn) => {
-      const key = txn.itemName;
-      if (!map[key]) {
-        map[key] = {
-          itemName: txn.itemName,
-          itemCode: txn.itemCode || "-",
-          salesQty: 0, salesUnit: txn.unit || "PCS", salesAmt: 0,
-          purchaseQty: 0, purchaseUnit: txn.unit || "PCS", purchaseAmt: 0,
-        };
-      }
-      if (txn.type === "Sale") {
+    filteredByDate
+      .filter(txn => txn.type === "Sale")   // only sales for customer party page
+      .forEach(txn => {
+        const key = `${txn.itemName}__${txn.itemCode || ""}`;
+        if (!map[key]) {
+          map[key] = {
+            itemName:  txn.itemName,
+            itemCode:  txn.itemCode || "-",
+            salesQty:  0,
+            salesUnit: txn.unit || "PCS",
+            salesAmt:  0,
+            avgPrice:  0,
+            txnCount:  0,
+          };
+        }
         map[key].salesQty += txn.quantity;
         map[key].salesAmt += txn.amount;
+        map[key].avgPrice += txn.price;
+        map[key].txnCount += 1;
         map[key].salesUnit = txn.unit || "PCS";
-      } else {
-        map[key].purchaseQty += txn.quantity;
-        map[key].purchaseAmt += txn.amount;
-        map[key].purchaseUnit = txn.unit || "PCS";
-      }
-    });
-    return Object.values(map);
+      });
+
+    // Compute average price
+    return Object.values(map).map(item => ({
+      ...item,
+      avgPrice: item.txnCount > 0 ? item.avgPrice / item.txnCount : 0,
+    }));
   }, [filteredByDate]);
 
-  const totals = useMemo(() =>
-    groupedItems.reduce((acc, item) => ({
-      salesQty: acc.salesQty + item.salesQty,
-      salesAmt: acc.salesAmt + item.salesAmt,
-      purchaseQty: acc.purchaseQty + item.purchaseQty,
-      purchaseAmt: acc.purchaseAmt + item.purchaseAmt,
-    }), { salesQty: 0, salesAmt: 0, purchaseQty: 0, purchaseAmt: 0 }),
-    [groupedItems]);
+  const totals = useMemo(() => groupedItems.reduce(
+    (acc, item) => ({ salesQty: acc.salesQty + item.salesQty, salesAmt: acc.salesAmt + item.salesAmt }),
+    { salesQty: 0, salesAmt: 0 }
+  ), [groupedItems]);
 
   const handleDownloadCSV = () => {
-    const header = "Item Name,Item Code,Sales Qty,Sales Amount,Purchase Qty,Purchase Amount\n";
-    const rows = groupedItems.map((item) =>
-      `${item.itemName},${item.itemCode},${item.salesQty},${item.salesAmt},${item.purchaseQty},${item.purchaseAmt}`
+    const header = "Item Name,Item Code,Sales Quantity,Avg Price,Sales Amount\n";
+    const rows   = groupedItems.map(item =>
+      `${item.itemName},${item.itemCode},${item.salesQty} ${item.salesUnit},${item.avgPrice.toFixed(2)},${item.salesAmt.toFixed(2)}`
     ).join("\n");
     const blob = new Blob([header + rows], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
@@ -126,10 +140,9 @@ const PartyItemWiseReport: React.FC = () => {
 
   return (
     <div className="report-wrapper">
-      {/* Top Bar */}
+      {/* ── Top Bar ─────────────────────────────────────── */}
       <div className="report-topbar">
         <div className="left-controls">
-          {/* Date Filter */}
           <div style={{ position: "relative" }}>
             <button className="report-date-btn" onClick={() => setShowDateDropdown(!showDateDropdown)}>
               <Calendar size={14} />
@@ -138,7 +151,7 @@ const PartyItemWiseReport: React.FC = () => {
             </button>
             {showDateDropdown && (
               <div className="report-dropdown">
-                {DATE_OPTIONS.map((item) => (
+                {DATE_OPTIONS.map(item => (
                   <div key={item} className={dateFilter === item ? "selected" : ""}
                     onClick={() => { setDateFilter(item); setShowDateDropdown(false); }}>
                     {item}
@@ -150,16 +163,17 @@ const PartyItemWiseReport: React.FC = () => {
 
           {dateFilter === "Custom" && (
             <div className="custom-date-range">
-              <input type="date" value={customFrom} onChange={(e) => setCustomFrom(e.target.value)} />
+              <input type="date" value={customFrom} onChange={e => setCustomFrom(e.target.value)} />
               <span>to</span>
-              <input type="date" value={customTo} onChange={(e) => setCustomTo(e.target.value)} />
+              <input type="date" value={customTo}   onChange={e => setCustomTo(e.target.value)} />
             </div>
           )}
         </div>
 
         <div className="right-controls">
           <div style={{ position: "relative" }}>
-            <button className="report-action-btn download" onClick={() => setShowDownloadDropdown(!showDownloadDropdown)}>
+            <button className="report-action-btn download"
+              onClick={() => setShowDownloadDropdown(!showDownloadDropdown)}>
               <Download size={14} /> Download <ChevronDown size={13} />
             </button>
             {showDownloadDropdown && (
@@ -175,40 +189,41 @@ const PartyItemWiseReport: React.FC = () => {
         </div>
       </div>
 
-      {/* Table */}
+      {/* ── Table ────────────────────────────────────────── */}
       <div className="report-card">
         <table>
           <thead>
             <tr>
+              <th>#</th>
               <th>Item Name</th>
               <th>Item Code</th>
-              <th>Sales Quantity</th>
+              <th>Qty Sold</th>
+              <th>Avg Price</th>
               <th>Sales Amount</th>
-              <th>Purchase Quantity</th>
-              <th>Purchase Amount</th>
             </tr>
           </thead>
           <tbody>
             {groupedItems.length === 0 ? (
-              <tr><td colSpan={6} className="no-data">No data available</td></tr>
+              <tr>
+                <td colSpan={6} className="no-data">No items found for the selected period</td>
+              </tr>
             ) : (
               <>
                 {groupedItems.map((item, i) => (
-                  <tr key={i}>
-                    <td>{item.itemName}</td>
-                    <td>{item.itemCode}</td>
-                    <td>{item.salesQty.toFixed(1)} {item.salesUnit}</td>
-                    <td>&#8377; {item.salesAmt.toLocaleString("en-IN")}</td>
-                    <td>{item.purchaseQty.toFixed(1)} {item.purchaseUnit}</td>
-                    <td>{item.purchaseAmt > 0 ? `&#8377; ${item.purchaseAmt.toLocaleString("en-IN")}` : "-"}</td>
+                  <tr key={`${item.itemName}-${item.itemCode}-${i}`}>
+                    <td style={{ color: "#9ca3af" }}>{i + 1}</td>
+                    <td style={{ fontWeight: 500, color: "#111827" }}>{item.itemName}</td>
+                    <td style={{ color: "#6b7280" }}>{item.itemCode}</td>
+                    <td>{fmtQty(item.salesQty, item.salesUnit)}</td>
+                    <td>{fmtAmt(item.avgPrice)}</td>
+                    <td style={{ fontWeight: 600 }}>{fmtAmt(item.salesAmt)}</td>
                   </tr>
                 ))}
                 <tr className="totals-row">
-                  <td colSpan={2}><strong>Total</strong></td>
-                  <td><strong>{totals.salesQty.toFixed(1)} PCS</strong></td>
-                  <td><strong>&#8377; {totals.salesAmt.toLocaleString("en-IN")}</strong></td>
-                  <td><strong>{totals.purchaseQty.toFixed(1)} PCS</strong></td>
-                  <td><strong>{totals.purchaseAmt > 0 ? `&#8377; ${totals.purchaseAmt.toLocaleString("en-IN")}` : "-"}</strong></td>
+                  <td colSpan={3}><strong>Total</strong></td>
+                  <td><strong>{fmtQty(totals.salesQty, groupedItems[0]?.salesUnit || "PCS")}</strong></td>
+                  <td>-</td>
+                  <td><strong>{fmtAmt(totals.salesAmt)}</strong></td>
                 </tr>
               </>
             )}
