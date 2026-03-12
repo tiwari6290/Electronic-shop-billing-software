@@ -57,6 +57,8 @@ interface QuickSettings {
   sequenceNumber: number;
   showItemImage: boolean;
   priceHistory: boolean;
+  showPricePerItem: boolean;
+  showQuantity: boolean;
 }
 
 type DateFilterOption =
@@ -606,6 +608,92 @@ function StatusFilterDropdown({
 }
 
 // ─── Quick Settings Modal ────────────────────────────────────────────────────
+// ─── Show/Hide Columns Modal ─────────────────────────────────────────────────
+function ShowHideColumnsModal({
+  settings,
+  onSave,
+  onClose,
+}: {
+  settings: QuickSettings;
+  onSave: (s: QuickSettings) => void;
+  onClose: () => void;
+}) {
+  const navigate = useNavigate();
+  const [local, setLocal] = useState({ ...settings });
+
+  function Toggle2({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
+    return (
+      <div
+        onClick={() => onChange(!checked)}
+        style={{
+          width: 44, height: 24, borderRadius: 12,
+          background: checked ? "#4338ca" : "#d1d5db",
+          cursor: "pointer", position: "relative",
+          transition: "background 0.2s", flexShrink: 0,
+        }}
+      >
+        <div style={{
+          width: 18, height: 18, borderRadius: "50%",
+          background: "#fff", position: "absolute",
+          top: 3, left: checked ? 23 : 3,
+          transition: "left 0.2s",
+          boxShadow: "0 1px 3px rgba(0,0,0,0.15)",
+        }} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="qe-modal-overlay" onClick={onClose}>
+      <div className="qe-shcol-modal" onClick={(e) => e.stopPropagation()}>
+        {/* Header */}
+        <div className="qe-shcol-header">
+          <h2 className="qe-shcol-title">Show/Hide Columns in Invoice</h2>
+          <button className="qe-shcol-close" onClick={onClose}>✕</button>
+        </div>
+
+        {/* Body */}
+        <div className="qe-shcol-body">
+          {/* Price per item toggle */}
+          <div className="qe-shcol-row">
+            <span className="qe-shcol-label">Price/Item (₹)</span>
+            <Toggle2 checked={local.showPricePerItem} onChange={(v) => setLocal({ ...local, showPricePerItem: v })} />
+          </div>
+          {/* Quantity toggle */}
+          <div className="qe-shcol-row">
+            <span className="qe-shcol-label">Quantity</span>
+            <Toggle2 checked={local.showQuantity} onChange={(v) => setLocal({ ...local, showQuantity: v })} />
+          </div>
+
+          {/* Custom Column section */}
+          <div className="qe-shcol-section-label">CUSTOM COLUMN</div>
+          <div className="qe-shcol-empty-box">
+            <div className="qe-shcol-empty-title">No Custom Columns added</div>
+            <div className="qe-shcol-empty-desc">
+              Any custom column such as Batch # &amp; Expiry Date can be added
+            </div>
+          </div>
+          <div className="qe-shcol-hint-box">
+            <span>To add Custom Item Columns - Go to <strong>Item settings</strong> from </span>
+            <button
+              className="qe-shcol-link"
+              onClick={() => { onSave(local); onClose(); navigate("/cashier/inventory"); }}
+            >
+              Items page (click here)
+            </button>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="qe-shcol-footer">
+          <button className="qe-btn-cancel" onClick={onClose}>Cancel</button>
+          <button className="qe-btn-save" onClick={() => { onSave(local); onClose(); }}>Save</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function QuickSettingsModal({
   settings,
   onSave,
@@ -814,19 +902,106 @@ function CreateQuotationPage({
   // ── Items modal state ──────────────────────────────────────────────────────
   const [showAddItems, setShowAddItems] = useState(false);
   const [itemSelections, setItemSelections] = useState<Record<number, number>>({});
+  const [itemSearch, setItemSearch] = useState("");
+  const [itemCategory, setItemCategory] = useState("");
 
   // ── Settings modal ─────────────────────────────────────────────────────────
   const [showSettings, setShowSettings] = useState(false);
+  const [showColumnModal, setShowColumnModal] = useState(false);
   const [settings, setSettings] = useState<QuickSettings>({
     prefixEnabled: true, prefix: "", sequenceNumber: nextNo, showItemImage: true, priceHistory: true,
+    showPricePerItem: true, showQuantity: true,
   });
+
+  // ── Shipping Address state ─────────────────────────────────────────────────
+  interface ShippingAddress {
+    id: string;
+    name: string;
+    street: string;
+    state: string;
+    pincode: string;
+    city: string;
+  }
+  const INDIAN_STATES = [
+    "Andhra Pradesh","Arunachal Pradesh","Assam","Bihar","Chhattisgarh","Goa","Gujarat",
+    "Haryana","Himachal Pradesh","Jharkhand","Karnataka","Kerala","Madhya Pradesh",
+    "Maharashtra","Manipur","Meghalaya","Mizoram","Nagaland","Odisha","Punjab",
+    "Rajasthan","Sikkim","Tamil Nadu","Telangana","Tripura","Uttar Pradesh",
+    "Uttarakhand","West Bengal","Delhi","Jammu and Kashmir","Ladakh","Puducherry",
+  ];
+
+  const [shippingAddresses, setShippingAddresses] = useState<ShippingAddress[]>([]);
+  const [selectedShippingId, setSelectedShippingId] = useState<string>("");
+  const [showChangeShipping, setShowChangeShipping] = useState(false);
+  const [showAddShipping, setShowAddShipping] = useState(false);
+  const [editingAddress, setEditingAddress] = useState<ShippingAddress | null>(null);
+  const [shippingForm, setShippingForm] = useState<ShippingAddress>({ id: "", name: "", street: "", state: "", pincode: "", city: "" });
+
+  // Seed default shipping once per party using useEffect — never overwrites manually added addresses
+  useEffect(() => {
+    if (form.party) {
+      const street = (form.party as any).shippingAddress || (form.party as any).billingAddress || "";
+      const defaultAddr: ShippingAddress = {
+        id: `sa-default-${form.party.id}`,
+        name: form.party.name,
+        street,
+        state: "", pincode: "", city: "",
+      };
+      setShippingAddresses([defaultAddr]);
+      setSelectedShippingId(defaultAddr.id);
+    } else {
+      setShippingAddresses([]);
+      setSelectedShippingId("");
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.party?.id]);
+
+  const activeShipping = shippingAddresses.find((a) => a.id === selectedShippingId);
+
+  function openAddShipping() {
+    const blank: ShippingAddress = { id: `sa-${Date.now()}`, name: form.party?.name || "", street: "", state: "", pincode: "", city: "" };
+    setShippingForm(blank);
+    setEditingAddress(null);
+    setShowChangeShipping(false);
+    setShowAddShipping(true);
+  }
+
+  function openEditShipping(addr: ShippingAddress) {
+    setShippingForm({ ...addr });
+    setEditingAddress(addr);
+    setShowChangeShipping(false);
+    setShowAddShipping(true);
+  }
+
+  function handleSaveShipping() {
+    if (!shippingForm.name.trim() || !shippingForm.street.trim()) return;
+    if (editingAddress) {
+      setShippingAddresses((prev) => prev.map((a) => a.id === shippingForm.id ? shippingForm : a));
+    } else {
+      setShippingAddresses((prev) => [...prev, shippingForm]);
+      setSelectedShippingId(shippingForm.id);
+    }
+    setShowAddShipping(false);
+    setEditingAddress(null);
+    setShowChangeShipping(true);
+  }
 
   // ── Notes/Terms expand ─────────────────────────────────────────────────────
   const [showNotes, setShowNotes] = useState(!!form.notes);
   const [showDiscount, setShowDiscount] = useState(form.discountPct > 0 || form.discountAmt > 0);
+  const [paymentAmount, setPaymentAmount] = useState<number | "">("");
 
   // ── Bank Account Modal ────────────────────────────────────────────────────
   const [showBankModal, setShowBankModal] = useState(false);
+  const [showSelectBankModal, setShowSelectBankModal] = useState(false);
+  const [savedBankAccounts, setSavedBankAccounts] = useState<any[]>(() => {
+    try { return JSON.parse(localStorage.getItem("bankAccounts") || "[]"); } catch { return []; }
+  });
+  const [selectedBankId, setSelectedBankId] = useState<number | null>(null);
+  const [bankForm, setBankForm] = useState({
+    accountNumber: "", reEnterAccountNumber: "", ifscCode: "",
+    bankBranchName: "", accountHolderName: "", upiId: "",
+  });
 
   useEffect(() => {
     function h(e: MouseEvent) {
@@ -852,15 +1027,22 @@ function CreateQuotationPage({
 
   // ── Item helpers ──────────────────────────────────────────────────────────
   const SAMPLE_ITEMS = [
-    { id: 1, name: "BILLING SOFTWARE MOBILE APP", itemCode: "-", stock: "-", salesPrice: 256, purchasePrice: 0, unit: "PCS" },
-    { id: 2, name: "BILLING SOFTWARE WITH GST", itemCode: "-", stock: "-", salesPrice: 369875, purchasePrice: 0, unit: "PCS" },
-    { id: 3, name: "BILLING SOFTWARE WITHOUT GST", itemCode: "-", stock: "-", salesPrice: 3556, purchasePrice: 0, unit: "PCS" },
-    { id: 4, name: "GODREJ FRIDGE", itemCode: "34567", stock: "143 ACS", salesPrice: 42000, purchasePrice: 0, unit: "ACS" },
-    { id: 5, name: "HERIER AC", itemCode: "1234", stock: "93 PCS", salesPrice: 45000, purchasePrice: 38000, unit: "PCS" },
-    { id: 6, name: "HISENSE 32 INCH", itemCode: "-", stock: "39 PCS", salesPrice: 21000, purchasePrice: 18000, unit: "PCS" },
+    { id: 1, name: "BILLING SOFTWARE MOBILE APP", itemCode: "-", stock: "-", salesPrice: 256, purchasePrice: 0, unit: "PCS", category: "" },
+    { id: 2, name: "BILLING SOFTWARE WITH GST", itemCode: "-", stock: "-", salesPrice: 369875, purchasePrice: 0, unit: "PCS", category: "" },
+    { id: 3, name: "BILLING SOFTWARE WITHOUT GST", itemCode: "-", stock: "-", salesPrice: 3556, purchasePrice: 0, unit: "PCS", category: "" },
+    { id: 4, name: "GODREJ FRIDGE", itemCode: "34567", stock: "143 ACS", salesPrice: 42000, purchasePrice: 0, unit: "ACS", category: "Electronics" },
+    { id: 5, name: "HERIER AC", itemCode: "1234", stock: "93 PCS", salesPrice: 45000, purchasePrice: 38000, unit: "PCS", category: "Electronics" },
+    { id: 6, name: "HISENSE 32 INCH", itemCode: "-", stock: "39 PCS", salesPrice: 21000, purchasePrice: 18000, unit: "PCS", category: "Electronics" },
   ];
   const storedItems: any[] = JSON.parse(localStorage.getItem("items") || "[]");
   const allItems = storedItems.length > 0 ? storedItems : SAMPLE_ITEMS;
+  const itemCategories: string[] = Array.from(new Set(allItems.map((i: any) => i.category || "").filter(Boolean)));
+  const filteredItems = allItems.filter((item: any) => {
+    const s = itemSearch.toLowerCase();
+    const matchSearch = !s || item.name.toLowerCase().includes(s) || (item.itemCode || "").toLowerCase().includes(s) || (item.hsn || "").toLowerCase().includes(s) || (item.category || "").toLowerCase().includes(s);
+    const matchCat = !itemCategory || item.category === itemCategory;
+    return matchSearch && matchCat;
+  });
   const selectedItemCount = Object.values(itemSelections).filter((q) => q > 0).length;
 
   function handleAddToBill() {
@@ -1020,12 +1202,27 @@ function CreateQuotationPage({
                 <div className="qe-party-selected-col">
                   <div className="qe-party-selected-hdr">
                     <span className="qe-party-selected-title">Ship To</span>
-                    <button className="qe-party-change-btn">Change Shipping Address</button>
+                    <button className="qe-party-change-btn" onClick={() => setShowChangeShipping(true)}>Change Shipping Address</button>
                   </div>
                   <div className="qe-party-selected-body">
                     <div className="qe-party-selected-name">{form.party.name}</div>
                     {form.party.mobile && form.party.mobile !== "-" && (
                       <div className="qe-party-selected-info">Phone: <span>{form.party.mobile}</span></div>
+                    )}
+                    {activeShipping?.street && (
+                      <div className="qe-party-selected-info">{activeShipping.street}</div>
+                    )}
+                    {activeShipping && (activeShipping.city || activeShipping.state || activeShipping.pincode) && (
+                      <div className="qe-party-selected-info">
+                        {[activeShipping.city, activeShipping.state, activeShipping.pincode].filter(Boolean).join(", ")}
+                      </div>
+                    )}
+                    {/* Fallback to raw party address if no active shipping seeded */}
+                    {!activeShipping && (form.party as any).shippingAddress && (
+                      <div className="qe-party-selected-info">{(form.party as any).shippingAddress}</div>
+                    )}
+                    {!activeShipping && !(form.party as any).shippingAddress && (form.party as any).billingAddress && (
+                      <div className="qe-party-selected-info">{(form.party as any).billingAddress}</div>
                     )}
                   </div>
                 </div>
@@ -1119,13 +1316,13 @@ function CreateQuotationPage({
                 <th className="qe-it-th qe-it-th--no">NO</th>
                 <th className="qe-it-th">ITEMS / SERVICES</th>
                 <th className="qe-it-th qe-it-th--c">HSN / SAC</th>
-                <th className="qe-it-th qe-it-th--c">QTY</th>
-                <th className="qe-it-th qe-it-th--r">PRICE / ITEM (₹)</th>
+                {settings.showQuantity && <th className="qe-it-th qe-it-th--c">QTY</th>}
+                {settings.showPricePerItem && <th className="qe-it-th qe-it-th--r">PRICE / ITEM (₹)</th>}
                 <th className="qe-it-th qe-it-th--r">DISCOUNT</th>
                 <th className="qe-it-th qe-it-th--c">TAX</th>
                 <th className="qe-it-th qe-it-th--r">AMOUNT (₹)</th>
                 <th className="qe-it-th qe-it-th--add">
-                  <button className="qe-it-add-col" onClick={() => setShowAddItems(true)}>
+                  <button className="qe-it-add-col" onClick={() => setShowColumnModal(true)}>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
                   </button>
                 </th>
@@ -1144,6 +1341,7 @@ function CreateQuotationPage({
                     <input className="qe-it-cell" value={item.hsn} placeholder="—"
                       onChange={(e) => updateBillItem(item.rowId, "hsn", e.target.value)} />
                   </td>
+                  {settings.showQuantity && (
                   <td className="qe-it-td qe-it-td--c">
                     <div className="qe-it-qty-row">
                       <input className="qe-it-qty" type="number" value={item.qty}
@@ -1151,10 +1349,13 @@ function CreateQuotationPage({
                       <span className="qe-it-unit">{item.unit}</span>
                     </div>
                   </td>
+                  )}
+                  {settings.showPricePerItem && (
                   <td className="qe-it-td qe-it-td--r">
                     <input className="qe-it-cell qe-it-cell--r" type="number" value={item.price}
                       onChange={(e) => updateBillItem(item.rowId, "price", Number(e.target.value))} />
                   </td>
+                  )}
                   <td className="qe-it-td">
                     <div className="qe-it-disc-col">
                       <div className="qe-it-disc-row"><span className="qe-it-sym">%</span>
@@ -1190,7 +1391,7 @@ function CreateQuotationPage({
               <tr><td colSpan={7}>
                 <button className="qe-add-item-btn" onClick={() => setShowAddItems(true)}>+ Add Item</button>
               </td><td colSpan={2}>
-                <button className="qe-scan-btn">
+                <button className="qe-scan-btn" onClick={() => setShowAddItems(true)}>
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{width:22,height:22}}>
                     <path d="M3 9V5a2 2 0 0 1 2-2h4M3 15v4a2 2 0 0 0 2 2h4M21 9V5a2 2 0 0 0-2-2h-4M21 15v4a2 2 0 0 1-2 2h-4"/>
                     <line x1="7" y1="8" x2="7" y2="16"/><line x1="10" y1="8" x2="10" y2="16"/>
@@ -1239,7 +1440,7 @@ function CreateQuotationPage({
                   value={form.termsConditions} onChange={(e) => setField("termsConditions", e.target.value)} />
               </div>
             </div>
-            <button className="qe-link-btn" onClick={() => setShowBankModal(true)}>+ Add New Account</button>
+            <button className="qe-link-btn" onClick={() => savedBankAccounts.length > 0 ? setShowSelectBankModal(true) : setShowBankModal(true)}>+ Add New Account</button>
           </div>
 
           {/* Right: Summary */}
@@ -1336,6 +1537,7 @@ function CreateQuotationPage({
               <span>₹ {total.toLocaleString("en-IN", { minimumFractionDigits: 0 })}</span>
             </div>
 
+            {/* Payment amount — disabled placeholder always */}
             <div className="qe-payment-placeholder">Enter Payment amount</div>
             <div className="qe-signatory">Authorized signatory for <strong>scratchweb.solutions</strong><div className="qe-sign-box" /></div>
           </div>
@@ -1344,22 +1546,47 @@ function CreateQuotationPage({
 
       {/* ── Add Items Modal ──────────────────────────────────────────────── */}
       {showAddItems && (
-        <div className="qe-modal-overlay" onClick={() => setShowAddItems(false)}>
+        <div className="qe-modal-overlay" onClick={() => { setShowAddItems(false); setItemSearch(""); setItemCategory(""); setItemSelections({}); }}>
           <div className="qe-aim-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="qe-modal-header">
-              <h2 className="qe-modal-title">Add Items to Bill</h2>
-              <button className="qe-modal-close" onClick={() => setShowAddItems(false)}>✕</button>
+            {/* Header */}
+            <div className="qe-aim-header">
+              <h2 className="qe-aim-title">Add Items to Bill</h2>
+              <button className="qe-aim-close" onClick={() => { setShowAddItems(false); setItemSearch(""); setItemCategory(""); setItemSelections({}); }}>✕</button>
             </div>
+
+            {/* Toolbar */}
             <div className="qe-aim-toolbar">
               <div className="qe-aim-search-wrap">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{width:15,height:15,color:"#9ca3af",flexShrink:0,marginLeft:10}}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{width:15,height:15,color:"#9ca3af",flexShrink:0,marginLeft:12}}>
                   <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
                 </svg>
-                <input className="qe-aim-search" placeholder="Search by Item/ Serial no./ HSN code/ SKU/ Custom Field / Category" />
+                <input
+                  className="qe-aim-search"
+                  autoFocus
+                  placeholder="Search by Item/ Serial no./ HSN code/ SKU/ Custom Field / Category"
+                  value={itemSearch}
+                  onChange={(e) => setItemSearch(e.target.value)}
+                />
+                <button className="qe-aim-barcode-btn" title="Scan barcode — use search to filter by item code">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{width:18,height:18}}>
+                    <path d="M3 9V5a2 2 0 0 1 2-2h4M3 15v4a2 2 0 0 0 2 2h4M21 9V5a2 2 0 0 0-2-2h-4M21 15v4a2 2 0 0 1-2 2h-4"/>
+                    <line x1="7" y1="8" x2="7" y2="16"/><line x1="10" y1="8" x2="10" y2="16"/>
+                    <line x1="14" y1="8" x2="14" y2="16"/><line x1="17" y1="8" x2="17" y2="16"/>
+                  </svg>
+                </button>
               </div>
-              <select className="qe-aim-cat"><option value="">Select Category</option></select>
-              <button className="qe-btn-create" style={{fontSize:13}}>Create New Item</button>
+              <select className="qe-aim-cat" value={itemCategory} onChange={(e) => setItemCategory(e.target.value)}>
+                <option value="">Select Category</option>
+                {itemCategories.map((cat: string) => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+              <button className="qe-aim-create-btn" onClick={() => { setShowAddItems(false); navigate("/cashier/create-item"); }}>
+                Create New Item
+              </button>
             </div>
+
+            {/* Table */}
             <div className="qe-aim-table-wrap">
               <table className="qe-aim-table">
                 <thead><tr>
@@ -1371,24 +1598,26 @@ function CreateQuotationPage({
                   <th className="qe-aim-th qe-aim-th--c">Quantity</th>
                 </tr></thead>
                 <tbody>
-                  {allItems.map((item: any) => {
+                  {filteredItems.length === 0 ? (
+                    <tr><td colSpan={6} className="qe-aim-empty">No items found</td></tr>
+                  ) : filteredItems.map((item: any) => {
                     const qty = itemSelections[item.id] || 0;
                     return (
                       <tr key={item.id} className={`qe-aim-tr ${qty > 0 ? "qe-aim-tr--sel" : ""}`}>
                         <td className="qe-aim-td">{item.name}</td>
-                        <td className="qe-aim-td qe-aim-td--c">{item.itemCode || "–"}</td>
-                        <td className="qe-aim-td qe-aim-td--c">{item.stock || "–"}</td>
+                        <td className="qe-aim-td qe-aim-td--c">{item.itemCode || "-"}</td>
+                        <td className="qe-aim-td qe-aim-td--c">{item.stock || "-"}</td>
                         <td className="qe-aim-td qe-aim-td--r">₹{item.salesPrice?.toLocaleString("en-IN")}</td>
-                        <td className="qe-aim-td qe-aim-td--r">{item.purchasePrice > 0 ? `₹${item.purchasePrice?.toLocaleString("en-IN")}` : "–"}</td>
+                        <td className="qe-aim-td qe-aim-td--r">{item.purchasePrice > 0 ? `₹${item.purchasePrice?.toLocaleString("en-IN")}` : "-"}</td>
                         <td className="qe-aim-td qe-aim-td--c">
                           {qty === 0 ? (
-                            <button className="qe-aim-add-btn" onClick={() => setItemSelections(p => ({ ...p, [item.id]: 1 }))}>+ Add</button>
+                            <button className="qe-aim-add-btn" onClick={() => setItemSelections((p: any) => ({ ...p, [item.id]: 1 }))}>+ Add</button>
                           ) : (
                             <div className="qe-aim-qty-row">
-                              <button className="qe-aim-qty-btn" onClick={() => setItemSelections(p => ({ ...p, [item.id]: Math.max(0, qty - 1) }))}>−</button>
+                              <button className="qe-aim-qty-btn" onClick={() => setItemSelections((p: any) => ({ ...p, [item.id]: Math.max(0, qty - 1) }))}>−</button>
                               <input className="qe-aim-qty-inp" type="number" value={qty}
-                                onChange={(e) => setItemSelections(p => ({ ...p, [item.id]: Number(e.target.value) }))} />
-                              <button className="qe-aim-qty-btn" onClick={() => setItemSelections(p => ({ ...p, [item.id]: qty + 1 }))}>+</button>
+                                onChange={(e) => setItemSelections((p: any) => ({ ...p, [item.id]: Number(e.target.value) }))} />
+                              <button className="qe-aim-qty-btn" onClick={() => setItemSelections((p: any) => ({ ...p, [item.id]: qty + 1 }))}>+</button>
                               <span style={{fontSize:12,color:"#6b7280"}}>{item.unit}</span>
                             </div>
                           )}
@@ -1399,16 +1628,18 @@ function CreateQuotationPage({
                 </tbody>
               </table>
             </div>
+
+            {/* Footer */}
             <div className="qe-aim-footer">
-              <div style={{display:"flex",alignItems:"center",gap:8,fontSize:12.5,color:"#6b7280",flexWrap:"wrap"}}>
-                <strong style={{color:"#374151"}}>Keyboard Shortcuts:</strong>
-                Change Quantity <kbd className="qe-kbd">Enter</kbd>
-                Move between items <kbd className="qe-kbd">↑</kbd> <kbd className="qe-kbd">↓</kbd>
+              <div className="qe-aim-shortcuts">
+                <strong className="qe-aim-shortcut-label">Keyboard Shortcuts :</strong>
+                <span>Change Quantity</span><kbd className="qe-kbd">Enter</kbd>
+                <span>Move between items</span><kbd className="qe-kbd">↑</kbd><kbd className="qe-kbd">↓</kbd>
               </div>
-              <div style={{display:"flex",alignItems:"center",gap:10}}>
-                <span style={{fontSize:13,color:"#4338ca",fontWeight:500}}>Show {selectedItemCount} Item(s) Selected</span>
-                <button className="qe-btn-cancel" onClick={() => { setItemSelections({}); setShowAddItems(false); }}>Cancel [ESC]</button>
-                <button className={`qe-btn-create ${selectedItemCount === 0 ? "qe-btn-create--disabled" : ""}`}
+              <div className="qe-aim-footer-right">
+                <span className="qe-aim-sel-count">Show {selectedItemCount} Item(s) Selected</span>
+                <button className="qe-aim-cancel-btn" onClick={() => { setItemSelections({}); setItemSearch(""); setItemCategory(""); setShowAddItems(false); }}>Cancel [ESC]</button>
+                <button className={`qe-aim-confirm-btn${selectedItemCount === 0 ? " qe-aim-confirm-btn--disabled" : ""}`}
                   onClick={handleAddToBill} disabled={selectedItemCount === 0}>Add to Bill [F7]</button>
               </div>
             </div>
@@ -1416,48 +1647,282 @@ function CreateQuotationPage({
         </div>
       )}
 
-      {/* ── Bank Modal ─────────────────────────────────────────────────── */}
+      {/* ── Add Bank Account Modal (Image 1 style) ───────────────────── */}
       {showBankModal && (
         <div className="qe-modal-overlay" onClick={() => setShowBankModal(false)}>
-          <div className="qe-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="qe-modal-header">
-              <h2 className="qe-modal-title">Add Bank Account</h2>
-              <button className="qe-modal-close" onClick={() => setShowBankModal(false)}>✕</button>
+          <div className="qe-bank-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="qe-bank-header">
+              <h2 className="qe-bank-title">Add Bank Account</h2>
+              <button className="qe-bank-close" onClick={() => setShowBankModal(false)}>✕</button>
             </div>
-            <div style={{display:"flex",flexDirection:"column",gap:14,padding:"4px 0"}}>
-              <div><label className="qe-field-label-sm">Account Name*</label><input className="qe-meta-input" style={{width:"100%",marginTop:4}} placeholder="ex: Personal Account" /></div>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-                <div><label className="qe-field-label-sm">Opening Balance</label><input className="qe-meta-input" style={{width:"100%",marginTop:4}} placeholder="ex: ₹10,000" /></div>
-                <div><label className="qe-field-label-sm">As of Date</label><input type="date" className="qe-meta-input" style={{width:"100%",marginTop:4}} defaultValue={new Date().toISOString().split("T")[0]} /></div>
+            <div className="qe-bank-body">
+              {/* Row 1: Account Number + Re-Enter */}
+              <div className="qe-bank-grid">
+                <div className="qe-bank-field">
+                  <label className="qe-bank-label">Bank Account Number <span className="qe-req">*</span></label>
+                  <input className="qe-bank-input" placeholder="ex: 123456789"
+                    value={bankForm.accountNumber}
+                    onChange={(e) => setBankForm(p => ({ ...p, accountNumber: e.target.value }))} />
+                </div>
+                <div className="qe-bank-field">
+                  <label className="qe-bank-label">Re-Enter Bank Account Number <span className="qe-req">*</span></label>
+                  <input className="qe-bank-input" placeholder="ex: 123456789"
+                    value={bankForm.reEnterAccountNumber}
+                    onChange={(e) => setBankForm(p => ({ ...p, reEnterAccountNumber: e.target.value }))} />
+                </div>
               </div>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-                <div><label className="qe-field-label-sm">Bank Account Number*</label><input className="qe-meta-input" style={{width:"100%",marginTop:4}} placeholder="ex: 123456789157950" /></div>
-                <div><label className="qe-field-label-sm">Re-Enter Bank Account Number*</label><input className="qe-meta-input" style={{width:"100%",marginTop:4}} placeholder="ex: 123456789157950" /></div>
+              {/* Row 2: IFSC + Bank Branch */}
+              <div className="qe-bank-grid">
+                <div className="qe-bank-field">
+                  <label className="qe-bank-label">IFSC Code</label>
+                  <input className="qe-bank-input" placeholder="ex: ICIC0001234"
+                    value={bankForm.ifscCode}
+                    onChange={(e) => setBankForm(p => ({ ...p, ifscCode: e.target.value }))} />
+                </div>
+                <div className="qe-bank-field">
+                  <label className="qe-bank-label">Bank &amp; Branch Name</label>
+                  <input className="qe-bank-input" placeholder="ex: ICICI Bank, Mumbai"
+                    value={bankForm.bankBranchName}
+                    onChange={(e) => setBankForm(p => ({ ...p, bankBranchName: e.target.value }))} />
+                </div>
               </div>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-                <div><label className="qe-field-label-sm">IFSC Code*</label><input className="qe-meta-input" style={{width:"100%",marginTop:4}} placeholder="ex: HDFC000075" /></div>
-                <div><label className="qe-field-label-sm">Bank & Branch Name*</label><input className="qe-meta-input" style={{width:"100%",marginTop:4}} placeholder="ex: HDFC, Old Madras" /></div>
-              </div>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-                <div><label className="qe-field-label-sm">Account Holders Name*</label><input className="qe-meta-input" style={{width:"100%",marginTop:4}} placeholder="ex: Elisa wolf" /></div>
-                <div><label className="qe-field-label-sm">UPI ID</label><input className="qe-meta-input" style={{width:"100%",marginTop:4}} placeholder="ex: elisa@okhdfc" /></div>
+              {/* Row 3: Account Holder + UPI */}
+              <div className="qe-bank-grid">
+                <div className="qe-bank-field">
+                  <label className="qe-bank-label">Account Holder's Name</label>
+                  <input className="qe-bank-input" placeholder="ex: Babu Lal"
+                    value={bankForm.accountHolderName}
+                    onChange={(e) => setBankForm(p => ({ ...p, accountHolderName: e.target.value }))} />
+                </div>
+                <div className="qe-bank-field">
+                  <label className="qe-bank-label">UPI ID</label>
+                  <input className="qe-bank-input" placeholder="ex: babulal@upi"
+                    value={bankForm.upiId}
+                    onChange={(e) => setBankForm(p => ({ ...p, upiId: e.target.value }))} />
+                </div>
               </div>
             </div>
-            <div className="qe-modal-actions">
-              <button className="qe-btn-cancel" onClick={() => setShowBankModal(false)}>Cancel</button>
-              <button className="qe-btn-save" onClick={() => { alert("Bank account added!"); setShowBankModal(false); }}>Submit</button>
+            <div className="qe-bank-footer">
+              <button className="qe-btn-cancel" onClick={() => { setShowBankModal(false); setBankForm({ accountNumber:"", reEnterAccountNumber:"", ifscCode:"", bankBranchName:"", accountHolderName:"", upiId:"" }); }}>Cancel</button>
+              <button
+                className={`qe-bank-submit${!bankForm.accountNumber || !bankForm.reEnterAccountNumber ? " qe-bank-submit--disabled" : ""}`}
+                disabled={!bankForm.accountNumber || !bankForm.reEnterAccountNumber}
+                onClick={() => {
+                  if (bankForm.accountNumber !== bankForm.reEnterAccountNumber) {
+                    alert("Account numbers do not match"); return;
+                  }
+                  const newAcc = { id: Date.now(), ...bankForm };
+                  const updated = [...savedBankAccounts, newAcc];
+                  setSavedBankAccounts(updated);
+                  localStorage.setItem("bankAccounts", JSON.stringify(updated));
+                  setBankForm({ accountNumber:"", reEnterAccountNumber:"", ifscCode:"", bankBranchName:"", accountHolderName:"", upiId:"" });
+                  setShowBankModal(false);
+                  setShowSelectBankModal(true);
+                }}
+              >Submit</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Select Bank Accounts Modal (Image 2 style) ───────────────── */}
+      {showSelectBankModal && (
+        <div className="qe-modal-overlay" onClick={() => setShowSelectBankModal(false)}>
+          <div className="qe-bank-select-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="qe-bank-header">
+              <h2 className="qe-bank-title">Select Bank Accounts</h2>
+              <button className="qe-bank-close" onClick={() => setShowSelectBankModal(false)}>✕</button>
+            </div>
+            <div className="qe-bank-select-body">
+              {savedBankAccounts.length === 0 ? (
+                <div className="qe-bank-empty">No bank accounts saved yet.</div>
+              ) : savedBankAccounts.map((acc: any) => (
+                <div key={acc.id} className={`qe-bank-acc-row${selectedBankId === acc.id ? " qe-bank-acc-row--selected" : ""}`}
+                  onClick={() => setSelectedBankId(acc.id)}>
+                  <div className="qe-bank-acc-icon">
+                    <svg viewBox="0 0 48 48" width="36" height="36">
+                      <rect x="4" y="4" width="40" height="40" rx="6" fill="#fee2e2" />
+                      <rect x="10" y="10" width="28" height="28" rx="4" fill="none" stroke="#dc2626" strokeWidth="3"/>
+                      <rect x="18" y="18" width="12" height="12" rx="2" fill="#dc2626"/>
+                    </svg>
+                  </div>
+                  <div className="qe-bank-acc-info">
+                    <div className="qe-bank-acc-name">{acc.accountHolderName || acc.bankBranchName || "Account"}</div>
+                    <div className="qe-bank-acc-num">ACC No: {acc.accountNumber}</div>
+                  </div>
+                  <div className="qe-bank-acc-right">
+                    {acc.upiId && <div className="qe-bank-acc-upi">₹ {acc.upiId}</div>}
+                    {acc.ifscCode && <div className="qe-bank-acc-ifsc">IFSC: {acc.ifscCode}</div>}
+                  </div>
+                  <div className={`qe-bank-radio${selectedBankId === acc.id ? " qe-bank-radio--on" : ""}`}>
+                    {selectedBankId === acc.id && <div className="qe-bank-radio-dot" />}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="qe-bank-select-footer">
+              <button className="qe-bank-done-btn" onClick={() => setShowSelectBankModal(false)}>DONE</button>
             </div>
           </div>
         </div>
       )}
 
       {/* ── Quick Settings Modal ─────────────────────────────────────── */}
+      {showColumnModal && (
+        <ShowHideColumnsModal
+          settings={settings}
+          onSave={setSettings}
+          onClose={() => setShowColumnModal(false)}
+        />
+      )}
+
       {showSettings && (
         <QuickSettingsModal
           settings={settings}
           onSave={setSettings}
           onClose={() => setShowSettings(false)}
         />
+      )}
+
+      {/* ── Change Shipping Address Modal ────────────────────────────── */}
+      {showChangeShipping && (
+        <div className="qe-modal-overlay" onClick={() => setShowChangeShipping(false)}>
+          <div className="qe-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="qe-modal-header">
+              <h2 className="qe-modal-title">Change Shipping Address</h2>
+              <button className="qe-modal-close" onClick={() => setShowChangeShipping(false)}>✕</button>
+            </div>
+            {/* List header */}
+            <div className="qe-shipping-list-hdr">
+              <span>Address</span>
+              <span className="qe-shipping-list-actions-label">
+                <span>Edit</span>
+                <span>Select</span>
+              </span>
+            </div>
+            {/* Address list */}
+            <div className="qe-shipping-list">
+              {shippingAddresses.map((addr) => (
+                <div key={addr.id} className={`qe-shipping-item ${selectedShippingId === addr.id ? "qe-shipping-item--selected" : ""}`}>
+                  <div className="qe-shipping-item-info">
+                    <div className="qe-shipping-item-name">{addr.name}</div>
+                    <div className="qe-shipping-item-addr">
+                      {[addr.street, addr.city, addr.state, addr.pincode].filter(Boolean).join(", ")}
+                    </div>
+                  </div>
+                  <div className="qe-shipping-item-actions">
+                    <button className="qe-shipping-edit-btn" onClick={() => openEditShipping(addr)}>
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" style={{width:16,height:16}}>
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                      </svg>
+                    </button>
+                    <button
+                      className={`qe-shipping-radio ${selectedShippingId === addr.id ? "qe-shipping-radio--selected" : ""}`}
+                      onClick={() => setSelectedShippingId(addr.id)}
+                    >
+                      {selectedShippingId === addr.id && <span className="qe-shipping-radio-dot" />}
+                    </button>
+                  </div>
+                </div>
+              ))}
+              <button className="qe-shipping-add-new" onClick={openAddShipping}>
+                + Add New Shipping Address
+              </button>
+            </div>
+            <div className="qe-modal-actions">
+              <button className="qe-btn-cancel" onClick={() => setShowChangeShipping(false)}>Cancel</button>
+              <button className="qe-btn-save" onClick={() => setShowChangeShipping(false)}>Done</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Add / Edit Shipping Address Modal ───────────────────────── */}
+      {showAddShipping && (
+        <div className="qe-modal-overlay" onClick={() => { setShowAddShipping(false); setShowChangeShipping(true); }}>
+          <div className="qe-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="qe-modal-header">
+              <h2 className="qe-modal-title">{editingAddress ? "Edit" : "Add"} Shipping Address</h2>
+              <button className="qe-modal-close" onClick={() => { setShowAddShipping(false); setShowChangeShipping(true); }}>✕</button>
+            </div>
+            <div style={{padding:"20px",display:"flex",flexDirection:"column",gap:14}}>
+              <div>
+                <label className="qe-shipping-field-label">Shipping Name <span style={{color:"#ef4444"}}>*</span></label>
+                <input
+                  className="qe-meta-input"
+                  style={{width:"100%",marginTop:5,padding:"10px 12px",fontSize:13.5}}
+                  autoFocus
+                  value={shippingForm.name}
+                  onChange={(e) => setShippingForm(f => ({...f, name: e.target.value}))}
+                />
+              </div>
+              <div>
+                <label className="qe-shipping-field-label">Street Address <span style={{color:"#ef4444"}}>*</span></label>
+                <textarea
+                  className="qe-meta-input"
+                  style={{width:"100%",marginTop:5,padding:"10px 12px",fontSize:13.5,resize:"vertical",fontFamily:"inherit",boxSizing:"border-box"}}
+                  placeholder="Enter Street Address"
+                  rows={3}
+                  value={shippingForm.street}
+                  onChange={(e) => setShippingForm(f => ({...f, street: e.target.value}))}
+                />
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+                <div>
+                  <label className="qe-shipping-field-label">State</label>
+                  <div className="qe-shipping-select-wrap" style={{marginTop:5}}>
+                    <svg style={{width:13,height:13,color:"#9ca3af",marginLeft:10,flexShrink:0}} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+                    </svg>
+                    <select
+                      className="qe-shipping-select"
+                      value={shippingForm.state}
+                      onChange={(e) => setShippingForm(f => ({...f, state: e.target.value}))}
+                    >
+                      <option value="">Enter State</option>
+                      {INDIAN_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                    <svg style={{width:13,height:13,color:"#9ca3af",marginRight:10,flexShrink:0,pointerEvents:"none"}} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <polyline points="6 9 12 15 18 9"/>
+                    </svg>
+                  </div>
+                </div>
+                <div>
+                  <label className="qe-shipping-field-label">Pincode</label>
+                  <input
+                    className="qe-meta-input"
+                    style={{width:"100%",marginTop:5,padding:"10px 12px",fontSize:13.5}}
+                    placeholder="Enter pin code"
+                    maxLength={6}
+                    value={shippingForm.pincode}
+                    onChange={(e) => setShippingForm(f => ({...f, pincode: e.target.value}))}
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="qe-shipping-field-label">City</label>
+                <input
+                  className="qe-meta-input"
+                  style={{width:"100%",marginTop:5,padding:"10px 12px",fontSize:13.5}}
+                  placeholder="Enter City"
+                  value={shippingForm.city}
+                  onChange={(e) => setShippingForm(f => ({...f, city: e.target.value}))}
+                />
+              </div>
+            </div>
+            <div className="qe-modal-actions">
+              <button className="qe-btn-cancel" onClick={() => { setShowAddShipping(false); setShowChangeShipping(true); }}>Cancel</button>
+              <button
+                className={`qe-btn-save ${(!shippingForm.name.trim() || !shippingForm.street.trim()) ? "qe-btn-save--disabled" : ""}`}
+                onClick={handleSaveShipping}
+                disabled={!shippingForm.name.trim() || !shippingForm.street.trim()}
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -1484,6 +1949,8 @@ export default function QuotationEstimate() {
     sequenceNumber: 5,
     showItemImage: true,
     priceHistory: true,
+    showPricePerItem: true,
+    showQuantity: true,
   });
 
   // Refresh list from localStorage whenever returning to list
