@@ -677,7 +677,7 @@ function ShowHideColumnsModal({
             <span>To add Custom Item Columns - Go to <strong>Item settings</strong> from </span>
             <button
               className="qe-shcol-link"
-              onClick={() => { onSave(local); onClose(); navigate("/cashier/inventory"); }}
+              onClick={() => { onSave(local); onClose(); navigate("/cashier/create-item/inventory"); }}
             >
               Items page (click here)
             </button>
