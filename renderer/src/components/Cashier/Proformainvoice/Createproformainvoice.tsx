@@ -253,11 +253,26 @@ const CreateProformaInvoice: React.FC<Props> = ({ nextNumber, settings, editData
     setLineItems(prev => prev.map(li => {
       if (li.id !== id) return li;
       const updated = { ...li, [field]: value };
-      // Recalculate amount
       const base = updated.pricePerItem * updated.qty;
-      const discAmt = updated.discountPct > 0 ? (base * updated.discountPct / 100) : updated.discountAmt;
-      updated.discountAmt = discAmt;
-      updated.amount = base - discAmt;
+      if (field === "discountPct") {
+        // % changed → auto-calc ₹
+        const pct = Number(value);
+        updated.discountPct = pct;
+        updated.discountAmt = pct > 0 ? parseFloat((base * pct / 100).toFixed(2)) : updated.discountAmt;
+      } else if (field === "discountAmt") {
+        // ₹ changed → auto-calc %
+        const amt = Number(value);
+        updated.discountAmt = amt;
+        updated.discountPct = base > 0 ? parseFloat(((amt / base) * 100).toFixed(2)) : 0;
+      } else if (field === "qty" || field === "pricePerItem") {
+        // Qty/price changed → recalc discount ₹ from existing %
+        const newBase = (field === "qty" ? Number(value) : updated.qty) * (field === "pricePerItem" ? Number(value) : updated.pricePerItem);
+        if (updated.discountPct > 0) {
+          updated.discountAmt = parseFloat((newBase * updated.discountPct / 100).toFixed(2));
+        }
+      }
+      const finalBase = updated.pricePerItem * updated.qty;
+      updated.amount = Math.max(0, finalBase - updated.discountAmt);
       return updated;
     }));
   };
@@ -321,103 +336,103 @@ const CreateProformaInvoice: React.FC<Props> = ({ nextNumber, settings, editData
     : String(nextNumber);
 
   return (
-    <div className="cpi-root">
+    <div className="aa-cpi-root">
       {/* ── Top Bar ── */}
-      <div className="cpi-topbar">
-        <div className="cpi-topbar-left">
-          <button className="cpi-back-btn" onClick={onBack}>
+      <div className="aa-cpi-topbar">
+        <div className="aa-cpi-topbar-left">
+          <button className="aa-cpi-back-btn" onClick={onBack}>
             <IconArrowLeft />
           </button>
-          <h1 className="cpi-page-title">
+          <h1 className="aa-cpi-page-title">
             {isEdit ? "Update Proforma Invoice" : "Create Proforma Invoice"}
           </h1>
         </div>
-        <div className="cpi-topbar-right">
-          <button className="cpi-keyboard-btn" title="Keyboard shortcuts">
+        <div className="aa-cpi-topbar-right">
+          <button className="aa-cpi-keyboard-btn" title="Keyboard shortcuts">
             <IconKeyboard />
           </button>
-          <button className="cpi-settings-btn" onClick={() => { setTempSettings({ ...localSettings }); setShowSettingsModal(true); }}>
+          <button className="aa-cpi-settings-btn" onClick={() => { setTempSettings({ ...localSettings }); setShowSettingsModal(true); }}>
             <IconSettings />
             <span>Settings</span>
-            <span className="cpi-settings-dot" />
+            <span className="aa-cpi-settings-dot" />
           </button>
           {!isEdit && (
-            <button className="cpi-save-new-btn" onClick={() => onSaveNew(buildInvoice())}>
+            <button className="aa-cpi-save-new-btn" onClick={() => onSaveNew(buildInvoice())}>
               Save &amp; New
             </button>
           )}
-          <button className={isEdit ? "cpi-update-btn" : "cpi-save-btn"} onClick={() => onSave(buildInvoice())}>
+          <button className={isEdit ? "aa-cpi-update-btn" : "aa-cpi-save-btn"} onClick={() => onSave(buildInvoice())}>
             {isEdit ? "Update Proforma Invoice" : "Save"}
           </button>
         </div>
       </div>
 
-      <div className="cpi-body">
+      <div className="aa-cpi-body">
         {/* ── Left: Bill To / Ship To ── */}
-        <div className="cpi-left">
+        <div className="aa-cpi-left">
           {/* Bill To */}
-          <div className="cpi-section-label">Bill To</div>
+          <div className="aa-cpi-section-label">Bill To</div>
           {party ? (
-            <div className="cpi-party-sections">
-              <div className="cpi-party-card">
-                <div className="cpi-party-card-header">
-                  <span className="cpi-party-section-title">Bill To</span>
-                  <button className="cpi-change-btn" onClick={() => setShowAddParty(true)}>Change Party</button>
+            <div className="aa-cpi-party-sections">
+              <div className="aa-cpi-party-card">
+                <div className="aa-cpi-party-card-header">
+                  <span className="aa-cpi-party-section-title">Bill To</span>
+                  <button className="aa-cpi-change-btn" onClick={() => setShowAddParty(true)}>Change Party</button>
                 </div>
-                <div className="cpi-party-name">{party.name}</div>
+                <div className="aa-cpi-party-name">{party.name}</div>
                 {party.mobile && party.mobile !== "-" && (
-                  <div className="cpi-party-detail">Phone Number: {party.mobile}</div>
+                  <div className="aa-cpi-party-detail">Phone Number: {party.mobile}</div>
                 )}
                 {party.billingAddress && (
-                  <div className="cpi-party-detail">{party.billingAddress}</div>
+                  <div className="aa-cpi-party-detail">{party.billingAddress}</div>
                 )}
               </div>
-              <div className="cpi-party-card">
-                <div className="cpi-party-card-header">
-                  <span className="cpi-party-section-title">Ship To</span>
-                  <button className="cpi-change-btn" onClick={() => setShowChangeShipping(true)}>Change Shipping Address</button>
+              <div className="aa-cpi-party-card">
+                <div className="aa-cpi-party-card-header">
+                  <span className="aa-cpi-party-section-title">Ship To</span>
+                  <button className="aa-cpi-change-btn" onClick={() => setShowChangeShipping(true)}>Change Shipping Address</button>
                 </div>
                 {selectedShipping ? (
                   <>
-                    <div className="cpi-party-name">{selectedShipping.name}</div>
-                    <div className="cpi-party-detail">
+                    <div className="aa-cpi-party-name">{selectedShipping.name}</div>
+                    <div className="aa-cpi-party-detail">
                       Address: {selectedShipping.street}
                       {selectedShipping.city ? `, ${selectedShipping.city}` : ""}
                       {selectedShipping.state ? `, ${selectedShipping.state}` : ""}
                       {selectedShipping.pincode ? ` ${selectedShipping.pincode}` : ""}
                     </div>
                     {party.mobile && party.mobile !== "-" && (
-                      <div className="cpi-party-detail">Phone Number: {party.mobile}</div>
+                      <div className="aa-cpi-party-detail">Phone Number: {party.mobile}</div>
                     )}
                   </>
                 ) : (
-                  <button className="cpi-add-shipping-btn" onClick={() => setShowAddShipping(true)}>
+                  <button className="aa-cpi-add-shipping-btn" onClick={() => setShowAddShipping(true)}>
                     + Add Shipping Address
                   </button>
                 )}
               </div>
             </div>
           ) : (
-            <div className="cpi-add-party-box" onClick={() => setShowAddParty(true)}>
-              <span className="cpi-add-party-text">+ Add Party</span>
+            <div className="aa-cpi-add-party-box" onClick={() => setShowAddParty(true)}>
+              <span className="aa-cpi-add-party-text">+ Add Party</span>
             </div>
           )}
         </div>
 
         {/* ── Right: Invoice Meta ── */}
-        <div className="cpi-right">
-          <div className="cpi-meta-grid">
-            <div className="cpi-meta-field">
+        <div className="aa-cpi-right">
+          <div className="aa-cpi-meta-grid">
+            <div className="aa-cpi-meta-field">
               <label>Proforma Invoice No:</label>
-              <input className="cpi-meta-input cpi-num-input" value={proformaDisplay} readOnly />
+              <input className="aa-cpi-meta-input cpi-num-input" value={proformaDisplay} readOnly />
             </div>
-            <div className="cpi-meta-field">
+            <div className="aa-cpi-meta-field">
               <label>Proforma Invoice Date:</label>
-              <div className="cpi-date-btn">
+              <div className="aa-cpi-date-btn">
                 {/* <IconCalendar /> */}
                 <input
                   type="date"
-                  className="cpi-date-input"
+                  className="aa-cpi-date-input"
                   value={invoiceDate}
                   onChange={e => {
                     setInvoiceDate(e.target.value);
@@ -431,32 +446,32 @@ const CreateProformaInvoice: React.FC<Props> = ({ nextNumber, settings, editData
 
           {/* Payment Terms */}
           {!showPaymentTerms ? (
-            <div className="cpi-due-box" onClick={() => setShowPaymentTerms(true)}>
+            <div className="aa-cpi-due-box" onClick={() => setShowPaymentTerms(true)}>
               + Add Due Date
             </div>
           ) : (
-            <div className="cpi-payment-row">
-              <button className="cpi-remove-terms" onClick={() => setShowPaymentTerms(false)}><IconXCircle /></button>
-              <div className="cpi-terms-field">
+            <div className="aa-cpi-payment-row">
+              <button className="aa-cpi-remove-terms" onClick={() => setShowPaymentTerms(false)}><IconXCircle /></button>
+              <div className="aa-cpi-terms-field">
                 <label>Payment Terms:</label>
-                <div className="cpi-terms-input-wrap">
+                <div className="aa-cpi-terms-input-wrap">
                   <input
                     type="number"
-                    className="cpi-terms-input"
+                    className="aa-cpi-terms-input"
                     value={paymentTerms}
                     min={0}
                     onChange={e => handlePaymentTermsChange(e.target.value)}
                   />
-                  <span className="cpi-days-label">days</span>
+                  <span className="aa-cpi-days-label">days</span>
                 </div>
               </div>
-              <div className="cpi-expiry-field">
+              <div className="aa-cpi-expiry-field">
                 <label>Expiry Date:</label>
-                <div className="cpi-date-btn">
+                <div className="aa-cpi-date-btn">
                   {/* <IconCalendar /> */}
                   <input
                     type="date"
-                    className="cpi-date-input"
+                    className="aa-cpi-date-input"
                     value={expiryDate}
                     onChange={e => setExpiryDate(e.target.value)}
                   />
@@ -467,248 +482,283 @@ const CreateProformaInvoice: React.FC<Props> = ({ nextNumber, settings, editData
           )}
 
           {/* Extra Fields */}
-          <div className="cpi-extra-grid">
-            <div className="cpi-extra-field">
-              <label>E-Way Bill No: <span className="cpi-info-icon"><IconInfo /></span></label>
-              <input className="cpi-extra-input" value={eWayBill} onChange={e => setEWayBill(e.target.value)} />
+          <div className="aa-cpi-extra-grid">
+            <div className="aa-cpi-extra-field">
+              <label>E-Way Bill No: <span className="aa-cpi-info-icon"><IconInfo /></span></label>
+              <input className="aa-cpi-extra-input" value={eWayBill} onChange={e => setEWayBill(e.target.value)} />
             </div>
-            <div className="cpi-extra-field">
+            <div className="aa-cpi-extra-field">
               <label>Challan No.:</label>
-              <input className="cpi-extra-input" value={challanNo} onChange={e => setChallanNo(e.target.value)} />
+              <input className="aa-cpi-extra-input" value={challanNo} onChange={e => setChallanNo(e.target.value)} />
             </div>
-            <div className="cpi-extra-field">
+            <div className="aa-cpi-extra-field">
               <label>Financed By:</label>
-              <input className="cpi-extra-input" value={financedBy} onChange={e => setFinancedBy(e.target.value)} />
+              <input className="aa-cpi-extra-input" value={financedBy} onChange={e => setFinancedBy(e.target.value)} />
             </div>
-            <div className="cpi-extra-field">
+            <div className="aa-cpi-extra-field">
               <label>Salesman:</label>
-              <input className="cpi-extra-input" value={salesman} onChange={e => setSalesman(e.target.value)} />
+              <input className="aa-cpi-extra-input" value={salesman} onChange={e => setSalesman(e.target.value)} />
             </div>
-            <div className="cpi-extra-field">
+            <div className="aa-cpi-extra-field">
               <label>Email ID:</label>
-              <input className="cpi-extra-input" value={emailId} onChange={e => setEmailId(e.target.value)} />
+              <input className="aa-cpi-extra-input" value={emailId} onChange={e => setEmailId(e.target.value)} />
             </div>
-            <div className="cpi-extra-field">
+            <div className="aa-cpi-extra-field">
               <label>Warranty Period:</label>
-              <input className="cpi-extra-input" value={warrantyPeriod} onChange={e => setWarrantyPeriod(e.target.value)} />
+              <input className="aa-cpi-extra-input" value={warrantyPeriod} onChange={e => setWarrantyPeriod(e.target.value)} />
             </div>
           </div>
         </div>
       </div>
 
       {/* ── Items Table ── */}
-      <div className="cpi-items-section">
-        <table className="cpi-items-table">
+      <div className="aa-cpi-items-section">
+        <table className="aa-cpi-items-table">
           <thead>
             <tr>
-              <th className="cpi-th-no">NO</th>
-              <th className="cpi-th-item">ITEMS/ SERVICES</th>
+              <th className="aa-cpi-th-no">NO</th>
+              <th className="aa-cpi-th-item">ITEMS/ SERVICES</th>
               <th>HSN/ SAC</th>
               {colConfig.showQuantity && <th>QTY</th>}
               {colConfig.showPricePerItem && <th>PRICE/ITEM (₹)</th>}
               <th>DISCOUNT</th>
               <th>TAX</th>
               <th>AMOUNT (₹)</th>
-              <th className="cpi-th-add">
-                <button className="cpi-add-col-btn" onClick={() => setShowColModal(true)} title="Show/Hide columns">
+              <th className="aa-cpi-th-add">
+                <button className="aa-cpi-add-col-btn" onClick={() => setShowColModal(true)} title="Show/Hide columns">
                   <IconColumns />
                 </button>
               </th>
             </tr>
           </thead>
           <tbody>
-            {lineItems.map((li, idx) => (
-              <tr key={li.id} className="cpi-item-row">
-                <td className="cpi-td-no">{idx + 1}</td>
-                <td className="cpi-td-item">
-                  <div className="cpi-item-name-cell">
-                    <span className="cpi-item-name">{li.item.name}</span>
-                    <input
-                      className="cpi-desc-input"
-                      placeholder="Enter Description (optional)"
-                      value={li.description}
-                      onChange={e => updateLineItem(li.id, "description", e.target.value)}
-                    />
-                  </div>
-                </td>
-                <td>
-                  <input className="cpi-cell-input" value={li.item.hsn} readOnly />
-                </td>
-                {colConfig.showQuantity && (
-                  <td>
-                    <div className="cpi-qty-cell">
+            {lineItems.map((li, idx) => {
+              const taxAmt = (li.amount * li.taxRate) / 100;
+              const taxLabel = li.taxRate > 0 ? `GST ${li.taxRate}%` : "None";
+              return (
+                <tr key={li.id} className="aa-cpi-item-row">
+                  <td className="aa-cpi-td-no">{idx + 1}</td>
+                  <td className="aa-cpi-td-item">
+                    <div className="aa-cpi-item-name-cell">
+                      <span className="aa-cpi-item-name">{li.item.name}</span>
                       <input
-                        className="cpi-cell-input cpi-qty-input"
-                        type="number"
-                        min={1}
-                        value={li.qty}
-                        onChange={e => updateLineItem(li.id, "qty", Number(e.target.value) || 1)}
+                        className="aa-cpi-desc-input"
+                        placeholder="Enter Description (optional)"
+                        value={li.description}
+                        onChange={e => updateLineItem(li.id, "description", e.target.value)}
                       />
-                      <span className="cpi-unit">{li.unit}</span>
                     </div>
                   </td>
-                )}
-                {colConfig.showPricePerItem && (
-                  <td>
-                    <input
-                      className="cpi-cell-input"
-                      type="number"
-                      value={li.pricePerItem}
-                      onChange={e => updateLineItem(li.id, "pricePerItem", Number(e.target.value) || 0)}
-                    />
+                  <td className="aa-cpi-td-hsn">
+                    <input className="aa-cpi-cell-input cpi-hsn-input" value={li.item.hsn} readOnly placeholder="—" />
                   </td>
-                )}
-                <td>
-                  <div className="cpi-disc-cell">
-                    <div className="cpi-disc-row">
-                      <span className="cpi-disc-label">%</span>
+                  {colConfig.showQuantity && (
+                    <td className="aa-cpi-td-qty">
+                      <div className="aa-cpi-qty-cell">
+                        <input
+                          className="aa-cpi-cell-input cpi-qty-num"
+                          type="number" min={1}
+                          value={li.qty}
+                          onChange={e => updateLineItem(li.id, "qty", Number(e.target.value) || 1)}
+                        />
+                        <span className="aa-cpi-unit-badge">{li.unit}</span>
+                      </div>
+                    </td>
+                  )}
+                  {colConfig.showPricePerItem && (
+                    <td className="aa-cpi-td-price">
                       <input
-                        className="cpi-cell-input"
+                        className="aa-cpi-cell-input cpi-price-input"
+                        type="number" min={0}
+                        value={li.pricePerItem}
+                        onChange={e => updateLineItem(li.id, "pricePerItem", Number(e.target.value) || 0)}
+                      />
+                    </td>
+                  )}
+                  <td className="aa-cpi-td-disc">
+                    <div className="aa-cpi-disc-cell">
+                      <div className="aa-cpi-disc-row">
+                        <span className="aa-cpi-disc-label">%</span>
+                        <input
+                          className="aa-cpi-cell-input cpi-disc-input"
+                          type="number" min={0} max={100}
+                          value={li.discountPct}
+                          onChange={e => updateLineItem(li.id, "discountPct", Number(e.target.value))}
+                        />
+                      </div>
+                      <div className="aa-cpi-disc-row">
+                        <span className="aa-cpi-disc-label">₹</span>
+                        <input
+                          className="aa-cpi-cell-input cpi-disc-input"
+                          type="number" min={0}
+                          value={li.discountAmt}
+                          onChange={e => updateLineItem(li.id, "discountAmt", Number(e.target.value))}
+                        />
+                      </div>
+                    </div>
+                  </td>
+                  <td className="aa-cpi-td-tax">
+                    <div className="aa-cpi-tax-cell">
+                      <TaxSelectInline
+                        value={taxLabel}
+                        onChange={v => {
+                          const rate = v === "None" ? 0 : parseInt(v.replace("GST ", "").replace("%", "")) || 0;
+                          setLineItems(prev => prev.map(x => x.id === li.id ? { ...x, taxRate: rate } : x));
+                        }}
+                      />
+                      <span className="aa-cpi-tax-amt">(₹ {taxAmt.toFixed(0)})</span>
+                    </div>
+                  </td>
+                  <td className="aa-cpi-td-amount">
+                    <div className="aa-cpi-amount-cell">
+                      <span className="aa-cpi-amt-rs">₹</span>
+                      <input
+                        className="aa-cpi-cell-input cpi-amount-input"
                         type="number"
-                        min={0} max={100}
-                        value={li.discountPct}
-                        onChange={e => updateLineItem(li.id, "discountPct", Number(e.target.value))}
+                        value={li.amount.toFixed(2)}
+                        onChange={e => setLineItems(prev => prev.map(x => x.id === li.id ? { ...x, amount: Number(e.target.value) } : x))}
                       />
                     </div>
-                    <div className="cpi-disc-row">
-                      <span className="cpi-disc-label">₹</span>
-                      <input
-                        className="cpi-cell-input"
-                        type="number"
-                        min={0}
-                        value={li.discountAmt.toFixed(0)}
-                        readOnly={li.discountPct > 0}
-                        onChange={e => li.discountPct === 0 && updateLineItem(li.id, "discountAmt", Number(e.target.value))}
-                      />
-                    </div>
-                  </div>
-                </td>
-                <td>
-                  <div className="cpi-tax-cell">
-                    <span className="cpi-tax-name">{li.taxRate > 0 ? `GST ${li.taxRate}%` : "None"}</span>
-                    <span className="cpi-tax-amt">(₹ {((li.amount * li.taxRate) / 100).toFixed(0)})</span>
-                  </div>
-                </td>
-                <td>
-                  <div className="cpi-amount-cell">
-                    <span className="cpi-amt-currency">₹</span>
-                    <input
-                      className="cpi-cell-input"
-                      type="number"
-                      value={li.amount.toFixed(0)}
-                      readOnly
-                    />
-                  </div>
-                </td>
-                <td>
-                  <button className="cpi-remove-item" onClick={() => removeLineItem(li.id)}>
-                    <IconTrash />
-                  </button>
-                </td>
-              </tr>
-            ))}
+                  </td>
+                  <td className="aa-cpi-td-del">
+                    <button className="aa-cpi-remove-item" onClick={() => removeLineItem(li.id)}>
+                      <IconTrash />
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
 
         {/* Add Item Row */}
-        <div className="cpi-add-item-row">
-          <div className="cpi-add-item-btn-wrap">
-            <button className="cpi-add-item-btn" onClick={() => setShowAddItems(true)}>
+        <div className="aa-cpi-add-item-row">
+          <div className="aa-cpi-add-item-btn-wrap">
+            <button className="aa-cpi-add-item-btn" onClick={() => setShowAddItems(true)}>
               + Add Item
             </button>
           </div>
-          <div className="cpi-scan-wrap">
+          <div className="aa-cpi-scan-wrap">
             <IconBarcode />
             <span>Scan Barcode</span>
           </div>
         </div>
 
         {/* Subtotal */}
-        <div className="cpi-subtotal-row">
-          <span className="cpi-subtotal-label">SUBTOTAL</span>
-          <span className="cpi-subtotal-qty">{subtotalQty > 0 ? `₹ ${subtotalQty}` : "₹ 0"}</span>
-          <span className="cpi-subtotal-disc">₹ {subtotalDisc.toFixed(0)}</span>
-          <span className="cpi-subtotal-amt">₹ {subtotalAmt.toFixed(0)}</span>
+        <div className="aa-cpi-subtotal-row">
+          <span className="aa-cpi-subtotal-label">SUBTOTAL</span>
+          <span className="aa-cpi-subtotal-qty">{subtotalQty > 0 ? `₹ ${subtotalQty}` : "₹ 0"}</span>
+          <span className="aa-cpi-subtotal-disc">₹ {subtotalDisc.toFixed(0)}</span>
+          <span className="aa-cpi-subtotal-amt">₹ {subtotalAmt.toFixed(0)}</span>
         </div>
       </div>
 
       {/* ── Bottom Section ── */}
-      <div className="cpi-bottom">
+      <div className="aa-cpi-bottom">
         {/* Left: Notes / Terms / Bank */}
-        <div className="cpi-bottom-left">
+        <div className="aa-cpi-bottom-left">
           {!showNotes ? (
-            <button className="cpi-add-link" onClick={() => setShowNotes(true)}>+ Add Notes</button>
+            <button className="aa-cpi-add-link" onClick={() => setShowNotes(true)}>+ Add Notes</button>
           ) : (
-            <div className="cpi-expandable">
-              <div className="cpi-expandable-header">
+            <div className="aa-cpi-expandable">
+              <div className="aa-cpi-expandable-header">
                 <span>Notes</span>
-                <button className="cpi-expand-close" onClick={() => setShowNotes(false)}><IconMinusCircle /></button>
+                <button className="aa-cpi-expand-close" onClick={() => setShowNotes(false)}><IconMinusCircle /></button>
               </div>
               <textarea
-                className="cpi-textarea"
+                className="aa-cpi-textarea"
                 placeholder="Enter your notes"
                 value={notes}
                 onChange={e => setNotes(e.target.value)}
                 rows={3}
               />
-              <div className="cpi-textarea-actions">
-                <button className="cpi-tx-btn"><IconGoogle /> <span className="cpi-tx-label">G</span></button>
-                <button className="cpi-tx-btn cpi-wa-btn"><IconWhatsApp /></button>
+              <div className="aa-cpi-textarea-actions">
+                <button className="aa-cpi-tx-btn"><IconGoogle /> <span className="aa-cpi-tx-label">G</span></button>
+                <button className="aa-cpi-tx-btn cpi-wa-btn"><IconWhatsApp /></button>
               </div>
             </div>
           )}
 
           {!showTerms ? (
-            <button className="cpi-add-link" onClick={() => setShowTerms(true)}>+ Add Terms and Conditions</button>
+            <button className="aa-cpi-add-link" onClick={() => setShowTerms(true)}>+ Add Terms and Conditions</button>
           ) : (
-            <div className="cpi-expandable">
-              <div className="cpi-expandable-header">
+            <div className="aa-cpi-expandable">
+              <div className="aa-cpi-expandable-header">
                 <span>Terms and Conditions</span>
-                <button className="cpi-expand-close" onClick={() => setShowTerms(false)}><IconMinusCircle /></button>
+                <button className="aa-cpi-expand-close" onClick={() => setShowTerms(false)}><IconMinusCircle /></button>
               </div>
               <textarea
-                className="cpi-textarea"
+                className="aa-cpi-textarea"
                 placeholder="Enter your terms and conditions"
                 value={terms}
                 onChange={e => setTerms(e.target.value)}
                 rows={3}
               />
-              <div className="cpi-textarea-actions">
-                <button className="cpi-tx-btn"><IconGoogle /> <span className="cpi-tx-label">G</span></button>
-                <button className="cpi-tx-btn cpi-wa-btn"><IconWhatsApp /></button>
+              <div className="aa-cpi-textarea-actions">
+                <button className="aa-cpi-tx-btn"><IconGoogle /> <span className="aa-cpi-tx-label">G</span></button>
+                <button className="aa-cpi-tx-btn cpi-wa-btn"><IconWhatsApp /></button>
               </div>
             </div>
           )}
 
-          {!showCharges && (
-            <button className="cpi-add-link cpi-bank-link" onClick={() => {
-              const acc = bankAccounts[0];
-              if (acc) setShowSelectBank(true);
-              else setShowAddBank(true);
-            }}>
-              + Add Bank Account
-            </button>
-          )}
+          {!showCharges && (() => {
+            const selectedBank = bankAccounts.find(b => b.id === selectedBankId) || null;
+            return selectedBank ? (
+              <div className="aa-bm-selected-card">
+                <div className="aa-bm-selected-card-title">Bank Details</div>
+                <div className="aa-bm-selected-detail-row">
+                  <span>Account Number: </span><strong>{selectedBank.accountNumber}</strong>
+                </div>
+                {selectedBank.ifsc && (
+                  <div className="aa-bm-selected-detail-row">
+                    <span>IFSC Code: </span><strong>{selectedBank.ifsc}</strong>
+                  </div>
+                )}
+                {selectedBank.bankName && (
+                  <div className="aa-bm-selected-detail-row">
+                    <span>Bank &amp; Branch: </span><strong>{selectedBank.bankName}</strong>
+                  </div>
+                )}
+                {selectedBank.holderName && (
+                  <div className="aa-bm-selected-detail-row">
+                    <span>Account Holder: </span><strong>{selectedBank.holderName}</strong>
+                  </div>
+                )}
+                <div className="aa-bm-selected-actions">
+                  <button className="aa-cpi-add-link" onClick={() => setShowSelectBank(true)}>
+                    Change Bank Account
+                  </button>
+                  <button className="aa-cpi-add-link" style={{ color: "#ef4444" }} onClick={() => setSelectedBankId(null)}>
+                    Remove
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button className="aa-cpi-add-link" onClick={() => setShowAddBank(true)}>
+                + Add Bank Account
+              </button>
+            );
+          })()}
         </div>
 
         {/* Right: Charges / Discount / Total */}
-        <div className="cpi-bottom-right">
+        <div className="aa-cpi-bottom-right">
           {/* Additional Charges */}
           {!showCharges ? (
-            <button className="cpi-add-link" onClick={() => setShowCharges(true)}>+ Add Additional Charges</button>
+            <button className="aa-cpi-add-link" onClick={() => setShowCharges(true)}>+ Add Additional Charges</button>
           ) : (
             <>
               {charges.map((charge, i) => (
-                <div key={charge.id} className="cpi-charge-row">
+                <div key={charge.id} className="aa-cpi-charge-row">
                   <input
-                    className="cpi-charge-label-input"
+                    className="aa-cpi-charge-label-input"
                     placeholder="Enter charge (ex. Transport Charge)"
                     value={charge.label}
                     onChange={e => setCharges(prev => prev.map(c => c.id === charge.id ? { ...c, label: e.target.value } : c))}
                   />
-                  <span className="cpi-charge-currency">₹</span>
+                  <span className="aa-cpi-charge-currency">₹</span>
                   <input
-                    className="cpi-charge-amt-input"
+                    className="aa-cpi-charge-amt-input"
                     type="number"
                     min={0}
                     value={charge.amount}
@@ -718,35 +768,38 @@ const CreateProformaInvoice: React.FC<Props> = ({ nextNumber, settings, editData
                     value={charge.taxType}
                     onChange={v => setCharges(prev => prev.map(c => c.id === charge.id ? { ...c, taxType: v } : c))}
                   />
-                  <button className="cpi-charge-remove" onClick={() => removeCharge(charge.id)}><IconXCircle /></button>
+                  <button className="aa-cpi-charge-remove" onClick={() => removeCharge(charge.id)}><IconXCircle /></button>
                 </div>
               ))}
-              <button className="cpi-add-link" onClick={addCharge}>+ Add Another Charge</button>
+              <button className="aa-cpi-add-link" onClick={addCharge}>+ Add Another Charge</button>
             </>
           )}
 
           {/* Taxable Amount */}
-          <div className="cpi-taxable-row">
+          <div className="aa-cpi-taxable-row">
             <span>Taxable Amount</span>
             <span>₹ {taxableAmount.toFixed(0)}</span>
           </div>
 
           {/* Discount */}
           {!showDiscount ? (
-            <button className="cpi-add-link" onClick={() => setShowDiscount(true)}>+ Add Discount</button>
+            <div className="aa-cpi-summary-row cpi-summary-row--link">
+              <button className="aa-cpi-add-link" onClick={() => setShowDiscount(true)}>+ Add Discount</button>
+              <span className="aa-cpi-summary-neg">- ₹ 0</span>
+            </div>
           ) : (
-            <div className="cpi-discount-row">
-              <div className="cpi-discount-type-wrap">
+            <div className="aa-cpi-discount-row">
+              <div className="aa-cpi-discount-type-wrap">
                 <button
-                  className="cpi-discount-type-btn"
+                  className="aa-cpi-discount-type-btn"
                   onClick={() => setShowDiscountTypeDropdown(s => !s)}
                 >
                   {discountType} <IconChevronDown />
                 </button>
                 {showDiscountTypeDropdown && (
-                  <div className="cpi-discount-type-menu">
+                  <div className="aa-cpi-discount-type-menu">
                     {(["Discount Before Tax", "Discount After Tax"] as const).map(opt => (
-                      <button key={opt} className={`cpi-disc-opt${discountType === opt ? " active" : ""}`}
+                      <button key={opt} className={`aa-cpi-disc-opt${discountType === opt ? " active" : ""}`}
                         onClick={() => { setDiscountType(opt); setShowDiscountTypeDropdown(false); }}>
                         {opt}
                       </button>
@@ -754,48 +807,52 @@ const CreateProformaInvoice: React.FC<Props> = ({ nextNumber, settings, editData
                   </div>
                 )}
               </div>
-              <input
-                className="cpi-disc-pct-input"
-                placeholder="% 0"
-                type="number" min={0} max={100}
-                value={discountPct || ""}
-                onChange={e => {
-                  const v = Number(e.target.value);
-                  setDiscountPct(v);
-                  setDiscountAmt(v > 0 ? taxableAmount * v / 100 : 0);
-                }}
-              />
-              <span className="cpi-disc-slash">/</span>
-              <input
-                className="cpi-disc-amt-input"
-                placeholder="₹ 0"
-                type="number" min={0}
-                value={discountAmt || ""}
-                onChange={e => {
-                  const v = Number(e.target.value);
-                  setDiscountAmt(v);
-                  setDiscountPct(taxableAmount > 0 ? v / taxableAmount * 100 : 0);
-                }}
-              />
-              <button className="cpi-charge-remove" onClick={() => { setShowDiscount(false); setDiscountPct(0); setDiscountAmt(0); }}><IconXCircle /></button>
+              <div className="aa-cpi-disc-inputs-wrap">
+                <span className="aa-cpi-disc-pct-label">%</span>
+                <input
+                  className="aa-cpi-disc-pct-input"
+                  type="number" min={0} max={100}
+                  value={discountPct || ""}
+                  placeholder="0"
+                  onChange={e => {
+                    const v = Number(e.target.value);
+                    setDiscountPct(v);
+                    setDiscountAmt(taxableAmount > 0 ? parseFloat((taxableAmount * v / 100).toFixed(2)) : 0);
+                  }}
+                />
+                <span className="aa-cpi-disc-sep">/</span>
+                <span className="aa-cpi-disc-rs-label">₹</span>
+                <input
+                  className="aa-cpi-disc-amt-input"
+                  type="number" min={0}
+                  value={discountAmt || ""}
+                  placeholder="0"
+                  onChange={e => {
+                    const v = Number(e.target.value);
+                    setDiscountAmt(v);
+                    setDiscountPct(taxableAmount > 0 ? parseFloat((v / taxableAmount * 100).toFixed(2)) : 0);
+                  }}
+                />
+                <button className="aa-cpi-charge-remove" onClick={() => { setShowDiscount(false); setDiscountPct(0); setDiscountAmt(0); }}><IconXCircle /></button>
+              </div>
             </div>
           )}
 
           {/* Auto Round Off */}
-          <div className="cpi-round-row">
-            <label className="cpi-checkbox-wrap">
+          <div className="aa-cpi-round-row">
+            <label className="aa-cpi-checkbox-wrap">
               <input type="checkbox" checked={autoRound} onChange={e => setAutoRound(e.target.checked)} />
-              <span className="cpi-checkbox-label">Auto Round Off</span>
+              <span className="aa-cpi-checkbox-label">Auto Round Off</span>
             </label>
-            <div className="cpi-adjust-wrap">
-              <div className="cpi-adjust-type-wrap">
-                <button className="cpi-adjust-btn" onClick={() => setShowAdjustDropdown(s => !s)}>
+            <div className="aa-cpi-adjust-wrap">
+              <div className="aa-cpi-adjust-type-wrap">
+                <button className="aa-cpi-adjust-btn" onClick={() => setShowAdjustDropdown(s => !s)}>
                   {adjustType} <IconChevronDown />
                 </button>
                 {showAdjustDropdown && (
-                  <div className="cpi-adjust-menu">
+                  <div className="aa-cpi-adjust-menu">
                     {(["+Add", "- Reduce"] as const).map(opt => (
-                      <button key={opt} className={`cpi-adj-opt${adjustType === opt ? " active" : ""}`}
+                      <button key={opt} className={`aa-cpi-adj-opt${adjustType === opt ? " active" : ""}`}
                         onClick={() => { setAdjustType(opt as any); setShowAdjustDropdown(false); }}>
                         {opt}
                       </button>
@@ -803,9 +860,9 @@ const CreateProformaInvoice: React.FC<Props> = ({ nextNumber, settings, editData
                   </div>
                 )}
               </div>
-              <span className="cpi-adjust-currency">₹</span>
+              <span className="aa-cpi-adjust-currency">₹</span>
               <input
-                className="cpi-adjust-input"
+                className="aa-cpi-adjust-input"
                 type="number"
                 min={0}
                 value={adjustAmt || 0}
@@ -815,25 +872,20 @@ const CreateProformaInvoice: React.FC<Props> = ({ nextNumber, settings, editData
           </div>
 
           {/* Total Amount */}
-          <div className="cpi-total-row">
-            <span className="cpi-total-label">Total Amount</span>
-            <div className="cpi-payment-input-wrap">
-              <input className="cpi-payment-input" placeholder="Enter Payment amount" readOnly />
-            </div>
+          <div className="aa-cpi-total-row">
+            <span className="aa-cpi-total-label">Total Amount</span>
+            <span className="aa-cpi-total-value">{totalAmount > 0 ? formatINR(totalAmount) : ""}</span>
           </div>
-          {totalAmount > 0 && (
-            <div className="cpi-total-value-row">
-              <span />
-              <span className="cpi-total-value">{formatINR(totalAmount)}</span>
-            </div>
-          )}
+          <div className="aa-cpi-payment-row-wrap">
+            <input className="aa-cpi-payment-input" placeholder="Enter Payment amount" />
+          </div>
 
           {/* Signature */}
-          <div className="cpi-signature-section">
-            <div className="cpi-signature-label">
+          <div className="aa-cpi-signature-section">
+            <div className="aa-cpi-signature-label">
               Authorized signatory for <strong>scratchweb.solutions</strong>
             </div>
-            <div className="cpi-signature-box" />
+            <div className="aa-cpi-signature-box" />
           </div>
         </div>
       </div>
@@ -906,71 +958,71 @@ const CreateProformaInvoice: React.FC<Props> = ({ nextNumber, settings, editData
 
       {/* Quick Settings Modal */}
       {showSettingsModal && (
-        <div className="cpi-modal-overlay" onClick={() => setShowSettingsModal(false)}>
-          <div className="cpi-modal" onClick={e => e.stopPropagation()}>
-            <div className="cpi-modal-header">
+        <div className="aa-cpi-modal-overlay" onClick={() => setShowSettingsModal(false)}>
+          <div className="aa-cpi-modal" onClick={e => e.stopPropagation()}>
+            <div className="aa-cpi-modal-header">
               <h2>Quick Proforma Settings</h2>
-              <button className="cpi-modal-close" onClick={() => setShowSettingsModal(false)}><IconClose /></button>
+              <button className="aa-cpi-modal-close" onClick={() => setShowSettingsModal(false)}><IconClose /></button>
             </div>
-            <div className="cpi-modal-body">
-              <div className={`cpi-settings-card${tempSettings.prefixEnabled ? " enabled" : ""}`}>
-                <div className="cpi-settings-row">
+            <div className="aa-cpi-modal-body">
+              <div className={`aa-cpi-settings-card${tempSettings.prefixEnabled ? " enabled" : ""}`}>
+                <div className="aa-cpi-settings-row">
                   <div>
-                    <div className="cpi-settings-title">Proforma Prefix &amp; Sequence Number</div>
-                    <div className="cpi-settings-desc">Add your custom prefix &amp; sequence for Proforma Numbering</div>
+                    <div className="aa-cpi-settings-title">Proforma Prefix &amp; Sequence Number</div>
+                    <div className="aa-cpi-settings-desc">Add your custom prefix &amp; sequence for Proforma Numbering</div>
                   </div>
-                  <label className="cpi-toggle">
+                  <label className="aa-cpi-toggle">
                     <input type="checkbox" checked={tempSettings.prefixEnabled}
                       onChange={e => setTempSettings(p => ({...p, prefixEnabled: e.target.checked}))} />
-                    <span className="cpi-toggle-slider" />
+                    <span className="aa-cpi-toggle-slider" />
                   </label>
                 </div>
                 {tempSettings.prefixEnabled && (
-                  <div className="cpi-settings-fields">
-                    <div className="cpi-s-field">
+                  <div className="aa-cpi-settings-fields">
+                    <div className="aa-cpi-s-field">
                       <label>Prefix</label>
                       <input type="text" placeholder="Prefix" value={tempSettings.prefix}
                         onChange={e => setTempSettings(p => ({...p, prefix: e.target.value}))} />
                     </div>
-                    <div className="cpi-s-field">
+                    <div className="aa-cpi-s-field">
                       <label>Sequence Number</label>
                       <input type="number" value={tempSettings.sequenceNumber}
                         onChange={e => setTempSettings(p => ({...p, sequenceNumber: Number(e.target.value)}))} />
                     </div>
-                    <div className="cpi-s-preview">Proforma Number: {tempSettings.prefix}{tempSettings.sequenceNumber}</div>
+                    <div className="aa-cpi-s-preview">Proforma Number: {tempSettings.prefix}{tempSettings.sequenceNumber}</div>
                   </div>
                 )}
               </div>
-              <div className="cpi-settings-card">
-                <div className="cpi-settings-row">
+              <div className="aa-cpi-settings-card">
+                <div className="aa-cpi-settings-row">
                   <div>
-                    <div className="cpi-settings-title">Show Item Image on Invoice</div>
-                    <div className="cpi-settings-desc">This will apply to all vouchers except for Payment In and Payment Out</div>
+                    <div className="aa-cpi-settings-title">Show Item Image on Invoice</div>
+                    <div className="aa-cpi-settings-desc">This will apply to all vouchers except for Payment In and Payment Out</div>
                   </div>
-                  <label className="cpi-toggle">
+                  <label className="aa-cpi-toggle">
                     <input type="checkbox" checked={tempSettings.showItemImage}
                       onChange={e => setTempSettings(p => ({...p, showItemImage: e.target.checked}))} />
-                    <span className="cpi-toggle-slider" />
+                    <span className="aa-cpi-toggle-slider" />
                   </label>
                 </div>
               </div>
-              <div className="cpi-settings-card">
-                <div className="cpi-settings-row">
+              <div className="aa-cpi-settings-card">
+                <div className="aa-cpi-settings-row">
                   <div>
-                    <div className="cpi-settings-title">Price History <span className="cpi-new-badge">New</span></div>
-                    <div className="cpi-settings-desc">Show last 5 sales / purchase prices of the item for the selected party in invoice</div>
+                    <div className="aa-cpi-settings-title">Price History <span className="aa-cpi-new-badge">New</span></div>
+                    <div className="aa-cpi-settings-desc">Show last 5 sales / purchase prices of the item for the selected party in invoice</div>
                   </div>
-                  <label className="cpi-toggle">
+                  <label className="aa-cpi-toggle">
                     <input type="checkbox" checked={tempSettings.priceHistory}
                       onChange={e => setTempSettings(p => ({...p, priceHistory: e.target.checked}))} />
-                    <span className="cpi-toggle-slider" />
+                    <span className="aa-cpi-toggle-slider" />
                   </label>
                 </div>
               </div>
             </div>
-            <div className="cpi-modal-footer">
-              <button className="cpi-btn-cancel" onClick={() => setShowSettingsModal(false)}>Cancel</button>
-              <button className="cpi-btn-save" onClick={() => { setLocalSettings({...tempSettings}); setShowSettingsModal(false); }}>Save</button>
+            <div className="aa-cpi-modal-footer">
+              <button className="aa-cpi-btn-cancel" onClick={() => setShowSettingsModal(false)}>Cancel</button>
+              <button className="aa-cpi-btn-save" onClick={() => { setLocalSettings({...tempSettings}); setShowSettingsModal(false); }}>Save</button>
             </div>
           </div>
         </div>
@@ -979,20 +1031,35 @@ const CreateProformaInvoice: React.FC<Props> = ({ nextNumber, settings, editData
   );
 };
 
-// ── Tax Dropdown helper ───────────────────────────────────────────────────────
+// ── Tax Select for line items (select element) ────────────────────────────────
+const TAX_LINE_OPTIONS = ["None", "GST 5%", "GST 12%", "GST 18%", "GST 28%"];
+
+const TaxSelectInline: React.FC<{ value: string; onChange: (v: string) => void }> = ({ value, onChange }) => (
+  <select
+    className="aa-cpi-tax-select"
+    value={value}
+    onChange={e => onChange(e.target.value)}
+  >
+    {TAX_LINE_OPTIONS.map(opt => (
+      <option key={opt} value={opt}>{opt}</option>
+    ))}
+  </select>
+);
+
+// ── Tax Dropdown helper (for charges) ─────────────────────────────────────────
 const TAX_OPTIONS = ["No Tax Applicable", "GST 5%", "GST 12%", "GST 18%", "GST 28%"];
 
 const TaxDropdown: React.FC<{ value: string; onChange: (v: string) => void }> = ({ value, onChange }) => {
   const [open, setOpen] = useState(false);
   return (
-    <div className="cpi-tax-dropdown">
-      <button className="cpi-tax-btn" onClick={() => setOpen(s => !s)}>
+    <div className="aa-cpi-tax-dropdown">
+      <button className="aa-cpi-tax-btn" onClick={() => setOpen(s => !s)}>
         {value} <IconChevronDown />
       </button>
       {open && (
-        <div className="cpi-tax-menu">
+        <div className="aa-cpi-tax-menu">
           {TAX_OPTIONS.map(opt => (
-            <button key={opt} className={`cpi-tax-opt${value === opt ? " active" : ""}`}
+            <button key={opt} className={`aa-cpi-tax-opt${value === opt ? " active" : ""}`}
               onClick={() => { onChange(opt); setOpen(false); }}>
               {opt}
             </button>

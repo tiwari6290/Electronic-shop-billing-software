@@ -324,94 +324,94 @@ const ProformaInvoiceViewModal: React.FC<Props> = ({
   }
 
   return (
-    <div className="pfi-overlay" onClick={onClose}>
-      <div className="pfi-modal" onClick={e => e.stopPropagation()}>
+    <div className="aa-pfi-overlay" onClick={onClose}>
+      <div className="aa-pfi-modal" onClick={e => e.stopPropagation()}>
 
         {/* ── Top Bar ── */}
-        <div className="pfi-topbar">
-          <div className="pfi-topbar-left">
-            <button className="pfi-back-btn" onClick={onClose} title="Back">
+        <div className="aa-pfi-topbar">
+          <div className="aa-pfi-topbar-left">
+            <button className="aa-pfi-back-btn" onClick={onClose} title="Back">
               <IconBack />
             </button>
-            <span className="pfi-title">
+            <span className="aa-pfi-title">
               Proforma Invoice #{proformaDisplay}
             </span>
-            <span className={`pfi-status-badge pfi-status--${invoice.status.toLowerCase()}`}>
+            <span className={`aa-pfi-status-badge pfi-status--${invoice.status.toLowerCase()}`}>
               {invoice.status}
             </span>
           </div>
 
-          <div className="pfi-topbar-right">
+          <div className="aa-pfi-topbar-right">
             {/* 3-dot menu */}
-            <div className="pfi-menu-wrap" ref={menuRef}>
+            <div className="aa-pfi-menu-wrap" ref={menuRef}>
               <button
-                className={`pfi-dot-btn${showMenu ? " active" : ""}`}
+                className={`aa-pfi-dot-btn${showMenu ? " active" : ""}`}
                 onClick={e => { e.stopPropagation(); setShowMenu(s => !s); }}
                 title="More options"
               >
                 <IconDots />
               </button>
               {showMenu && (
-                <div className="pfi-dropdown">
-                  <button className="pfi-drop-item" onClick={() => { setShowMenu(false); onEdit(invoice); }}>
-                    <span className="pfi-drop-icon"><IconEdit /></span>
+                <div className="aa-pfi-dropdown">
+                  <button className="aa-pfi-drop-item" onClick={() => { setShowMenu(false); onEdit(invoice); }}>
+                    <span className="aa-pfi-drop-icon"><IconEdit /></span>
                     Edit
                   </button>
-                  <button className="pfi-drop-item" onClick={() => { setShowMenu(false); setShowHistoryModal(true); }}>
-                    <span className="pfi-drop-icon"><IconHistory /></span>
+                  <button className="aa-pfi-drop-item" onClick={() => { setShowMenu(false); setShowHistoryModal(true); }}>
+                    <span className="aa-pfi-drop-icon"><IconHistory /></span>
                     Edit History
                   </button>
-                  <button className="pfi-drop-item" onClick={() => { setShowMenu(false); onDuplicate(invoice); }}>
-                    <span className="pfi-drop-icon"><IconDuplicate /></span>
+                  <button className="aa-pfi-drop-item" onClick={() => { setShowMenu(false); onDuplicate(invoice); }}>
+                    <span className="aa-pfi-drop-icon"><IconDuplicate /></span>
                     Duplicate
                   </button>
-                  <div className="pfi-drop-sep" />
-                  <button className="pfi-drop-item pfi-drop-item--danger" onClick={() => { setShowMenu(false); setShowDeleteConfirm(true); }}>
-                    <span className="pfi-drop-icon"><IconTrash /></span>
+                  <div className="aa-pfi-drop-sep" />
+                  <button className="aa-pfi-drop-item pfi-drop-item--danger" onClick={() => { setShowMenu(false); setShowDeleteConfirm(true); }}>
+                    <span className="aa-pfi-drop-icon"><IconTrash /></span>
                     Delete
                   </button>
                 </div>
               )}
             </div>
 
-            <button className="pfi-chat-btn" title="Chat">
+            <button className="aa-pfi-chat-btn" title="Chat">
               <IconChat />
             </button>
           </div>
         </div>
 
         {/* ── Action Bar ── */}
-        <div className="pfi-actionbar">
-          <div className="pfi-actionbar-left">
-            <button className="pfi-action-btn" onClick={handlePrint}>
+        <div className="aa-pfi-actionbar">
+          <div className="aa-pfi-actionbar-left">
+            <button className="aa-pfi-action-btn" onClick={handlePrint}>
               <IconDownload />
               <span>Download PDF</span>
-              <span className="pfi-action-chevron">▾</span>
+              <span className="aa-pfi-action-chevron">▾</span>
             </button>
-            <button className="pfi-action-btn" onClick={handlePrint}>
+            <button className="aa-pfi-action-btn" onClick={handlePrint}>
               <IconPrint />
               <span>Print PDF</span>
-              <span className="pfi-action-chevron">▾</span>
+              <span className="aa-pfi-action-chevron">▾</span>
             </button>
-            <button className="pfi-action-btn pfi-action-btn--round">
+            <button className="aa-pfi-action-btn pfi-action-btn--round">
               <IconShare />
             </button>
-            <button className="pfi-action-btn pfi-action-btn--round">
+            <button className="aa-pfi-action-btn pfi-action-btn--round">
               {/* clock / reminder icon */}
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="10"/>
                 <polyline points="12 6 12 12 16 14"/>
               </svg>
             </button>
-            <button className="pfi-action-btn pfi-action-btn--share">
+            <button className="aa-pfi-action-btn pfi-action-btn--share">
               <IconShare />
               <span>Share</span>
-              <span className="pfi-action-chevron">▾</span>
+              <span className="aa-pfi-action-chevron">▾</span>
             </button>
           </div>
 
           <button
-            className="pfi-convert-btn"
+            className="aa-pfi-convert-btn"
             onClick={() => onConvertToInvoice(invoice)}
             disabled={invoice.status === "Closed"}
           >
@@ -420,45 +420,45 @@ const ProformaInvoiceViewModal: React.FC<Props> = ({
         </div>
 
         {/* ── Invoice Content Area ── */}
-        <div className="pfi-content-wrap">
-          <div className="pfi-paper" id="pfi-print-area" style={{ fontFamily: font }}>
+        <div className="aa-pfi-content-wrap">
+          <div className="aa-pfi-paper" id="pfi-print-area" style={{ fontFamily: font }}>
 
             {/* Company Header */}
-            <div className="pfi-paper-header" style={{ borderBottom: `2px solid ${tc}` }}>
-              <div className="pfi-biz-left">
+            <div className="aa-pfi-paper-header" style={{ borderBottom: `2px solid ${tc}` }}>
+              <div className="aa-pfi-biz-left">
                 {showLogo && logoUrl && (
-                  <img src={logoUrl} alt="Logo" className="pfi-logo" />
+                  <img src={logoUrl} alt="Logo" className="aa-pfi-logo" />
                 )}
                 {!showLogo && (
-                  <div className="pfi-logo-placeholder" style={{ borderColor: tc }}>
+                  <div className="aa-pfi-logo-placeholder" style={{ borderColor: tc }}>
                     <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke={tc} strokeWidth="1.5">
                       <rect x="3" y="3" width="18" height="18" rx="2"/>
                       <path d="M9 9h6M9 12h6M9 15h4"/>
                     </svg>
                   </div>
                 )}
-                <div className="pfi-biz-info">
+                <div className="aa-pfi-biz-info">
                   {vis.companyName && (
-                    <div className="pfi-biz-name" style={{ color: tc }}>{business.companyName}</div>
+                    <div className="aa-pfi-biz-name" style={{ color: tc }}>{business.companyName}</div>
                   )}
                   {vis.address && (
-                    <div className="pfi-biz-addr">{business.address}</div>
+                    <div className="aa-pfi-biz-addr">{business.address}</div>
                   )}
-                  <div className="pfi-biz-contact">
+                  <div className="aa-pfi-biz-contact">
                     {vis.phone && <span>Mobile: {business.phone}</span>}
                     {vis.email && <span>Email: {business.email}</span>}
                   </div>
                 </div>
               </div>
 
-              <div className="pfi-inv-meta">
-                <div className="pfi-inv-meta-row">
-                  <span className="pfi-inv-meta-label">Proforma Invoice No.</span>
-                  <span className="pfi-inv-meta-val">{proformaDisplay}</span>
+              <div className="aa-pfi-inv-meta">
+                <div className="aa-pfi-inv-meta-row">
+                  <span className="aa-pfi-inv-meta-label">Proforma Invoice No.</span>
+                  <span className="aa-pfi-inv-meta-val">{proformaDisplay}</span>
                 </div>
-                <div className="pfi-inv-meta-row">
-                  <span className="pfi-inv-meta-label">Proforma Date</span>
-                  <span className="pfi-inv-meta-val" style={{ fontSize: 11 }}>
+                <div className="aa-pfi-inv-meta-row">
+                  <span className="aa-pfi-inv-meta-label">Proforma Date</span>
+                  <span className="aa-pfi-inv-meta-val" style={{ fontSize: 11 }}>
                     {fmtDate(fd?.invoiceDate || invoice.date)}
                   </span>
                 </div>
@@ -466,117 +466,117 @@ const ProformaInvoiceViewModal: React.FC<Props> = ({
             </div>
 
             {/* PROFORMA INVOICE title */}
-            <div className="pfi-doc-title" style={{ color: tc }}>PROFORMA INVOICE</div>
+            <div className="aa-pfi-doc-title" style={{ color: tc }}>PROFORMA INVOICE</div>
 
             {/* Bill To */}
-            <div className="pfi-bill-section" style={{ borderBottom: `1px solid ${borderColor}` }}>
-              <div className="pfi-bill-label">BILL TO</div>
-              <div className="pfi-bill-name">
+            <div className="aa-pfi-bill-section" style={{ borderBottom: `1px solid ${borderColor}` }}>
+              <div className="aa-pfi-bill-label">BILL TO</div>
+              <div className="aa-pfi-bill-name">
                 {fd?.party?.name || invoice.partyName || "Cash Sale"}
               </div>
               {fd?.party?.mobile && (
-                <div className="pfi-bill-contact">Mobile &nbsp; {fd.party.mobile}</div>
+                <div className="aa-pfi-bill-contact">Mobile &nbsp; {fd.party.mobile}</div>
               )}
               {fd?.party?.billingAddress && (
-                <div className="pfi-bill-addr">{fd.party.billingAddress}</div>
+                <div className="aa-pfi-bill-addr">{fd.party.billingAddress}</div>
               )}
             </div>
 
             {/* Items Table */}
-            <table className="pfi-items-table">
+            <table className="aa-pfi-items-table">
               <thead>
                 <tr style={{ background: tc, color: "#fff" }}>
-                  <th className="pfi-th pfi-th--sno">S.NO.</th>
-                  <th className="pfi-th pfi-th--services">SERVICES</th>
-                  <th className="pfi-th pfi-th--qty">QTY.</th>
-                  <th className="pfi-th pfi-th--rate">RATE</th>
-                  <th className="pfi-th pfi-th--tax">TAX</th>
-                  <th className="pfi-th pfi-th--amount">AMOUNT</th>
+                  <th className="aa-pfi-th pfi-th--sno">S.NO.</th>
+                  <th className="aa-pfi-th pfi-th--services">SERVICES</th>
+                  <th className="aa-pfi-th pfi-th--qty">QTY.</th>
+                  <th className="aa-pfi-th pfi-th--rate">RATE</th>
+                  <th className="aa-pfi-th pfi-th--tax">TAX</th>
+                  <th className="aa-pfi-th pfi-th--amount">AMOUNT</th>
                 </tr>
               </thead>
               <tbody>
                 {lineItems.length > 0 ? lineItems.map((li: any, idx: number) => (
-                  <tr key={idx} className={idx % 2 === 0 ? "pfi-tr-even" : "pfi-tr-odd"}>
-                    <td className="pfi-td pfi-td--sno">{idx + 1}</td>
-                    <td className="pfi-td pfi-td--services">
+                  <tr key={idx} className={idx % 2 === 0 ? "aa-pfi-tr-even" : "aa-pfi-tr-odd"}>
+                    <td className="aa-pfi-td pfi-td--sno">{idx + 1}</td>
+                    <td className="aa-pfi-td pfi-td--services">
                       {li.item?.name || li.name || li.itemName || "Item"}
                     </td>
-                    <td className="pfi-td pfi-td--qty">{li.qty || 1} {li.unit || li.item?.unit || "PCS"}</td>
-                    <td className="pfi-td pfi-td--rate">{li.pricePerItem || li.price || li.rate || 0}</td>
-                    <td className="pfi-td pfi-td--tax">
+                    <td className="aa-pfi-td pfi-td--qty">{li.qty || 1} {li.unit || li.item?.unit || "PCS"}</td>
+                    <td className="aa-pfi-td pfi-td--rate">{li.pricePerItem || li.price || li.rate || 0}</td>
+                    <td className="aa-pfi-td pfi-td--tax">
                       {li.taxRate ?? li.item?.taxRate ?? 0}<br/>
-                      <span className="pfi-tax-pct">({li.taxRate ?? li.item?.taxRate ?? 0}%)</span>
+                      <span className="aa-pfi-tax-pct">({li.taxRate ?? li.item?.taxRate ?? 0}%)</span>
                     </td>
-                    <td className="pfi-td pfi-td--amount">{li.amount || 0}</td>
+                    <td className="aa-pfi-td pfi-td--amount">{li.amount || 0}</td>
                   </tr>
                 )) : (
                   // Empty rows to stretch table (matching screenshot)
                   Array.from({ length: 8 }).map((_, i) => (
-                    <tr key={i} className={i % 2 === 0 ? "pfi-tr-even" : "pfi-tr-odd"}>
-                      <td className="pfi-td pfi-td--sno">&nbsp;</td>
-                      <td className="pfi-td pfi-td--services">&nbsp;</td>
-                      <td className="pfi-td pfi-td--qty">&nbsp;</td>
-                      <td className="pfi-td pfi-td--rate">&nbsp;</td>
-                      <td className="pfi-td pfi-td--tax">&nbsp;</td>
-                      <td className="pfi-td pfi-td--amount">&nbsp;</td>
+                    <tr key={i} className={i % 2 === 0 ? "aa-pfi-tr-even" : "aa-pfi-tr-odd"}>
+                      <td className="aa-pfi-td pfi-td--sno">&nbsp;</td>
+                      <td className="aa-pfi-td pfi-td--services">&nbsp;</td>
+                      <td className="aa-pfi-td pfi-td--qty">&nbsp;</td>
+                      <td className="aa-pfi-td pfi-td--rate">&nbsp;</td>
+                      <td className="aa-pfi-td pfi-td--tax">&nbsp;</td>
+                      <td className="aa-pfi-td pfi-td--amount">&nbsp;</td>
                     </tr>
                   ))
                 )}
               </tbody>
               <tfoot>
-                <tr className="pfi-tfoot-total">
-                  <td colSpan={2} className="pfi-td pfi-tfoot-label">TOTAL</td>
-                  <td className="pfi-td pfi-td--qty">
+                <tr className="aa-pfi-tfoot-total">
+                  <td colSpan={2} className="aa-pfi-td pfi-tfoot-label">TOTAL</td>
+                  <td className="aa-pfi-td pfi-td--qty">
                     {lineItems.reduce((s: number, li: any) => s + (Number(li.qty) || 0), 0)}
                   </td>
-                  <td className="pfi-td pfi-td--rate"></td>
-                  <td className="pfi-td pfi-td--tax">₹ {totalTax.toFixed(0)}</td>
-                  <td className="pfi-td pfi-td--amount">₹ {subtotal.toFixed(0)}</td>
+                  <td className="aa-pfi-td pfi-td--rate"></td>
+                  <td className="aa-pfi-td pfi-td--tax">₹ {totalTax.toFixed(0)}</td>
+                  <td className="aa-pfi-td pfi-td--amount">₹ {subtotal.toFixed(0)}</td>
                 </tr>
               </tfoot>
             </table>
 
             {/* HSN Tax Summary */}
-            <table className="pfi-hsn-table">
+            <table className="aa-pfi-hsn-table">
               <thead>
                 <tr style={{ background: "#f5f5f0" }}>
-                  <th className="pfi-hsn-th">HSN/SAC</th>
-                  <th className="pfi-hsn-th">Taxable Value</th>
-                  <th className="pfi-hsn-th pfi-hsn-th--group" colSpan={2}>
+                  <th className="aa-pfi-hsn-th">HSN/SAC</th>
+                  <th className="aa-pfi-hsn-th">Taxable Value</th>
+                  <th className="aa-pfi-hsn-th pfi-hsn-th--group" colSpan={2}>
                     CGST
-                    <div className="pfi-hsn-subrow">
+                    <div className="aa-pfi-hsn-subrow">
                       <span>Rate</span><span>Amount</span>
                     </div>
                   </th>
-                  <th className="pfi-hsn-th pfi-hsn-th--group" colSpan={2}>
+                  <th className="aa-pfi-hsn-th pfi-hsn-th--group" colSpan={2}>
                     SGST
-                    <div className="pfi-hsn-subrow">
+                    <div className="aa-pfi-hsn-subrow">
                       <span>Rate</span><span>Amount</span>
                     </div>
                   </th>
-                  <th className="pfi-hsn-th">Total Tax Amount</th>
+                  <th className="aa-pfi-hsn-th">Total Tax Amount</th>
                 </tr>
               </thead>
               <tbody>
                 {Object.keys(hsnGroups).length > 0 ? Object.entries(hsnGroups).map(([hsn, g], i) => (
                   <tr key={i}>
-                    <td className="pfi-hsn-td">{hsn}</td>
-                    <td className="pfi-hsn-td">{g.taxable.toFixed(0)}</td>
-                    <td className="pfi-hsn-td">0%</td>
-                    <td className="pfi-hsn-td">{g.cgst.toFixed(0)}</td>
-                    <td className="pfi-hsn-td">0%</td>
-                    <td className="pfi-hsn-td">{g.sgst.toFixed(0)}</td>
-                    <td className="pfi-hsn-td">₹ {(g.cgst + g.sgst).toFixed(0)}</td>
+                    <td className="aa-pfi-hsn-td">{hsn}</td>
+                    <td className="aa-pfi-hsn-td">{g.taxable.toFixed(0)}</td>
+                    <td className="aa-pfi-hsn-td">0%</td>
+                    <td className="aa-pfi-hsn-td">{g.cgst.toFixed(0)}</td>
+                    <td className="aa-pfi-hsn-td">0%</td>
+                    <td className="aa-pfi-hsn-td">{g.sgst.toFixed(0)}</td>
+                    <td className="aa-pfi-hsn-td">₹ {(g.cgst + g.sgst).toFixed(0)}</td>
                   </tr>
                 )) : (
                   <tr>
-                    <td className="pfi-hsn-td">-</td>
-                    <td className="pfi-hsn-td">{subtotal.toFixed(0)}</td>
-                    <td className="pfi-hsn-td">0%</td>
-                    <td className="pfi-hsn-td">0</td>
-                    <td className="pfi-hsn-td">0%</td>
-                    <td className="pfi-hsn-td">0</td>
-                    <td className="pfi-hsn-td">₹ 0</td>
+                    <td className="aa-pfi-hsn-td">-</td>
+                    <td className="aa-pfi-hsn-td">{subtotal.toFixed(0)}</td>
+                    <td className="aa-pfi-hsn-td">0%</td>
+                    <td className="aa-pfi-hsn-td">0</td>
+                    <td className="aa-pfi-hsn-td">0%</td>
+                    <td className="aa-pfi-hsn-td">0</td>
+                    <td className="aa-pfi-hsn-td">₹ 0</td>
                   </tr>
                 )}
               </tbody>
@@ -584,28 +584,28 @@ const ProformaInvoiceViewModal: React.FC<Props> = ({
 
             {/* Amount in Words */}
             {misc.amountWords && (
-              <div className="pfi-words-box" style={{ border: `1px solid ${borderColor}` }}>
-                <div className="pfi-words-label">Total Amount (in words)</div>
-                <div className="pfi-words-val">{numberToWords(Math.round(grandTotal))}</div>
+              <div className="aa-pfi-words-box" style={{ border: `1px solid ${borderColor}` }}>
+                <div className="aa-pfi-words-label">Total Amount (in words)</div>
+                <div className="aa-pfi-words-val">{numberToWords(Math.round(grandTotal))}</div>
               </div>
             )}
 
             {/* Terms & Conditions + Signature */}
             {misc.showTerms && (
-              <div className="pfi-terms-row" style={{ border: `1px solid ${borderColor}` }}>
-                <div className="pfi-terms-left">
-                  <div className="pfi-terms-title">Terms and Conditions</div>
-                  <div className="pfi-terms-text">
+              <div className="aa-pfi-terms-row" style={{ border: `1px solid ${borderColor}` }}>
+                <div className="aa-pfi-terms-left">
+                  <div className="aa-pfi-terms-title">Terms and Conditions</div>
+                  <div className="aa-pfi-terms-text">
                     {(fd?.terms || business.terms).split("\n").map((line: string, i: number) => (
                       <div key={i}>{line}</div>
                     ))}
                   </div>
                 </div>
-                <div className="pfi-sig-box">
+                <div className="aa-pfi-sig-box">
                   {misc.signatureUrl && (
-                    <img src={misc.signatureUrl} alt="Signature" className="pfi-sig-img" />
+                    <img src={misc.signatureUrl} alt="Signature" className="aa-pfi-sig-img" />
                   )}
-                  <div className="pfi-sig-label">
+                  <div className="aa-pfi-sig-label">
                     Authorised Signatory For<br />
                     <strong>{business.companyName}</strong>
                   </div>
@@ -619,30 +619,30 @@ const ProformaInvoiceViewModal: React.FC<Props> = ({
 
       {/* ── Edit History Modal ── */}
       {showHistoryModal && (
-        <div className="pfi-inner-overlay" onClick={() => setShowHistoryModal(false)}>
-          <div className="pfi-inner-modal" onClick={e => e.stopPropagation()}>
-            <div className="pfi-inner-header">
+        <div className="aa-pfi-inner-overlay" onClick={() => setShowHistoryModal(false)}>
+          <div className="aa-pfi-inner-modal" onClick={e => e.stopPropagation()}>
+            <div className="aa-pfi-inner-header">
               <span>Edit History</span>
               <button onClick={() => setShowHistoryModal(false)}>✕</button>
             </div>
-            <div className="pfi-inner-body">
-              <div className="pfi-hist-item">
-                <span className="pfi-hist-dot" />
+            <div className="aa-pfi-inner-body">
+              <div className="aa-pfi-hist-item">
+                <span className="aa-pfi-hist-dot" />
                 <div>
-                  <div className="pfi-hist-action">Invoice Created</div>
-                  <div className="pfi-hist-time">{fmtDateShort(invoice.date)}, System</div>
+                  <div className="aa-pfi-hist-action">Invoice Created</div>
+                  <div className="aa-pfi-hist-time">{fmtDateShort(invoice.date)}, System</div>
                 </div>
               </div>
-              <div className="pfi-hist-item">
-                <span className="pfi-hist-dot" />
+              <div className="aa-pfi-hist-item">
+                <span className="aa-pfi-hist-dot" />
                 <div>
-                  <div className="pfi-hist-action">Invoice Viewed</div>
-                  <div className="pfi-hist-time">{fmtDateShort(new Date().toISOString())}, System</div>
+                  <div className="aa-pfi-hist-action">Invoice Viewed</div>
+                  <div className="aa-pfi-hist-time">{fmtDateShort(new Date().toISOString())}, System</div>
                 </div>
               </div>
             </div>
-            <div className="pfi-inner-footer">
-              <button className="pfi-btn-primary" onClick={() => setShowHistoryModal(false)}>Close</button>
+            <div className="aa-pfi-inner-footer">
+              <button className="aa-pfi-btn-primary" onClick={() => setShowHistoryModal(false)}>Close</button>
             </div>
           </div>
         </div>
@@ -650,20 +650,20 @@ const ProformaInvoiceViewModal: React.FC<Props> = ({
 
       {/* ── Delete Confirm Modal ── */}
       {showDeleteConfirm && (
-        <div className="pfi-inner-overlay" onClick={() => setShowDeleteConfirm(false)}>
-          <div className="pfi-inner-modal" onClick={e => e.stopPropagation()}>
-            <div className="pfi-inner-header">
+        <div className="aa-pfi-inner-overlay" onClick={() => setShowDeleteConfirm(false)}>
+          <div className="aa-pfi-inner-modal" onClick={e => e.stopPropagation()}>
+            <div className="aa-pfi-inner-header">
               <span>Delete Invoice</span>
               <button onClick={() => setShowDeleteConfirm(false)}>✕</button>
             </div>
-            <div className="pfi-inner-body">
+            <div className="aa-pfi-inner-body">
               <p style={{ fontSize: 14, color: "#374151" }}>
                 Are you sure you want to delete Proforma Invoice #{proformaDisplay}? This action cannot be undone.
               </p>
             </div>
-            <div className="pfi-inner-footer">
-              <button className="pfi-btn-cancel" onClick={() => setShowDeleteConfirm(false)}>Cancel</button>
-              <button className="pfi-btn-danger" onClick={() => { onDelete(invoice.id); setShowDeleteConfirm(false); }}>Delete</button>
+            <div className="aa-pfi-inner-footer">
+              <button className="aa-pfi-btn-cancel" onClick={() => setShowDeleteConfirm(false)}>Cancel</button>
+              <button className="aa-pfi-btn-danger" onClick={() => { onDelete(invoice.id); setShowDeleteConfirm(false); }}>Delete</button>
             </div>
           </div>
         </div>

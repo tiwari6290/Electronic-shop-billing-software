@@ -270,9 +270,9 @@ const CalendarPicker: React.FC<{
     !!value && value.getDate() === day && value.getMonth() === viewMonth && value.getFullYear() === viewYear;
 
   return (
-    <div className="pi-calendar">
-      <div className="pi-calendar-label">{label}</div>
-      <div className="pi-calendar-nav">
+    <div className="aa-pi-calendar">
+      <div className="aa-pi-calendar-label">{label}</div>
+      <div className="aa-pi-calendar-nav">
         <button onClick={() => { const d = new Date(viewYear, viewMonth - 1); setViewMonth(d.getMonth()); setViewYear(d.getFullYear()); }}>‹</button>
         <span>{MONTH_NAMES[viewMonth]}</span>
         <button onClick={() => { const d = new Date(viewYear, viewMonth + 1); setViewMonth(d.getMonth()); setViewYear(d.getFullYear()); }}>›</button>
@@ -280,15 +280,15 @@ const CalendarPicker: React.FC<{
         <span>{viewYear}</span>
         <button onClick={() => setViewYear(v => v + 1)}>›</button>
       </div>
-      <div className="pi-calendar-grid">
+      <div className="aa-pi-calendar-grid">
         {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map(d => (
-          <div key={d} className="pi-cal-header">{d}</div>
+          <div key={d} className="aa-pi-cal-header">{d}</div>
         ))}
         {cells.map((day, i) =>
           day === null ? (
-            <div key={`e-${i}`} className="pi-cal-cell empty" />
+            <div key={`e-${i}`} className="aa-pi-cal-cell empty" />
           ) : (
-            <button key={day} className={`pi-cal-cell${isSelected(day) ? " selected" : ""}`}
+            <button key={day} className={`aa-pi-cal-cell${isSelected(day) ? " selected" : ""}`}
               onClick={() => onChange(new Date(viewYear, viewMonth, day))}>
               {day}
             </button>
@@ -615,89 +615,89 @@ const ProformaInvoice: React.FC = () => {
 
       {/* ── List (hidden while form is open) ── */}
       {pageMode === null && (
-        <div className="pi-root">
+        <div className="aa-pi-root">
           {/* ── Header ── */}
-          <div className="pi-header">
-            <h1 className="pi-title">Proforma Invoice</h1>
-            <div className="pi-header-actions">
-              <button className="pi-icon-btn" onClick={() => { setTempSettings({ ...settings }); setShowSettings(true); }} title="Settings">
+          <div className="aa-pi-header">
+            <h1 className="aa-pi-title">Proforma Invoice</h1>
+            <div className="aa-pi-header-actions">
+              <button className="aa-pi-icon-btn" onClick={() => { setTempSettings({ ...settings }); setShowSettings(true); }} title="Settings">
                 <IconSettings />
-                <span className="pi-notification-dot" />
+                <span className="aa-pi-notification-dot" />
               </button>
-              <button className="pi-icon-btn pi-msg-btn" title="Messages">
+              <button className="aa-pi-icon-btn pi-msg-btn" title="Messages">
                 <IconMail />
               </button>
             </div>
           </div>
 
           {/* ── Toolbar ── */}
-          <div className="pi-toolbar">
-            <div className="pi-toolbar-left">
+          <div className="aa-pi-toolbar">
+            <div className="aa-pi-toolbar-left">
               {/* Search */}
-              <div className={`pi-search-wrap${showSearch ? " open" : ""}`}>
-                <button className="pi-search-btn" onClick={() => setShowSearch(s => !s)}>
+              <div className={`aa-pi-search-wrap${showSearch ? " open" : ""}`}>
+                <button className="aa-pi-search-btn" onClick={() => setShowSearch(s => !s)}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                     <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
                   </svg>
                 </button>
                 {showSearch && (
-                  <input autoFocus className="pi-search-input" placeholder="Search party, invoice…"
+                  <input autoFocus className="aa-pi-search-input" placeholder="Search party, invoice…"
                     value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
                     onBlur={() => { if (!searchQuery) setShowSearch(false); }} />
                 )}
               </div>
 
               {/* Date filter */}
-              <div className="pi-dropdown-wrap" ref={dateDropdownRef}>
-                <button className={`pi-dropdown-btn${showDateDropdown ? " open" : ""}`}
+              <div className="aa-pi-dropdown-wrap" ref={dateDropdownRef}>
+                <button className={`aa-pi-dropdown-btn${showDateDropdown ? " open" : ""}`}
                   onClick={() => setShowDateDropdown(s => !s)}>
-                  <span className="pi-dropdown-icon"><IconCalendar /></span>
+                  <span className="aa-pi-dropdown-icon"><IconCalendar /></span>
                   <span>{dateFilter}</span>
-                  <span className="pi-caret"><IconChevronDown /></span>
+                  <span className="aa-pi-caret"><IconChevronDown /></span>
                 </button>
                 {showDateDropdown && !showCustomPicker && (
-                  <div className="pi-dropdown-menu pi-date-menu">
+                  <div className="aa-pi-dropdown-menu pi-date-menu">
                     {dateOptions.map(opt => (
-                      <button key={opt} className={`pi-dropdown-item${dateFilter === opt ? " active" : ""}`}
+                      <button key={opt} className={`aa-pi-dropdown-item${dateFilter === opt ? " active" : ""}`}
                         onClick={() => {
                           if (opt === "Custom") { setTempCustom({ start: null, end: null }); setPickingStage("start"); setShowCustomPicker(true); }
                           else { setDateFilter(opt); setShowDateDropdown(false); }
                         }}>
                         <span>{opt}</span>
                         {opt === dateFilter && opt !== "Custom" && (
-                          <span className="pi-date-range-label">{formatDateRangeLabel(opt, customRange)}</span>
+                          <span className="aa-pi-date-range-label">{formatDateRangeLabel(opt, customRange)}</span>
                         )}
                       </button>
                     ))}
                   </div>
                 )}
                 {showDateDropdown && showCustomPicker && (
-                  <div className="pi-custom-picker">
-                    <div className="pi-custom-calendars">
+                  <div className="aa-pi-custom-picker">
+                    <div className="aa-pi-custom-calendars">
                       <CalendarPicker label="Select Start Date" value={tempCustom.start}
                         onChange={d => { setTempCustom(prev => ({ ...prev, start: d })); setPickingStage("end"); }} />
                       <CalendarPicker label="Select End Date" value={tempCustom.end}
                         onChange={d => setTempCustom(prev => ({ ...prev, end: d }))} />
                     </div>
-                    <div className="pi-custom-actions">
-                      <button className="pi-btn-ghost" onClick={() => setShowCustomPicker(false)}>CANCEL</button>
-                      <button className="pi-btn-primary-text" onClick={handleCustomDateOk}>OK</button>
+                    <div className="aa-pi-custom-actions">
+                      <button className="aa-pi-btn-ghost" onClick={() => setShowCustomPicker(false)}>CANCEL</button>
+                      <button className="aa-pi-btn-primary-text" onClick={handleCustomDateOk}>OK</button>
                     </div>
                   </div>
                 )}
               </div>
 
               {/* Status filter */}
-              <div className="pi-dropdown-wrap" ref={statusDropdownRef}>
-                <button className={`pi-dropdown-btn${showStatusDropdown ? " open" : ""}`}
+              <div className="aa-pi-dropdown-wrap" ref={statusDropdownRef}>
+                <button className={`aa-pi-dropdown-btn${showStatusDropdown ? " open" : ""}`}
                   onClick={() => setShowStatusDropdown(s => !s)}>
                   <span>{statusFilter}</span>
-                  <span className="pi-caret"><IconChevronDown /></span>
+                  <span className="aa-pi-caret"><IconChevronDown /></span>
                 </button>
                 {showStatusDropdown && (
-                  <div className="pi-dropdown-menu pi-status-menu">
+                  <div className="aa-pi-dropdown-menu pi-status-menu">
                     {(["Show All Invoices","Show Open Invoices","Show Closed Invoices"] as StatusFilter[]).map(opt => (
-                      <button key={opt} className={`pi-dropdown-item${statusFilter === opt ? " active bold" : ""}`}
+                      <button key={opt} className={`aa-pi-dropdown-item${statusFilter === opt ? " active bold" : ""}`}
                         onClick={() => { setStatusFilter(opt); setShowStatusDropdown(false); }}>
                         {opt}
                       </button>
@@ -707,17 +707,17 @@ const ProformaInvoice: React.FC = () => {
               </div>
             </div>
 
-            <button className="pi-create-btn" onClick={() => setPageMode("create")}>
+            <button className="aa-pi-create-btn" onClick={() => setPageMode("create")}>
               + Create Proforma Invoice
             </button>
           </div>
 
           {/* ── Table ── */}
-          <div className="pi-table-wrap">
-            <table className="pi-table">
+          <div className="aa-pi-table-wrap">
+            <table className="aa-pi-table">
               <thead>
                 <tr>
-                  <th>Date <span className="pi-sort-icon"><IconSort /></span></th>
+                  <th>Date <span className="aa-pi-sort-icon"><IconSort /></span></th>
                   <th>Proforma Invoice Number</th>
                   <th>Party Name</th>
                   <th>Due In</th>
@@ -728,12 +728,12 @@ const ProformaInvoice: React.FC = () => {
               </thead>
               <tbody>
                 {filteredInvoices.length === 0 ? (
-                  <tr><td colSpan={7} className="pi-empty">No invoices found</td></tr>
+                  <tr><td colSpan={7} className="aa-pi-empty">No invoices found</td></tr>
                 ) : (
                   filteredInvoices.map(inv => (
                     <tr
                       key={inv.id}
-                      className="pi-tr-clickable"
+                      className="aa-pi-tr-clickable"
                       onClick={() => setViewInvoice(inv)}
                     >
                       <td>{formatDate(new Date(inv.date))}</td>
@@ -742,27 +742,27 @@ const ProformaInvoice: React.FC = () => {
                       <td>{inv.dueIn}</td>
                       <td>{formatAmount(inv.amount)}</td>
                       <td>
-                        <span className={`pi-status-badge ${inv.status.toLowerCase()}`}>{inv.status}</span>
+                        <span className={`aa-pi-status-badge ${inv.status.toLowerCase()}`}>{inv.status}</span>
                       </td>
-                      <td className="pi-actions-cell" onClick={e => e.stopPropagation()}>
-                        <div className="pi-menu-wrap">
-                          <button className="pi-kebab-btn"
+                      <td className="aa-pi-actions-cell" onClick={e => e.stopPropagation()}>
+                        <div className="aa-pi-menu-wrap">
+                          <button className="aa-pi-kebab-btn"
                             onClick={e => { e.stopPropagation(); setOpenMenuId(openMenuId === inv.id ? null : inv.id); }}>
                             ⋮
                           </button>
                           {openMenuId === inv.id && (
-                            <div className="pi-row-menu" ref={menuRef}>
+                            <div className="aa-pi-row-menu" ref={menuRef}>
                               <button onClick={() => handleEdit(inv.id)}>
-                                <span className="pi-menu-icon"><IconEdit /></span> Edit
+                                <span className="aa-pi-menu-icon"><IconEdit /></span> Edit
                               </button>
                               <button onClick={() => { setHistoryInvoiceId(inv.id); setShowHistoryModal(true); setOpenMenuId(null); }}>
-                                <span className="pi-menu-icon"><IconHistory /></span> Edit History
+                                <span className="aa-pi-menu-icon"><IconHistory /></span> Edit History
                               </button>
                               <button onClick={() => handleDuplicate(inv.id)}>
-                                <span className="pi-menu-icon"><IconDuplicate /></span> Duplicate
+                                <span className="aa-pi-menu-icon"><IconDuplicate /></span> Duplicate
                               </button>
-                              <button className="pi-delete-item" onClick={() => handleDeleteInvoice(inv.id)}>
-                                <span className="pi-menu-icon"><IconTrash /></span> Delete
+                              <button className="aa-pi-delete-item" onClick={() => handleDeleteInvoice(inv.id)}>
+                                <span className="aa-pi-menu-icon"><IconTrash /></span> Delete
                               </button>
                             </div>
                           )}
@@ -777,75 +777,75 @@ const ProformaInvoice: React.FC = () => {
 
           {/* ── Quick Settings Modal ── */}
           {showSettings && (
-            <div className="pi-modal-overlay" onClick={() => setShowSettings(false)}>
-              <div className="pi-modal" onClick={e => e.stopPropagation()}>
-                <div className="pi-modal-header">
+            <div className="aa-pi-modal-overlay" onClick={() => setShowSettings(false)}>
+              <div className="aa-pi-modal" onClick={e => e.stopPropagation()}>
+                <div className="aa-pi-modal-header">
                   <h2>Quick Proforma Settings</h2>
-                  <button className="pi-modal-close" onClick={() => setShowSettings(false)}><IconClose /></button>
+                  <button className="aa-pi-modal-close" onClick={() => setShowSettings(false)}><IconClose /></button>
                 </div>
-                <div className="pi-modal-body">
-                  <div className={`pi-settings-card${tempSettings.prefixEnabled ? " enabled" : ""}`}>
-                    <div className="pi-settings-row">
+                <div className="aa-pi-modal-body">
+                  <div className={`aa-pi-settings-card${tempSettings.prefixEnabled ? " enabled" : ""}`}>
+                    <div className="aa-pi-settings-row">
                       <div>
-                        <div className="pi-settings-title">Proforma Prefix &amp; Sequence Number</div>
-                        <div className="pi-settings-desc">Add your custom prefix &amp; sequence for Proforma Numbering</div>
+                        <div className="aa-pi-settings-title">Proforma Prefix &amp; Sequence Number</div>
+                        <div className="aa-pi-settings-desc">Add your custom prefix &amp; sequence for Proforma Numbering</div>
                       </div>
-                      <label className="pi-toggle">
+                      <label className="aa-pi-toggle">
                         <input type="checkbox" checked={tempSettings.prefixEnabled}
                           onChange={e => setTempSettings(prev => ({ ...prev, prefixEnabled: e.target.checked }))} />
-                        <span className="pi-toggle-slider" />
+                        <span className="aa-pi-toggle-slider" />
                       </label>
                     </div>
                     {tempSettings.prefixEnabled && (
-                      <div className="pi-settings-fields">
-                        <div className="pi-field">
+                      <div className="aa-pi-settings-fields">
+                        <div className="aa-pi-field">
                           <label>Prefix</label>
                           <input type="text" placeholder="Prefix" value={tempSettings.prefix}
                             onChange={e => setTempSettings(prev => ({ ...prev, prefix: e.target.value }))} />
                         </div>
-                        <div className="pi-field">
+                        <div className="aa-pi-field">
                           <label>Sequence Number</label>
                           <input type="number" value={tempSettings.sequenceNumber}
                             onChange={e => setTempSettings(prev => ({ ...prev, sequenceNumber: Number(e.target.value) }))} />
                         </div>
-                        <div className="pi-proforma-preview">
+                        <div className="aa-pi-proforma-preview">
                           Proforma Number: {tempSettings.prefix}{tempSettings.sequenceNumber}
                         </div>
                       </div>
                     )}
                   </div>
-                  <div className="pi-settings-card">
-                    <div className="pi-settings-row">
+                  <div className="aa-pi-settings-card">
+                    <div className="aa-pi-settings-row">
                       <div>
-                        <div className="pi-settings-title">Show Item Image on Invoice</div>
-                        <div className="pi-settings-desc">This will apply to all vouchers except for Payment In and Payment Out</div>
+                        <div className="aa-pi-settings-title">Show Item Image on Invoice</div>
+                        <div className="aa-pi-settings-desc">This will apply to all vouchers except for Payment In and Payment Out</div>
                       </div>
-                      <label className="pi-toggle">
+                      <label className="aa-pi-toggle">
                         <input type="checkbox" checked={tempSettings.showItemImage}
                           onChange={e => setTempSettings(prev => ({ ...prev, showItemImage: e.target.checked }))} />
-                        <span className="pi-toggle-slider" />
+                        <span className="aa-pi-toggle-slider" />
                       </label>
                     </div>
                   </div>
-                  <div className="pi-settings-card">
-                    <div className="pi-settings-row">
+                  <div className="aa-pi-settings-card">
+                    <div className="aa-pi-settings-row">
                       <div>
-                        <div className="pi-settings-title">
-                          Price History <span className="pi-new-badge">New</span>
+                        <div className="aa-pi-settings-title">
+                          Price History <span className="aa-pi-new-badge">New</span>
                         </div>
-                        <div className="pi-settings-desc">Show last 5 sales / purchase prices of the item for the selected party in invoice</div>
+                        <div className="aa-pi-settings-desc">Show last 5 sales / purchase prices of the item for the selected party in invoice</div>
                       </div>
-                      <label className="pi-toggle">
+                      <label className="aa-pi-toggle">
                         <input type="checkbox" checked={tempSettings.priceHistory}
                           onChange={e => setTempSettings(prev => ({ ...prev, priceHistory: e.target.checked }))} />
-                        <span className="pi-toggle-slider" />
+                        <span className="aa-pi-toggle-slider" />
                       </label>
                     </div>
                   </div>
                 </div>
-                <div className="pi-modal-footer">
-                  <button className="pi-btn-cancel" onClick={() => setShowSettings(false)}>Cancel</button>
-                  <button className="pi-btn-save" onClick={handleSettingsSave}>Save</button>
+                <div className="aa-pi-modal-footer">
+                  <button className="aa-pi-btn-cancel" onClick={() => setShowSettings(false)}>Cancel</button>
+                  <button className="aa-pi-btn-save" onClick={handleSettingsSave}>Save</button>
                 </div>
               </div>
             </div>
@@ -853,30 +853,30 @@ const ProformaInvoice: React.FC = () => {
 
           {/* ── Edit History Modal ── */}
           {showHistoryModal && (
-            <div className="pi-modal-overlay" onClick={() => setShowHistoryModal(false)}>
-              <div className="pi-modal" onClick={e => e.stopPropagation()}>
-                <div className="pi-modal-header">
+            <div className="aa-pi-modal-overlay" onClick={() => setShowHistoryModal(false)}>
+              <div className="aa-pi-modal" onClick={e => e.stopPropagation()}>
+                <div className="aa-pi-modal-header">
                   <h2>Edit History</h2>
-                  <button className="pi-modal-close" onClick={() => setShowHistoryModal(false)}><IconClose /></button>
+                  <button className="aa-pi-modal-close" onClick={() => setShowHistoryModal(false)}><IconClose /></button>
                 </div>
-                <div className="pi-modal-body">
-                  <div className="pi-history-entry">
-                    <span className="pi-history-dot" />
+                <div className="aa-pi-modal-body">
+                  <div className="aa-pi-history-entry">
+                    <span className="aa-pi-history-dot" />
                     <div>
-                      <div className="pi-history-action">Invoice Created</div>
-                      <div className="pi-history-time">{formatDate(new Date())}, System</div>
+                      <div className="aa-pi-history-action">Invoice Created</div>
+                      <div className="aa-pi-history-time">{formatDate(new Date())}, System</div>
                     </div>
                   </div>
-                  <div className="pi-history-entry">
-                    <span className="pi-history-dot" />
+                  <div className="aa-pi-history-entry">
+                    <span className="aa-pi-history-dot" />
                     <div>
-                      <div className="pi-history-action">Invoice Viewed</div>
-                      <div className="pi-history-time">{formatDate(new Date())}, System</div>
+                      <div className="aa-pi-history-action">Invoice Viewed</div>
+                      <div className="aa-pi-history-time">{formatDate(new Date())}, System</div>
                     </div>
                   </div>
                 </div>
-                <div className="pi-modal-footer">
-                  <button className="pi-btn-save" onClick={() => setShowHistoryModal(false)}>Close</button>
+                <div className="aa-pi-modal-footer">
+                  <button className="aa-pi-btn-save" onClick={() => setShowHistoryModal(false)}>Close</button>
                 </div>
               </div>
             </div>
