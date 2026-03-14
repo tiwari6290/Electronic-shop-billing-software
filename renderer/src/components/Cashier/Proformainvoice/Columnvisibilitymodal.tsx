@@ -55,7 +55,7 @@ const ColumnVisibilityModal: React.FC<Props> = ({ config, onSave, onClose }) => 
           </div>
           <div className="aa-cvm-info-box">
             To add Custom Item Columns - Go to <strong>Item settings</strong> from{" "}
-            <span className="aa-cvm-link" onClick={() => { onClose(); navigate("/cashier/items"); }}>Items page (click here)</span>
+            <span className="aa-cvm-link" onClick={() => { onClose(); navigate("/cashier/create-item/inventory"); }}>Items page (click here)</span>
           </div>
         </div>
         <div className="aa-cvm-footer">

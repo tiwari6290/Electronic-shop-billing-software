@@ -51,7 +51,7 @@ function ShowHideColumnsModal({ columns, onClose, onSave }: {
             To add Custom Item Columns - Go to <strong>Item settings</strong> from{" "}
             <span
               className="cn-col-notice-link"
-              onClick={() => { onClose(); navigate("/cashier/items"); }}
+              onClick={() => { onClose(); navigate("/cashier/create-item/inventory"); }}
             >
               Items page (click here)
             </span>
