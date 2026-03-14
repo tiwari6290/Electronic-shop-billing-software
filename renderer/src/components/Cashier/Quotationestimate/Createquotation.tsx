@@ -1,8 +1,9 @@
 import { useState, useEffect } from "react";
 import {
-  QuotationData, BillItem, AdditionalCharge, Party,
-  getNextQuotationNo, saveQuotation, getQuotationById,
-  todayStr, addDays,
+  QuotationData, BillItem, AdditionalCharge,
+  apiGetQuotationById, apiCreateQuotation, apiUpdateQuotation,
+  apiGetQuotationSettings, formDataToApiPayload, apiToFormData,
+  todayStr, addDays, QuotationSettings,
 } from "./Quotationtypes";
 import QuotationHeader from "./Quotationheader";
 import PartySelector from "./Partyselector";
@@ -26,11 +27,11 @@ interface CreateQuotationProps {
   onSaveAndNew?: () => void;
 }
 
-function makeBlank(nextNo: number): QuotationData {
+function makeBlank(nextNo: number, prefix = ""): QuotationData {
   const today = todayStr();
   return {
-    id: `q-${Date.now()}`,
-    quotationNo: nextNo,
+    id: "",
+    quotationNo: `${prefix}${String(nextNo).padStart(5, "0")}`,
     quotationDate: today,
     party: null,
     billItems: [],
@@ -61,21 +62,41 @@ export default function CreateQuotation({
   onBack,
   onSaveAndNew,
 }: CreateQuotationProps) {
-  const [form, setForm] = useState<QuotationData>(() =>
-    editId ? (getQuotationById(editId) ?? makeBlank(getNextQuotationNo())) : makeBlank(getNextQuotationNo())
-  );
+  const [form, setForm] = useState<QuotationData>(() => makeBlank(1));
+  const [settings, setSettings] = useState<QuotationSettings | null>(null);
   const [showAddItems, setShowAddItems] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showDiscount, setShowDiscount] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(!!editId);
+
+  // Load settings for next quotation number
+  useEffect(() => {
+    apiGetQuotationSettings()
+      .then((s) => {
+        setSettings(s);
+        if (!editId) {
+      setForm((prev) => ({
+  ...prev,
+  quotationNo: `${s.prefix}${String(s.sequenceNumber).padStart(5,"0")}`
+}));
+        }
+      })
+      .catch(console.error);
+  }, []);
 
   // Load existing quotation for edit
   useEffect(() => {
     if (editId) {
-      const existing = getQuotationById(editId);
-      if (existing) {
-        setForm(existing);
-        setShowDiscount(existing.discountPct > 0 || existing.discountAmt > 0);
-      }
+      setLoading(true);
+      apiGetQuotationById(Number(editId))
+        .then((q) => {
+          const formData = apiToFormData(q);
+          setForm(formData);
+          setShowDiscount(formData.discountPct > 0 || formData.discountAmt > 0);
+        })
+        .catch(console.error)
+        .finally(() => setLoading(false));
     }
   }, [editId]);
 
@@ -100,18 +121,58 @@ export default function CreateQuotation({
   const subtotal = form.billItems.reduce((s, i) => s + i.amount, 0);
 
   // ── Save ───────────────────────────────────────────────────────────
-  function handleSave() {
-    saveQuotation(form);
-    alert(`Quotation #${form.quotationNo} saved!`);
-    onBack();
+  async function handleSave() {
+    if (saving) return;
+    setSaving(true);
+    try {
+      const payload = formDataToApiPayload(form, settings ?? undefined);
+      if (editId) {
+        await apiUpdateQuotation(Number(editId), payload);
+      } else {
+        await apiCreateQuotation(payload);
+        // Bump sequence number in settings
+        if (settings) {
+          setSettings((s) => s ? { ...s, sequenceNumber: s.sequenceNumber + 1 } : s);
+        }
+      }
+      onBack();
+    } catch (err: any) {
+      alert(`Failed to save: ${err.message}`);
+    } finally {
+      setSaving(false);
+    }
   }
 
-  function handleSaveAndNew() {
-    saveQuotation(form);
-    const nextNo = getNextQuotationNo();
-    setForm(makeBlank(nextNo));
-    setShowDiscount(false);
-    if (onSaveAndNew) onSaveAndNew();
+  async function handleSaveAndNew() {
+    if (saving) return;
+    setSaving(true);
+    try {
+      const payload = formDataToApiPayload(form, settings ?? undefined);
+      if (editId) {
+        await apiUpdateQuotation(Number(editId), payload);
+      } else {
+        await apiCreateQuotation(payload);
+      }
+      // Reset form with next sequence number
+     const currentNo = settings?.sequenceNumber ?? Number(form.quotationNo.replace(/\D/g, ""));
+const nextNo = currentNo + 1;
+      if (settings) setSettings((s) => s ? { ...s, sequenceNumber: nextNo } : s);
+      setForm(makeBlank(nextNo, settings?.prefix ?? ""));
+      setShowDiscount(false);
+      if (onSaveAndNew) onSaveAndNew();
+    } catch (err: any) {
+      alert(`Failed to save: ${err.message}`);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="cq-page" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 300 }}>
+        <span style={{ color: "#6b7280", fontSize: 15 }}>Loading quotation...</span>
+      </div>
+    );
   }
 
   return (

@@ -237,6 +237,7 @@ export interface CreateInvoicePayload {
     discount: number;
   }>;
   additionalCharges: Array<{ name: string; amount: number }>;
+  // ── Pre-computed totals injected by CreateSalesInvoice before saving ──
   subTotal?:               number;
   taxAmount?:              number;
   tcsAmount?:              number;
@@ -261,16 +262,16 @@ export function toCreatePayload(form: FeSalesInvoice): CreateInvoicePayload {
     termsConditions: form.termsConditions || undefined,
     paymentMode: form.paymentMethod || undefined,
     receivedAmount: Number(form.amountReceived) || 0,
-    discountAmount: Number(form.discountAmt) || 0,
-    roundOff: Number(form.roundOffAmt) || 0,
+    discountAmount: Number(form.discountAmt) || 0,   // raw flat amt; % resolved value injected by CreateSalesInvoice
+    roundOff: Number(form.roundOffAmt) || 0,         // overridden by CreateSalesInvoice with computed value
     applyTcs: form.applyTCS,
     tcsRate: form.tcsRate,
     autoRoundOff: form.roundOff !== "none",
     items: form.billItems.map((i) => ({
       productId: i.itemId,
-      quantity:  Number(i.qty)       || 0,
-      price:     Number(i.price)     || 0,
-      taxRate:   Number(i.taxRate)   || 0,
+      quantity:  Number(i.qty)   || 0,
+      price:     Number(i.price) || 0,
+      taxRate:   Number(i.taxRate) || 0,
       discount:  Number(i.discountAmt) || 0,
     })),
     additionalCharges: form.additionalCharges.map((c) => ({
@@ -289,6 +290,8 @@ export interface GetInvoicesParams {
   status?: string;
   from?: string;
   to?: string;
+   sortField?: string;
+  sortDir?: "asc" | "desc";
 }
 
 // ─── Generic fetch helper ─────────────────────────────────────────────────────
@@ -307,6 +310,7 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
 
 // ─── Invoice endpoints ────────────────────────────────────────────────────────
 
+/** GET /api/invoices  (with pagination / filters) */
 export async function getInvoices(params: GetInvoicesParams = {}): Promise<{
   invoices: SaleInvoice[];
   total: number;
@@ -320,19 +324,24 @@ export async function getInvoices(params: GetInvoicesParams = {}): Promise<{
   if (params.status) qs.set("status", params.status);
   if (params.from)   qs.set("from",   params.from);
   if (params.to)     qs.set("to",     params.to);
+  if (params.sortField) qs.set("sortField", params.sortField);
+if (params.sortDir) qs.set("sortDir", params.sortDir);
 
   const json = await apiFetch<{ success: boolean; data: any }>(`/invoices?${qs}`);
+  // Backend returns { success, data: invoice[] } or { success, data: { invoices, total, page, pages } }
   if (Array.isArray(json.data)) {
     return { invoices: json.data, total: json.data.length, page: 1, pages: 1 };
   }
   return json.data;
 }
 
+/** GET /api/invoices/:id */
 export async function getInvoiceById(id: string | number): Promise<SaleInvoice> {
   const json = await apiFetch<{ success: boolean; data: SaleInvoice }>(`/invoices/${id}`);
   return json.data;
 }
 
+/** POST /api/invoices */
 export async function createInvoice(payload: CreateInvoicePayload): Promise<SaleInvoice> {
   const json = await apiFetch<{ success: boolean; data: SaleInvoice }>("/invoices", {
     method: "POST",
@@ -341,6 +350,7 @@ export async function createInvoice(payload: CreateInvoicePayload): Promise<Sale
   return json.data;
 }
 
+/** PUT /api/invoices/:id  (meta-field update) */
 export async function updateInvoice(
   id: string | number,
   payload: Partial<CreateInvoicePayload>
@@ -352,14 +362,17 @@ export async function updateInvoice(
   return json.data;
 }
 
+/** PATCH /api/invoices/:id/cancel */
 export async function cancelInvoice(id: string | number): Promise<void> {
   await apiFetch(`/invoices/${id}/cancel`, { method: "PATCH" });
 }
 
+/** DELETE /api/invoices/:id  — backend must expose this route */
 export async function deleteInvoice(id: string | number): Promise<void> {
   await apiFetch(`/invoices/${id}`, { method: "DELETE" });
 }
 
+/** PATCH /api/invoices/:id/payment */
 export async function recordPayment(
   id: string | number,
   payload: {
@@ -372,6 +385,7 @@ export async function recordPayment(
     tdsAmount?:   number;
   }
 ): Promise<SaleInvoice> {
+  // id from frontend state is String(inv.id) — ensure we send the numeric DB id
   const numericId = typeof id === "string" ? id.replace(/\D/g, "") || id : id;
   const json = await apiFetch<{ success: boolean; data: SaleInvoice }>(
     `/invoices/${numericId}/payment`,
@@ -380,6 +394,7 @@ export async function recordPayment(
   return json.data;
 }
 
+/** GET /api/invoices/summary */
 export async function getInvoiceSummary(): Promise<{
   totalSales: number;
   totalReceived: number;
@@ -401,71 +416,6 @@ export async function getInvoiceSummary(): Promise<{
     paidCount:        json.data.paidCount      ?? 0,
     cancelledCount:   json.data.cancelledCount ?? 0,
   };
-}
-
-// ─── Invoice Settings ─────────────────────────────────────────────────────────
-
-export interface InvoiceSettings {
-  id?: number | null;
-  enablePrefix: boolean;
-  prefix: string;
-  sequenceNumber: number;
-  showPurchasePrice: boolean;
-  showItemImage: boolean;
-  enablePriceHistory: boolean;
-  invoiceTheme: string;
-}
-
-const DEFAULT_SETTINGS: InvoiceSettings = {
-  id: null,
-  enablePrefix: false,
-  prefix: "",
-  sequenceNumber: 1,
-  showPurchasePrice: true,
-  showItemImage: true,
-  enablePriceHistory: true,
-  invoiceTheme: "Advanced GST",
-};
-
-/**
- * GET /api/invoice-settings
- * Returns the first settings row, or sensible defaults if none exist yet.
- */
-export async function getInvoiceSettings(): Promise<InvoiceSettings> {
-  try {
-    const json = await apiFetch<{ success: boolean; data: InvoiceSettings }>("/invoice-settings");
-    return json.data ?? DEFAULT_SETTINGS;
-  } catch {
-    return DEFAULT_SETTINGS;
-  }
-}
-
-/**
- * POST /api/invoice-settings
- * Creates or updates the single settings row.
- */
-export async function saveInvoiceSettings(
-  payload: Omit<InvoiceSettings, "id">
-): Promise<InvoiceSettings> {
-  const json = await apiFetch<{ success: boolean; data: InvoiceSettings }>("/invoice-settings", {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
-  return json.data;
-}
-
-/**
- * Build invoice number preview string from settings.
- * This is what the backend will generate on the next invoice.
- * If prefix is enabled and a prefix string is set, format: <prefix><padded-seq>
- * Otherwise fall back to INV-<padded-seq>
- */
-export function buildInvoiceNo(settings: InvoiceSettings): string {
-  const seq = String(settings.sequenceNumber).padStart(5, "0");
-  if (settings.enablePrefix && settings.prefix.trim()) {
-    return `${settings.prefix.trim()}${seq}`;
-  }
-  return `INV-${seq}`;
 }
 
 // ─── Party endpoints ──────────────────────────────────────────────────────────
@@ -517,9 +467,9 @@ export interface BackendItem {
   gstRate?: string | null;
   itemType: string;
   ProductStock?: Array<{
-    openingStock: number;
-    currentStock: number;    // ← live balance after all sales/purchases/adjustments
-  }>;
+  openingStock: number;
+  currentStock?: number;
+}>;
 }
 
 export async function getItems(): Promise<BackendItem[]> {
@@ -527,7 +477,16 @@ export async function getItems(): Promise<BackendItem[]> {
   return json.data;
 }
 
-// ─── Party Shipping Addresses ─────────────────────────────────────────────────
+// ─── Party Shipping Addresses (backend-persisted) ─────────────────────────────
+
+export interface ShippingAddressPayload {
+  partyId: number;
+  name: string;
+  street: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
+}
 
 export interface BackendShippingAddress {
   id: number;
@@ -559,7 +518,7 @@ export async function createPartyAddress(
   return json.data;
 }
 
-// ─── Party Bank Accounts ──────────────────────────────────────────────────────
+// ─── Party Bank Accounts (backend-persisted) ──────────────────────────────────
 
 export interface BackendBankAccount {
   id: number;
@@ -595,4 +554,65 @@ export async function createPartyBankAccount(
     { method: "POST", body: JSON.stringify(payload) }
   );
   return json.data;
+}
+
+// ─── Invoice Settings ─────────────────────────────────────────────────────────
+
+export interface InvoiceSettings {
+  id:                 number | null;
+  enablePrefix:       boolean;
+  prefix:             string;
+  sequenceNumber:     number;
+  showPurchasePrice:  boolean;
+  showItemImage:      boolean;
+  enablePriceHistory: boolean;
+  invoiceTheme:       string;
+}
+
+const SETTINGS_DEFAULTS: InvoiceSettings = {
+  id:                 null,
+  enablePrefix:       false,
+  prefix:             "",
+  sequenceNumber:     1,
+  showPurchasePrice:  true,
+  showItemImage:      true,
+  enablePriceHistory: true,
+  invoiceTheme:       "Advanced GST",
+};
+
+export async function getInvoiceSettings(): Promise<InvoiceSettings> {
+  try {
+    const res  = await fetch("/api/invoice-settings");
+    const body = await res.json().catch(() => ({}));
+    return { ...SETTINGS_DEFAULTS, ...(body.data ?? {}) };
+  } catch {
+    return SETTINGS_DEFAULTS;
+  }
+}
+
+export async function saveInvoiceSettings(
+  payload: Omit<InvoiceSettings, "id">
+): Promise<InvoiceSettings> {
+  const res  = await fetch("/api/invoice-settings", {
+    method:  "POST",
+    headers: { "Content-Type": "application/json" },
+    body:    JSON.stringify(payload),
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!body.success) throw new Error(body.message ?? "Failed to save settings");
+  return { ...SETTINGS_DEFAULTS, ...(body.data ?? {}) };
+}
+
+/**
+ * Builds the invoice number preview from saved settings.
+ * Must match the backend logic in invoice_controller.ts exactly:
+ *   prefix = enablePrefix && prefix.trim() ? prefix.trim() : "INV-"
+ *   invoiceNo = `${prefix}${sequenceNumber.padStart(5, "0")}`
+ */
+export function buildInvoiceNo(s: InvoiceSettings): string {
+  const prefix = s.enablePrefix && s.prefix?.trim()
+    ? s.prefix.trim()
+    : "INV-";
+  const seq = String(s.sequenceNumber ?? 1).padStart(5, "0");
+  return `${prefix}${seq}`;
 }

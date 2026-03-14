@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import "./PaymentInList.css";
-import { getPaymentsIn, deletePaymentIn, type PaymentInRecord } from "../../../api/paymentInApi";
+import { getPaymentsIn, deletePaymentIn, getPartiesBasic, getPartyLedgerBalance, type PaymentInRecord, type PartyBasic } from "../../../api/paymentInApi";
 
 // ─── Date helpers ─────────────────────────────────────────────────────────────
 type DateOption =
@@ -145,6 +145,13 @@ export default function PaymentInList() {
   const [deleteTarget,  setDeleteTarget]  = useState<number | null>(null);
   const [sortDir,       setSortDir]       = useState<"asc"|"desc">("desc");
   const [deleting,      setDeleting]      = useState(false);
+  // Party filter
+  const [parties,       setParties]       = useState<PartyBasic[]>([]);
+  const [partyFilter,   setPartyFilter]   = useState<number | null>(null);
+  const [partySearch,   setPartySearch]   = useState("");
+  const [partyBalance,  setPartyBalance]  = useState<number | null>(null);
+  const [showPartyDrop, setShowPartyDrop] = useState(false);
+  const partyRef = useRef<HTMLDivElement>(null);
   const dateRef = useRef<HTMLDivElement>(null);
 
   const load = useCallback(async () => {
@@ -156,11 +163,12 @@ export default function PaymentInList() {
         search:   search || undefined,
         dateFrom: dateFilter === "Custom Date Range" ? customStart : dateRange?.start.toISOString().split("T")[0],
         dateTo:   dateFilter === "Custom Date Range" ? customEnd   : dateRange?.end.toISOString().split("T")[0],
+        partyId:  partyFilter ?? undefined,
       });
       setPayments(result.payments);
     } catch { /* ignore */ }
     finally { setLoading(false); }
-  }, [dateFilter, customStart, customEnd, search]);
+  }, [dateFilter, customStart, customEnd, search, partyFilter]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -168,6 +176,22 @@ export default function PaymentInList() {
     function h(e: MouseEvent) { if (dateRef.current && !dateRef.current.contains(e.target as Node)) setShowDateDrop(false); }
     document.addEventListener("mousedown", h); return () => document.removeEventListener("mousedown", h);
   }, []);
+
+  useEffect(() => {
+    function h(e: MouseEvent) { if (partyRef.current && !partyRef.current.contains(e.target as Node)) setShowPartyDrop(false); }
+    document.addEventListener("mousedown", h); return () => document.removeEventListener("mousedown", h);
+  }, []);
+
+  // Load parties for filter dropdown
+  useEffect(() => {
+    getPartiesBasic().then(setParties).catch(() => {});
+  }, []);
+
+  // Fetch balance when party filter changes
+  useEffect(() => {
+    if (!partyFilter) { setPartyBalance(null); return; }
+    getPartyLedgerBalance(partyFilter).then(setPartyBalance).catch(() => setPartyBalance(null));
+  }, [partyFilter]);
 
   const sorted = [...payments].sort((a, b) => {
     const mul = sortDir === "asc" ? 1 : -1;
@@ -239,6 +263,65 @@ export default function PaymentInList() {
             {showCal && <CalPicker startDate={customStart} endDate={customEnd} onSelect={(s,e)=>{setCustomStart(s);setCustomEnd(e);}} onClose={()=>setShowCal(false)} />}
           </div>
         </div>
+        {/* ── Party Filter ─────────────────────────────────────────── */}
+        <div ref={partyRef} style={{ position: "relative" }}>
+          <div
+            style={{
+              display: "flex", alignItems: "center", gap: 8, padding: "0 12px", height: 36,
+              border: `1px solid ${partyFilter ? "#4f46e5" : "#e5e7eb"}`, borderRadius: 8,
+              background: "#fff", cursor: "pointer", fontSize: 13, minWidth: 190,
+              color: partyFilter ? "#111827" : "#9ca3af", userSelect: "none",
+            }}
+            onClick={() => { setShowPartyDrop(v => !v); setPartySearch(""); }}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 14, height: 14, color: "#6b7280", flexShrink: 0 }}><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {partyFilter ? (parties.find(p => p.id === partyFilter)?.partyName ?? "Party") : "Filter by Party"}
+            </span>
+            {partyFilter && (
+              <button onClick={e => { e.stopPropagation(); setPartyFilter(null); }} style={{ background: "none", border: "none", cursor: "pointer", color: "#9ca3af", padding: 0, display: "flex" }}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ width: 13, height: 13 }}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            )}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 13, height: 13, color: "#9ca3af", flexShrink: 0 }}><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+
+          {/* Balance badge under the dropdown */}
+          {partyFilter && partyBalance !== null && (
+            <div style={{ position: "absolute", left: 0, top: "calc(100% + 2px)", fontSize: 11, fontWeight: 600, whiteSpace: "nowrap", color: partyBalance > 0 ? "#dc2626" : "#16a34a" }}>
+              Balance: ₹{Math.abs(partyBalance).toLocaleString("en-IN")} {partyBalance > 0 ? "Due" : "Advance"}
+            </div>
+          )}
+
+          {/* Dropdown list */}
+          {showPartyDrop && (
+            <div style={{ position: "absolute", top: "calc(100% + 4px)", left: 0, zIndex: 300, background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, boxShadow: "0 8px 24px rgba(0,0,0,.1)", minWidth: 220, overflow: "hidden" }}>
+              <div style={{ padding: 8, borderBottom: "1px solid #f3f4f6" }}>
+                <input autoFocus placeholder="Search party…" value={partySearch} onChange={e => setPartySearch(e.target.value)}
+                  style={{ width: "100%", padding: "6px 10px", border: "1px solid #e5e7eb", borderRadius: 7, fontSize: 13, outline: "none" }} />
+              </div>
+              <div style={{ maxHeight: 240, overflowY: "auto" }}>
+                {/* All Parties option */}
+                <div onMouseDown={() => { setPartyFilter(null); setShowPartyDrop(false); }}
+                  style={{ padding: "10px 14px", fontSize: 13, cursor: "pointer", color: !partyFilter ? "#4f46e5" : "#374151", background: !partyFilter ? "#ede9fe" : "transparent", fontWeight: !partyFilter ? 600 : 400, borderBottom: "1px solid #f3f4f6" }}>
+                  All Parties
+                </div>
+                {parties
+                  .filter(p => p.partyName.toLowerCase().includes(partySearch.toLowerCase()))
+                  .map(p => (
+                    <div key={p.id} onMouseDown={() => { setPartyFilter(p.id); setShowPartyDrop(false); setPartySearch(""); }}
+                      style={{ padding: "10px 14px", fontSize: 13, cursor: "pointer", color: partyFilter === p.id ? "#4f46e5" : "#374151", background: partyFilter === p.id ? "#ede9fe" : "transparent", fontWeight: partyFilter === p.id ? 600 : 400, borderBottom: "1px solid #f9fafb" }}>
+                      {p.partyName}
+                    </div>
+                  ))}
+                {parties.filter(p => p.partyName.toLowerCase().includes(partySearch.toLowerCase())).length === 0 && (
+                  <div style={{ padding: "14px", textAlign: "center", fontSize: 13, color: "#9ca3af" }}>No party found</div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
         <button className="pil-create-btn" onClick={() => navigate("/cashier/payment-in")}>Create Payment In</button>
       </div>
 

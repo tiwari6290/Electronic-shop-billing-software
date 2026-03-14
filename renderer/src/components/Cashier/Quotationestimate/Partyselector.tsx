@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Party, getParties } from "./Quotationtypes";
+import { Party, apiGetParties } from "./Quotationtypes";
 import "./PartySelector.css";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -217,7 +217,11 @@ export default function PartySelector({ selectedParty, onSelectParty }: PartySel
   const [search, setSearch] = useState("");
   const ref = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
-  const parties = getParties();
+  const [parties, setParties] = useState<Party[]>([]);
+
+  useEffect(() => {
+    apiGetParties().then(setParties).catch(console.error);
+  }, []);
 
   // Shipping address state
   const [shippingAddresses, setShippingAddresses] = useState<ShippingAddress[]>([]);

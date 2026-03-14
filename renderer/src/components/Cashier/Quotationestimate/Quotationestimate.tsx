@@ -2,21 +2,37 @@ import { useState, useRef, useEffect } from "react";
 import "./QuotationEstimate.css";
 import { useNavigate } from "react-router-dom";
 import QuotationViewModal from "./Quotationviewmodal";
+import CreateSalesInvoice from "../Salesinvoices/CreateSalesInvoice";
+import {
+  apiGetQuotations,
+  apiGetQuotationById,
+  apiCreateQuotation,
+  apiUpdateQuotation,
+  apiDeleteQuotation,
+  apiGetQuotationSettings,
+  apiSaveQuotationSettings,
+  apiGetParties,
+  apiGetItems,
+  apiToFormData,
+  formDataToApiPayload,
+  apiCloseQuotation,
+  QuotationSettings,
+  ApiQuotation,
+} from "./Quotationtypes";
 
 // ─── VIEW STATE ───────────────────────────────────────────────────────────────
-// This controls which "page" is shown without needing a router.
-// Replace with useNavigate() + <Route> when backend is attached.
 type AppView =
   | { screen: "list" }
   | { screen: "create" }
   | { screen: "edit"; id: string }
-  | { screen: "duplicate"; sourceId: string };
+  | { screen: "duplicate"; sourceId: string }
+  | { screen: "convert-to-invoice"; quotation: StoredQuotation };
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface Quotation {
   id: string;
   date: string;
-  quotationNumber: number;
+  quotationNumber: string;
   partyName: string;
   dueIn: string | null;
   amount: number;
@@ -26,7 +42,7 @@ interface Quotation {
 // Full data stored in localStorage (matches CreateQuotation's QuotationData shape)
 interface StoredQuotation {
   id: string;
-  quotationNo: number;
+quotationNo: string | number;
   quotationDate: string;
   party: { id: number; name: string; mobile: string; balance: number } | null;
   billItems: any[];
@@ -79,118 +95,18 @@ type DateFilterOption =
 
 type StatusFilter = "Show All Quotation" | "Show Open Quotation" | "Show Closed Quotation";
 
-// ─── Sample Data ─────────────────────────────────────────────────────────────
-const INITIAL_QUOTATIONS: Quotation[] = [
-  {
-    id: "q4",
-    date: "2026-02-28",
-    quotationNumber: 4,
-    partyName: "MONDAL ELECTRONIC",
-    dueIn: null,
-    amount: 38540,
-    status: "Open",
-  },
-  {
-    id: "q3",
-    date: "2026-02-27",
-    quotationNumber: 3,
-    partyName: "Cash Sale",
-    dueIn: null,
-    amount: 0,
-    status: "Open",
-  },
-];
-
-// ─── localStorage Helpers ─────────────────────────────────────────────────────
-function getStoredQuotations(): StoredQuotation[] {
-  try {
-    return JSON.parse(localStorage.getItem("quotations") || "[]");
-  } catch {
-    return [];
-  }
-}
-
-function saveStoredQuotation(data: StoredQuotation): void {
-  const all = getStoredQuotations();
-  const idx = all.findIndex((q) => q.id === data.id);
-  if (idx >= 0) all[idx] = data;
-  else all.unshift(data);
-  localStorage.setItem("quotations", JSON.stringify(all));
-}
-
-function deleteStoredQuotation(id: string): void {
-  const all = getStoredQuotations().filter((q) => q.id !== id);
-  localStorage.setItem("quotations", JSON.stringify(all));
-}
-
-function getNextQuotationNo(): number {
-  const all = getStoredQuotations();
-  if (all.length === 0) return 1;
-  return Math.max(...all.map((q) => q.quotationNo)) + 1;
-}
-
-function storedToListItem(s: StoredQuotation): Quotation {
-  const subtotal = s.billItems?.reduce((sum: number, i: any) => sum + (i.amount || 0), 0) || 0;
-  const chargesTotal = s.additionalCharges?.reduce((sum: number, c: any) => sum + (c.amount || 0), 0) || 0;
-  const discountVal = s.discountPct > 0
-    ? ((subtotal + chargesTotal) * s.discountPct) / 100
-    : (s.discountAmt || 0);
-  const roundVal = s.roundOff === "+Add" ? (s.roundOffAmt || 0) : s.roundOff === "-Reduce" ? -(s.roundOffAmt || 0) : 0;
-  const total = subtotal + chargesTotal - discountVal + roundVal;
-  return {
-    id: s.id,
-    date: s.quotationDate,
-    quotationNumber: s.quotationNo,
-    partyName: s.party?.name || "Cash Sale",
-    dueIn: s.showDueDate && s.validityDate ? s.validityDate : null,
-    amount: Math.max(0, total),
-    status: s.status,
-  };
-}
-
-function mergeQuotations(initial: Quotation[], stored: StoredQuotation[]): Quotation[] {
-  const storedList = stored.map(storedToListItem);
-  // Stored ones go first (newest), then initial samples that don't conflict
-  const storedIds = new Set(storedList.map((q) => q.id));
-  const filteredInitial = initial.filter((q) => !storedIds.has(q.id));
-  return [...storedList, ...filteredInitial];
-}
-
-// ─── Default Blank QuotationData ──────────────────────────────────────────────
-function makeBlanKData(nextNo: number): StoredQuotation {
-  const today = new Date().toISOString().split("T")[0];
-  const validity = new Date();
-  validity.setDate(validity.getDate() + 30);
-  const validStr = validity.toISOString().split("T")[0];
-  return {
-    id: `q-${Date.now()}`,
-    quotationNo: nextNo,
-    quotationDate: today,
-    party: null,
-    billItems: [],
-    additionalCharges: [],
-    discountType: "Discount After Tax",
-    discountPct: 0,
-    discountAmt: 0,
-    roundOff: "none",
-    roundOffAmt: 0,
-    notes: "",
-    termsConditions: "1. Goods once sold will not be taken back or exchanged\n2. All disputes are subject to [ENTER_YOUR_CITY_NAME] jurisdiction only",
-    eWayBillNo: "",
-    challanNo: "",
-    financedBy: "",
-    salesman: "",
-    emailId: "",
-    warrantyPeriod: "",
-    validFor: 30,
-    validityDate: validStr,
-    showDueDate: false,
-    status: "Open",
-    createdAt: today,
-  };
-}
-
 // ─── Helpers ─────────────────────────────────────────────────────────────────
+function apiToListItem(q: ApiQuotation): Quotation {
+  return {
+    id: String(q.id),
+    date: q.quotationDate?.split("T")[0] ?? "",
+    quotationNumber: q.quotationNo,
+    partyName: q.party?.partyName ?? (q.party as any)?.name ?? "Cash Sale",
+    dueIn: q.validTill ? q.validTill.split("T")[0] : null,
+    amount: Number(q.totalAmount ?? 0),
+    status: q.status === "OPEN" ? "Open" : "Closed",
+  };
+}
 function formatDate(dateStr: string) {
   const d = new Date(dateStr);
   return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
@@ -700,7 +616,7 @@ function QuickSettingsModal({
   onClose,
 }: {
   settings: QuickSettings;
-  onSave: (s: QuickSettings) => void;
+  onSave: (s: QuickSettings) => void | Promise<void>;
   onClose: () => void;
 }) {
   const [local, setLocal] = useState({ ...settings });
@@ -865,7 +781,6 @@ function RowActionMenu({
 }
 
 // ─── CreateQuotation Inline (embedded, no router needed) ─────────────────────
-// This is a self-contained form. Replace with <Route path="/quotation/create"> when ready.
 function CreateQuotationPage({
   editId,
   duplicateSourceId,
@@ -878,26 +793,89 @@ function CreateQuotationPage({
   onSaved: () => void;
 }) {
   const navigate = useNavigate();
-  const stored = getStoredQuotations();
-  const sourceId = editId || duplicateSourceId;
-  const source = sourceId ? stored.find((q) => q.id === sourceId) : null;
 
-  const nextNo = getNextQuotationNo();
-  const [form, setForm] = useState<StoredQuotation>(() => {
-    if (editId && source) return { ...source };
-    if (duplicateSourceId && source) {
-      // Duplicate: new id + new number + today's date, keep everything else
-      const today = new Date().toISOString().split("T")[0];
-      return { ...source, id: `q-${Date.now()}`, quotationNo: nextNo, quotationDate: today, status: "Open" as const };
+  const [pageSettings, setPageSettings] = useState<QuotationSettings | null>(null);
+  const [loadingForm, setLoadingForm] = useState(!!(editId || duplicateSourceId));
+  const [saving, setSaving] = useState(false);
+
+  const makeBlankForm = (nextNo: number): StoredQuotation => {
+    const today = new Date().toISOString().split("T")[0];
+    const validity = new Date(); validity.setDate(validity.getDate() + 30);
+    return {
+      id: "", quotationNo: nextNo, quotationDate: today, party: null,
+      billItems: [], additionalCharges: [],
+      discountType: "Discount After Tax", discountPct: 0, discountAmt: 0,
+      roundOff: "none", roundOffAmt: 0,
+      notes: "", termsConditions: "1. Goods once sold will not be taken back or exchanged\n2. All disputes are subject to [ENTER_YOUR_CITY_NAME] jurisdiction only",
+      eWayBillNo: "", challanNo: "", financedBy: "", salesman: "", emailId: "", warrantyPeriod: "",
+      validFor: 30, validityDate: validity.toISOString().split("T")[0], showDueDate: false,
+      status: "Open", createdAt: today,
+    };
+  };
+
+  const [form, setForm] = useState<StoredQuotation>(() => makeBlankForm(1));
+
+  // Load settings and optionally load existing quotation
+  useEffect(() => {
+    apiGetQuotationSettings().then((s) => {
+      setPageSettings(s);
+      if (!editId && !duplicateSourceId) {
+        setForm((prev) => ({ ...prev, quotationNo: s.sequenceNumber }));
+      }
+    }).catch(console.error);
+
+    if (editId || duplicateSourceId) {
+      const id = editId || duplicateSourceId;
+      setLoadingForm(true);
+      apiGetQuotationById(Number(id))
+        .then((q) => {
+          const fd = apiToFormData(q);
+          const today = new Date().toISOString().split("T")[0];
+          const next = pageSettings?.sequenceNumber ?? 1;
+          setForm({
+            id: duplicateSourceId ? "" : String(q.id),
+           quotationNo: duplicateSourceId
+  ? next
+  : Number(fd.quotationNo ?? q.id),
+            quotationDate: duplicateSourceId ? today : (fd.quotationDate ?? today),
+            party: fd.party ? { id: fd.party.id, name: fd.party.name, mobile: fd.party.mobile, balance: fd.party.balance ?? 0 } : null,
+            billItems: fd.billItems as any,
+            additionalCharges: (fd.additionalCharges ?? []) as any,
+            discountType: fd.discountType ?? "Discount After Tax",
+            discountPct: fd.discountPct ?? 0,
+            discountAmt: fd.discountAmt ?? 0,
+            roundOff: fd.roundOff ?? "none",
+            roundOffAmt: fd.roundOffAmt ?? 0,
+            notes: fd.notes ?? "",
+            termsConditions: fd.termsConditions ?? "",
+            eWayBillNo: fd.eWayBillNo ?? "",
+            challanNo: fd.challanNo ?? "",
+            financedBy: fd.financedBy ?? "",
+            salesman: fd.salesman ?? "",
+            emailId: fd.emailId ?? "",
+            warrantyPeriod: fd.warrantyPeriod ?? "",
+            validFor: fd.validFor ?? 30,
+            validityDate: fd.validityDate ?? today,
+            showDueDate: fd.showDueDate ?? false,
+            status: duplicateSourceId ? "Open" : (fd.status ?? "Open"),
+            createdAt: duplicateSourceId ? today : (fd.createdAt ?? today),
+          });
+        })
+        .catch(console.error)
+        .finally(() => setLoadingForm(false));
     }
-    return makeBlanKData(nextNo);
-  });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // ── Party Selector state ───────────────────────────────────────────────────
   const [showPartyDrop, setShowPartyDrop] = useState(false);
   const [partySearch, setPartySearch] = useState("");
   const partyRef = useRef<HTMLDivElement>(null);
-  const parties: any[] = JSON.parse(localStorage.getItem("parties") || "[]");
+  const [parties, setParties] = useState<any[]>([]);
+
+  useEffect(() => {
+    apiGetParties().then(setParties).catch(console.error);
+  }, []);
 
   // ── Items modal state ──────────────────────────────────────────────────────
   const [showAddItems, setShowAddItems] = useState(false);
@@ -909,7 +887,7 @@ function CreateQuotationPage({
   const [showSettings, setShowSettings] = useState(false);
   const [showColumnModal, setShowColumnModal] = useState(false);
   const [settings, setSettings] = useState<QuickSettings>({
-    prefixEnabled: true, prefix: "", sequenceNumber: nextNo, showItemImage: true, priceHistory: true,
+    prefixEnabled: true, prefix: "", sequenceNumber: 1, showItemImage: true, priceHistory: true,
     showPricePerItem: true, showQuantity: true,
   });
 
@@ -994,9 +972,7 @@ function CreateQuotationPage({
   // ── Bank Account Modal ────────────────────────────────────────────────────
   const [showBankModal, setShowBankModal] = useState(false);
   const [showSelectBankModal, setShowSelectBankModal] = useState(false);
-  const [savedBankAccounts, setSavedBankAccounts] = useState<any[]>(() => {
-    try { return JSON.parse(localStorage.getItem("bankAccounts") || "[]"); } catch { return []; }
-  });
+  const [savedBankAccounts, setSavedBankAccounts] = useState<any[]>([]);
   const [selectedBankId, setSelectedBankId] = useState<number | null>(null);
   const [bankForm, setBankForm] = useState({
     accountNumber: "", reEnterAccountNumber: "", ifscCode: "",
@@ -1026,16 +1002,12 @@ function CreateQuotationPage({
   }
 
   // ── Item helpers ──────────────────────────────────────────────────────────
-  const SAMPLE_ITEMS = [
-    { id: 1, name: "BILLING SOFTWARE MOBILE APP", itemCode: "-", stock: "-", salesPrice: 256, purchasePrice: 0, unit: "PCS", category: "" },
-    { id: 2, name: "BILLING SOFTWARE WITH GST", itemCode: "-", stock: "-", salesPrice: 369875, purchasePrice: 0, unit: "PCS", category: "" },
-    { id: 3, name: "BILLING SOFTWARE WITHOUT GST", itemCode: "-", stock: "-", salesPrice: 3556, purchasePrice: 0, unit: "PCS", category: "" },
-    { id: 4, name: "GODREJ FRIDGE", itemCode: "34567", stock: "143 ACS", salesPrice: 42000, purchasePrice: 0, unit: "ACS", category: "Electronics" },
-    { id: 5, name: "HERIER AC", itemCode: "1234", stock: "93 PCS", salesPrice: 45000, purchasePrice: 38000, unit: "PCS", category: "Electronics" },
-    { id: 6, name: "HISENSE 32 INCH", itemCode: "-", stock: "39 PCS", salesPrice: 21000, purchasePrice: 18000, unit: "PCS", category: "Electronics" },
-  ];
-  const storedItems: any[] = JSON.parse(localStorage.getItem("items") || "[]");
-  const allItems = storedItems.length > 0 ? storedItems : SAMPLE_ITEMS;
+  const [allItems, setAllItems] = useState<any[]>([]);
+
+  useEffect(() => {
+    apiGetItems().then(setAllItems).catch(console.error);
+  }, []);
+
   const itemCategories: string[] = Array.from(new Set(allItems.map((i: any) => i.category || "").filter(Boolean)));
   const filteredItems = allItems.filter((item: any) => {
     const s = itemSearch.toLowerCase();
@@ -1097,19 +1069,46 @@ function CreateQuotationPage({
   }
 
   // ── Save ──────────────────────────────────────────────────────────────────
-  function handleSave() {
-    saveStoredQuotation(form);
-    onSaved();
+  async function handleSave() {
+    if (saving) return;
+    setSaving(true);
+    try {
+      const payload = formDataToApiPayload(form as any, pageSettings ?? undefined);
+      if (editId && form.id) {
+        await apiUpdateQuotation(Number(form.id), payload);
+      } else {
+        await apiCreateQuotation(payload);
+      }
+      onSaved();
+    } catch (err: any) {
+      alert(`Failed to save: ${err.message}`);
+    } finally {
+      setSaving(false);
+    }
   }
 
-  function handleSaveAndNew() {
-    saveStoredQuotation(form);
-    const newNo = getNextQuotationNo();
-    setForm(makeBlanKData(newNo));
-    setShowNotes(false);
-    setShowDiscount(false);
-    setItemSelections({});
-    window.scrollTo({ top: 0, behavior: "smooth" });
+  async function handleSaveAndNew() {
+    if (saving) return;
+    setSaving(true);
+    try {
+      const payload = formDataToApiPayload(form as any, pageSettings ?? undefined);
+      if (editId && form.id) {
+        await apiUpdateQuotation(Number(form.id), payload);
+      } else {
+        await apiCreateQuotation(payload);
+      }
+     const newNo = Number(pageSettings?.sequenceNumber ?? form.quotationNo) + 1;
+      if (pageSettings) setPageSettings((s) => s ? { ...s, sequenceNumber: newNo } : s);
+      setForm(makeBlankForm(newNo));
+      setShowNotes(false);
+      setShowDiscount(false);
+      setItemSelections({});
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch (err: any) {
+      alert(`Failed to save: ${err.message}`);
+    } finally {
+      setSaving(false);
+    }
   }
 
   const fmtDate = (s: string) => {
@@ -1120,6 +1119,14 @@ function CreateQuotationPage({
 
   const [discountMenu, setDiscountMenu] = useState(false);
   const [roundMenu, setRoundMenu] = useState(false);
+
+  if (loadingForm) {
+    return (
+      <div className="qe-page qe-create-page" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: 300 }}>
+        <span style={{ color: "#6b7280", fontSize: 15 }}>Loading quotation...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="qe-page qe-create-page">
@@ -1714,7 +1721,6 @@ function CreateQuotationPage({
                   const newAcc = { id: Date.now(), ...bankForm };
                   const updated = [...savedBankAccounts, newAcc];
                   setSavedBankAccounts(updated);
-                  localStorage.setItem("bankAccounts", JSON.stringify(updated));
                   setBankForm({ accountNumber:"", reEnterAccountNumber:"", ifscCode:"", bankBranchName:"", accountHolderName:"", upiId:"" });
                   setShowBankModal(false);
                   setShowSelectBankModal(true);
@@ -1931,10 +1937,9 @@ function CreateQuotationPage({
 // ─── Main Component ──────────────────────────────────────────────────────────
 export default function QuotationEstimate() {
   const [view, setView] = useState<AppView>({ screen: "list" });
-  const [quotations, setQuotations] = useState<Quotation[]>(() => {
-    const stored = getStoredQuotations();
-    return mergeQuotations(INITIAL_QUOTATIONS, stored);
-  });
+  const [quotations, setQuotations] = useState<Quotation[]>([]);
+  const [apiQuotations, setApiQuotations] = useState<ApiQuotation[]>([]);
+  const [loadingList, setLoadingList] = useState(true);
   const [dateFilter, setDateFilter] = useState<DateFilterOption>("Last 365 Days");
   const [customDate, setCustomDate] = useState<Date | null>(null);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("Show Open Quotation");
@@ -1953,11 +1958,33 @@ export default function QuotationEstimate() {
     showQuantity: true,
   });
 
-  // Refresh list from localStorage whenever returning to list
-  function refreshList() {
-    const stored = getStoredQuotations();
-    setQuotations(mergeQuotations(INITIAL_QUOTATIONS, stored));
+  // Load quotations from API — always fetch all statuses so frontend filter works
+  async function refreshList() {
+    setLoadingList(true);
+    try {
+      const data = await apiGetQuotations({ status: "all" });
+      setApiQuotations(data);
+      setQuotations(data.map(apiToListItem));
+    } catch (err) {
+      console.error("Failed to load quotations:", err);
+    } finally {
+      setLoadingList(false);
+    }
   }
+
+  useEffect(() => {
+    refreshList();
+    // Load quick settings from API
+    apiGetQuotationSettings()
+      .then((s) => {
+        setSettings((prev) => ({
+          ...prev,
+          prefix: s.prefix ?? "",
+          sequenceNumber: s.sequenceNumber ?? 1,
+        }));
+      })
+      .catch(console.error);
+  }, []);
 
   function handleBack() {
     setView({ screen: "list" });
@@ -1981,6 +2008,31 @@ export default function QuotationEstimate() {
     );
   }
 
+  // ── Render Convert to Invoice screen ──────────────────────────────
+  if (view.screen === "convert-to-invoice") {
+    const quotationId = Number(view.quotation.id);
+
+    async function handleInvoiceSaved() {
+      // Mark the source quotation as CONVERTED / Closed
+      try {
+        if (quotationId) await apiCloseQuotation(quotationId);
+      } catch (err) {
+        console.error("Failed to close quotation after invoice save:", err);
+      }
+      refreshList();
+      setView({ screen: "list" });
+    }
+
+    return (
+      <CreateSalesInvoice
+        fromQuotation={view.quotation}
+        fromQuotationId={view.quotation.id}
+        onBack={handleInvoiceSaved}
+        onSaveAndNew={handleInvoiceSaved}
+      />
+    );
+  }
+
   // ── Filter logic ────────────────────────────────────────────────
   const filtered = quotations.filter((q) => {
     if (statusFilter === "Show Open Quotation" && q.status !== "Open") return false;
@@ -2000,21 +2052,25 @@ export default function QuotationEstimate() {
 
     if (searchQuery) {
       const s = searchQuery.toLowerCase();
-      if (!q.partyName.toLowerCase().includes(s) && !String(q.quotationNumber).includes(s) && !q.amount.toString().includes(s))
+      if (!q.partyName.toLowerCase().includes(s) && !q.quotationNumber.toLowerCase().includes(s) && !q.amount.toString().includes(s))
         return false;
     }
     return true;
   });
 
   // ── Handlers ─────────────────────────────────────────────────────
-  function handleDelete(id: string) {
-    deleteStoredQuotation(id);
-    setQuotations((prev) => prev.filter((q) => q.id !== id));
-    setDeleteTarget(null);
+  async function handleDelete(id: string) {
+    try {
+      await apiDeleteQuotation(Number(id));
+      setQuotations((prev) => prev.filter((q) => q.id !== id));
+    } catch (err: any) {
+      alert(`Failed to delete: ${err.message}`);
+    } finally {
+      setDeleteTarget(null);
+    }
   }
 
   function handleDuplicate(q: Quotation) {
-    // Navigate to duplicate screen — CreateQuotationPage will handle cloning
     setView({ screen: "duplicate", sourceId: q.id });
   }
 
@@ -2028,6 +2084,23 @@ export default function QuotationEstimate() {
 
   function handleCreateQuotation() {
     setView({ screen: "create" });
+  }
+
+  // Open view modal — fetch full data from API (always fetch fresh for accuracy)
+  async function handleRowClick(q: Quotation) {
+    try {
+      // Try cache first for instant open, then upgrade with fresh fetch
+      const cached = apiQuotations.find((a) => String(a.id) === q.id);
+      if (cached) {
+        setViewQuotation(apiToFormData(cached) as any);
+      }
+      // Always fetch fresh to get complete data (party, items, charges)
+      const fresh = await apiGetQuotationById(Number(q.id));
+      setViewQuotation(apiToFormData(fresh) as any);
+    } catch (err) {
+      console.error("Failed to load quotation:", err);
+      alert("Failed to load quotation details. Please try again.");
+    }
   }
 
   // ── Render list ───────────────────────────────────────────────────
@@ -2087,7 +2160,15 @@ export default function QuotationEstimate() {
             </tr>
           </thead>
           <tbody>
-            {filtered.length === 0 ? (
+            {loadingList ? (
+              <tr>
+                <td colSpan={7} className="qe-empty">
+                  <div className="qe-empty-inner">
+                    <p className="qe-empty-text" style={{ color: "#6b7280" }}>Loading quotations...</p>
+                  </div>
+                </td>
+              </tr>
+            ) : filtered.length === 0 ? (
               <tr>
                 <td colSpan={7} className="qe-empty">
                   <div className="qe-empty-inner">
@@ -2105,47 +2186,7 @@ export default function QuotationEstimate() {
               </tr>
             ) : (
               filtered.map((q) => (
-                <tr key={q.id} className="qe-tr" onClick={() => {
-                    // First try localStorage (full data)
-                    const stored = getStoredQuotations().find(s => s.id === q.id);
-                    if (stored) {
-                      setViewQuotation(stored);
-                    } else {
-                      // Fallback for sample/initial quotations that only exist
-                      // in memory (fresh install with empty localStorage).
-                      // Build a minimal StoredQuotation so the view modal opens
-                      // instead of silently doing nothing.
-                      const fallback: StoredQuotation = {
-                        id:                q.id,
-                        quotationNo:       q.quotationNumber,
-                        quotationDate:     q.date,
-                        party:             q.partyName !== "Cash Sale"
-                                             ? { id: 0, name: q.partyName, mobile: "", balance: 0 }
-                                             : null,
-                        billItems:         [],
-                        additionalCharges: [],
-                        discountType:      "Discount After Tax",
-                        discountPct:       0,
-                        discountAmt:       0,
-                        roundOff:          "none",
-                        roundOffAmt:       0,
-                        notes:             "",
-                        termsConditions:   "",
-                        eWayBillNo:        "",
-                        challanNo:         "",
-                        financedBy:        "",
-                        salesman:          "",
-                        emailId:           "",
-                        warrantyPeriod:    "",
-                        validFor:          30,
-                        validityDate:      q.dueIn || "",
-                        showDueDate:       !!q.dueIn,
-                        status:            q.status,
-                        createdAt:         q.date,
-                      };
-                      setViewQuotation(fallback);
-                    }
-                  }}>
+                <tr key={q.id} className="qe-tr" onClick={() => handleRowClick(q)}>
                   <td className="qe-td">{formatDate(q.date)}</td>
                   <td className="qe-td">{q.quotationNumber}</td>
                   <td className="qe-td">{q.partyName}</td>
@@ -2171,7 +2212,23 @@ export default function QuotationEstimate() {
 
       {/* Modals */}
       {showSettings && (
-        <QuickSettingsModal settings={settings} onSave={setSettings} onClose={() => setShowSettings(false)} />
+        <QuickSettingsModal
+          settings={settings}
+          onSave={async (s) => {
+            setSettings(s);
+            // Persist prefix + sequenceNumber to backend
+            try {
+              await apiSaveQuotationSettings({
+                prefix: s.prefixEnabled ? s.prefix : "",
+                sequenceNumber: s.sequenceNumber,
+              });
+            } catch (err) {
+              console.error("Failed to save settings:", err);
+            }
+            setShowSettings(false);
+          }}
+          onClose={() => setShowSettings(false)}
+        />
       )}
       {deleteTarget && (
         <DeleteConfirmModal onConfirm={() => handleDelete(deleteTarget)} onCancel={() => setDeleteTarget(null)} />
@@ -2185,6 +2242,17 @@ export default function QuotationEstimate() {
           onEdit={() => {
             setViewQuotation(null);
             handleEdit(viewQuotation.id);
+          }}
+          onConvertToInvoice={(quotation) => {
+            setViewQuotation(null);
+setView({ screen: "convert-to-invoice", quotation: quotation as unknown as StoredQuotation });          }}
+          onDuplicate={() => {
+            setViewQuotation(null);
+            refreshList();
+          }}
+          onDelete={() => {
+            setViewQuotation(null);
+            refreshList();
           }}
         />
       )}

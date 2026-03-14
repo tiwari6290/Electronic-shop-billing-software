@@ -179,12 +179,17 @@ function ApplyDiscountModal({ invoiceNo, pending, onApply, onClose }: { invoiceN
 }
 
 // ─── Party Dropdown ───────────────────────────────────────────────────────────
-function PartyDropdown({ value, partyId, onChange, disabled }: { value: string; partyId: number | null; onChange: (name: string, id: number) => void; disabled?: boolean }) {
+function PartyDropdown({ value, partyId, onChange, disabled, openRef }: { value: string; partyId: number | null; onChange: (name: string, id: number) => void; disabled?: boolean; openRef?: React.MutableRefObject<(() => void) | null> }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [parties, setParties] = useState<Party[]>([]);
   const ref = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Expose open() so parent can trigger it (e.g. from "Select Party" button)
+  useEffect(() => {
+    if (openRef) openRef.current = () => setOpen(true);
+  }, [openRef]);
 
   useEffect(() => {
     getParties().then(list => setParties(list.map((p: any) => ({ id: p.id, name: p.partyName, partyName: p.partyName }))));
@@ -309,6 +314,7 @@ export default function PaymentIn() {
   const [tdsModal,           setTdsModal]            = useState<{ invoiceId: number; invoiceNo: string; pending: number } | null>(null);
   const [discModal,          setDiscModal]           = useState<{ invoiceId: number; invoiceNo: string; pending: number } | null>(null);
   const [nextPaymentNo,      setNextPaymentNo]       = useState("PI-1");
+  const partyDropdownOpenRef = useRef<(() => void) | null>(null);
 
   // ── Load next payment number ───────────────────────────────────────────────
   useEffect(() => {
@@ -508,7 +514,7 @@ export default function PaymentIn() {
           <div className="pi-card">
             <div className="pi-form-field">
               <label className="pi-form-label">Party Name</label>
-              <PartyDropdown value={partyName} partyId={partyId} onChange={(name, id) => { setPartyName(name); setPartyId(id); setAmountReceived("0"); }} disabled={isEditing} />
+              <PartyDropdown value={partyName} partyId={partyId} onChange={(name, id) => { setPartyName(name); setPartyId(id); setAmountReceived("0"); }} disabled={isEditing} openRef={partyDropdownOpenRef} />
             </div>
             <div className="pi-row-2">
               <div className="pi-form-field">
@@ -567,6 +573,12 @@ export default function PaymentIn() {
               </svg>
               <div className="pi-empty-title">No party selected!</div>
               <div className="pi-empty-sub">Select Party Name to view transactions</div>
+              <button
+                className="pi-empty-btn"
+                onClick={() => partyDropdownOpenRef.current?.()}
+              >
+                Select Party
+              </button>
             </div>
           </div>
         ) : (
