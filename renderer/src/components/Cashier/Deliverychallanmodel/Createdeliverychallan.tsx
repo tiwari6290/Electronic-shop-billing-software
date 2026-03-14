@@ -317,7 +317,7 @@ function ShowHideColumnsModal({ showPrice, showQty, onSave, onClose }: { showPri
           <div className="shc-row"><span>Quantity</span><Toggle value={qty} onChange={setQty} /></div>
           <div className="shc-divider">CUSTOM COLUMN</div>
           <div className="shc-empty-custom"><p>No Custom Columns added</p><p>Any custom column such as Batch # &amp; Expiry Date can be added</p></div>
-          <div className="shc-note">To add Custom Item Columns - Go to <strong>Item settings</strong> from <span className="link-text" onClick={() => { onClose(); navigate("/cashier/items"); }}>Items page (click here)</span></div>
+          <div className="shc-note">To add Custom Item Columns - Go to <strong >Item settings</strong> from <span className="link-text" onClick={() => { onClose(); navigate("/cashier/create-item/inventory"); }}>Items page (click here)</span></div>
         </div>
         <div className="cdc-modal-footer"><button className="btn-secondary-sm" onClick={onClose}>Cancel</button><button className="btn-primary-sm" onClick={() => { onSave(price, qty); onClose(); }}>Save</button></div>
       </div>
