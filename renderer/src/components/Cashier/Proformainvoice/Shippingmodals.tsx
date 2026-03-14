@@ -30,33 +30,33 @@ export const ChangeShippingModal: React.FC<ChangeShippingProps> = ({
   const [sel, setSel] = useState<number | null>(selectedId ?? (addresses[0]?.id ?? null));
 
   return (
-    <div className="sm-overlay" onClick={onClose}>
-      <div className="sm-modal" onClick={e => e.stopPropagation()}>
-        <div className="sm-header">
+    <div className="aa-sm-overlay" onClick={onClose}>
+      <div className="aa-sm-modal" onClick={e => e.stopPropagation()}>
+        <div className="aa-sm-header">
           <h2>Change Shipping Address</h2>
-          <button className="sm-close" onClick={onClose}><IconClose /></button>
+          <button className="aa-sm-close" onClick={onClose}><IconClose /></button>
         </div>
-        <div className="sm-body">
-          <div className="sm-table-header">
+        <div className="aa-sm-body">
+          <div className="aa-sm-table-header">
             <span>Address</span><span>Edit</span><span>Select</span>
           </div>
           {addresses.map(addr => (
-            <div key={addr.id} className="sm-addr-row">
-              <div className="sm-addr-info">
-                <div className="sm-addr-name">{addr.name}</div>
-                <div className="sm-addr-detail">
+            <div key={addr.id} className="aa-sm-addr-row">
+              <div className="aa-sm-addr-info">
+                <div className="aa-sm-addr-name">{addr.name}</div>
+                <div className="aa-sm-addr-detail">
                   {addr.street}{addr.city ? `, ${addr.city}` : ""}{addr.state ? `, ${addr.state}` : ""}{addr.pincode ? ` ${addr.pincode}` : ""}
                 </div>
               </div>
-              <button className="sm-edit-btn" onClick={() => onEdit(addr)}><IconPencil /></button>
-              <div className={`sm-radio${sel === addr.id ? " checked" : ""}`} onClick={() => setSel(addr.id)} />
+              <button className="aa-sm-edit-btn" onClick={() => onEdit(addr)}><IconPencil /></button>
+              <div className={`aa-sm-radio${sel === addr.id ? " checked" : ""}`} onClick={() => setSel(addr.id)} />
             </div>
           ))}
-          <button className="sm-add-new" onClick={onAddNew}>+ Add New Shipping Address</button>
+          <button className="aa-sm-add-new" onClick={onAddNew}>+ Add New Shipping Address</button>
         </div>
-        <div className="sm-footer">
-          <button className="sm-cancel" onClick={onClose}>Cancel</button>
-          <button className="sm-done" onClick={() => { if (sel != null) onSelect(sel); onDone(); }}>Done</button>
+        <div className="aa-sm-footer">
+          <button className="aa-sm-cancel" onClick={onClose}>Cancel</button>
+          <button className="aa-sm-done" onClick={() => { if (sel != null) onSelect(sel); onDone(); }}>Done</button>
         </div>
       </div>
     </div>
@@ -96,25 +96,25 @@ export const AddShippingAddressModal: React.FC<AddShippingProps> = ({ initial, d
   const valid = form.name.trim() !== "" && form.street.trim() !== "";
 
   return (
-    <div className="sm-overlay" onClick={onClose}>
-      <div className="sm-modal sm-add-modal" onClick={e => e.stopPropagation()}>
-        <div className="sm-header">
+    <div className="aa-sm-overlay" onClick={onClose}>
+      <div className="aa-sm-modal sm-add-modal" onClick={e => e.stopPropagation()}>
+        <div className="aa-sm-header">
           <h2>{initial ? "Edit" : "Add"} Shipping Address</h2>
-          <button className="sm-close" onClick={onClose}><IconClose /></button>
+          <button className="aa-sm-close" onClick={onClose}><IconClose /></button>
         </div>
-        <div className="sm-body sm-form-body">
-          <div className="sm-field sm-full">
-            <label>Shipping Name <span className="sm-req">*</span></label>
+        <div className="aa-sm-body sm-form-body">
+          <div className="aa-sm-field sm-full">
+            <label>Shipping Name <span className="aa-sm-req">*</span></label>
             <input value={form.name} onChange={set("name")} placeholder="Enter shipping name" />
           </div>
-          <div className="sm-field sm-full">
-            <label>Street Address <span className="sm-req">*</span></label>
+          <div className="aa-sm-field sm-full">
+            <label>Street Address <span className="aa-sm-req">*</span></label>
             <textarea value={form.street} onChange={set("street")} placeholder="Enter Street Address" rows={2} />
           </div>
-          <div className="sm-field-row">
-            <div className="sm-field">
+          <div className="aa-sm-field-row">
+            <div className="aa-sm-field">
               <label>State</label>
-              <div className="sm-state-wrap">
+              <div className="aa-sm-state-wrap">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                 <input
                   value={stateSearch}
@@ -125,9 +125,9 @@ export const AddShippingAddressModal: React.FC<AddShippingProps> = ({ initial, d
                 />
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
                 {showStates && filteredStates.length > 0 && (
-                  <div className="sm-state-dropdown">
+                  <div className="aa-sm-state-dropdown">
                     {filteredStates.map(s => (
-                      <div key={s} className="sm-state-option"
+                      <div key={s} className="aa-sm-state-option"
                         onMouseDown={() => { setForm(p => ({...p, state: s})); setStateSearch(s); setShowStates(false); }}>
                         {s}
                       </div>
@@ -136,20 +136,20 @@ export const AddShippingAddressModal: React.FC<AddShippingProps> = ({ initial, d
                 )}
               </div>
             </div>
-            <div className="sm-field">
+            <div className="aa-sm-field">
               <label>Pincode</label>
               <input value={form.pincode} onChange={set("pincode")} placeholder="Enter pin code" maxLength={6} />
             </div>
           </div>
-          <div className="sm-field sm-full">
+          <div className="aa-sm-field sm-full">
             <label>City</label>
             <input value={form.city} onChange={set("city")} placeholder="Enter City" />
           </div>
         </div>
-        <div className="sm-footer">
-          <button className="sm-cancel" onClick={onClose}>Cancel</button>
+        <div className="aa-sm-footer">
+          <button className="aa-sm-cancel" onClick={onClose}>Cancel</button>
           <button
-            className={`sm-done sm-save${!valid ? " disabled" : ""}`}
+            className={`aa-sm-done sm-save${!valid ? " disabled" : ""}`}
             disabled={!valid}
             onClick={() => valid && onSave({ name: form.name, street: form.street, state: form.state, pincode: form.pincode, city: form.city })}
           >

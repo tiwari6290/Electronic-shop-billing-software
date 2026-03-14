@@ -50,7 +50,7 @@ import CreateSalesReturn from "./components/Cashier/Salesreturn/Createsalesretur
 import SalesReturnViewModel from "./components/Cashier/Salesreturn/Salesreturnviewmodel";
 import CreditNote from "./components/Cashier/Creditnote/Creditnote";
 
-import DeliveryChallan from "./components/Cashier/DeliveryChallan/DeliveryChallan";
+import DeliveryChallan from "./components/Cashier/Deliverychallanmodel/DeliveryChallanmodel";
 
 // Sales Invoice components
 import SalesInvoiceList   from "./components/Cashier/Salesinvoices/SalesInvoiceList";

@@ -1,5 +1,5 @@
 /* ── Root ─────────────────────────────────────────────────────────────────── */
-.pi-root {
+.aa-pi-root {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   background: #f5f5f7;
   min-height: 100vh;
@@ -9,26 +9,26 @@
 }
 
 /* ── Header ──────────────────────────────────────────────────────────────── */
-.pi-header {
+.aa-pi-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   margin-bottom: 20px;
 }
 
-.pi-title {
+.aa-pi-title {
   font-size: 22px;
   font-weight: 700;
   color: #1a1a2e;
   margin: 0;
 }
 
-.pi-header-actions {
+.aa-pi-header-actions {
   display: flex;
   gap: 10px;
 }
 
-.pi-icon-btn {
+.aa-pi-icon-btn {
   position: relative;
   width: 38px;
   height: 38px;
@@ -43,9 +43,9 @@
   color: #555;
   transition: border-color 0.15s, background 0.15s;
 }
-.pi-icon-btn:hover { border-color: #5b4fcf; background: #f3f1fd; }
+.aa-pi-icon-btn:hover { border-color: #5b4fcf; background: #f3f1fd; }
 
-.pi-notification-dot {
+.aa-pi-notification-dot {
   position: absolute;
   top: 6px;
   right: 6px;
@@ -57,7 +57,7 @@
 }
 
 /* ── Toolbar ─────────────────────────────────────────────────────────────── */
-.pi-toolbar {
+.aa-pi-toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -66,7 +66,7 @@
   flex-wrap: wrap;
 }
 
-.pi-toolbar-left {
+.aa-pi-toolbar-left {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -74,7 +74,7 @@
 }
 
 /* ── Search ──────────────────────────────────────────────────────────────── */
-.pi-search-wrap {
+.aa-pi-search-wrap {
   display: flex;
   align-items: center;
   border: 1.5px solid #dde1e7;
@@ -83,9 +83,9 @@
   transition: border-color 0.15s, box-shadow 0.15s;
   overflow: hidden;
 }
-.pi-search-wrap.open { border-color: #5b4fcf; box-shadow: 0 0 0 3px rgba(91,79,207,0.1); }
+.aa-pi-search-wrap.open { border-color: #5b4fcf; box-shadow: 0 0 0 3px rgba(91,79,207,0.1); }
 
-.pi-search-btn {
+.aa-pi-search-btn {
   width: 38px;
   height: 38px;
   background: transparent;
@@ -98,7 +98,7 @@
   flex-shrink: 0;
 }
 
-.pi-search-input {
+.aa-pi-search-input {
   border: none;
   outline: none;
   font-size: 13px;
@@ -109,11 +109,11 @@
 }
 
 /* ── Dropdowns ───────────────────────────────────────────────────────────── */
-.pi-dropdown-wrap {
+.aa-pi-dropdown-wrap {
   position: relative;
 }
 
-.pi-dropdown-btn {
+.aa-pi-dropdown-btn {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -128,16 +128,16 @@
   transition: border-color 0.15s, box-shadow 0.15s;
   white-space: nowrap;
 }
-.pi-dropdown-btn:hover,
-.pi-dropdown-btn.open {
+.aa-pi-dropdown-btn:hover,
+.aa-pi-dropdown-btn.open {
   border-color: #5b4fcf;
   box-shadow: 0 0 0 3px rgba(91,79,207,0.1);
 }
 
-.pi-dropdown-icon { display: flex; align-items: center; color: #555; }
-.pi-caret { display: flex; align-items: center; color: #888; margin-left: 2px; }
+.aa-pi-dropdown-icon { display: flex; align-items: center; color: #555; }
+.aa-pi-caret { display: flex; align-items: center; color: #888; margin-left: 2px; }
 
-.pi-dropdown-menu {
+.aa-pi-dropdown-menu {
   position: absolute;
   top: calc(100% + 6px);
   left: 0;
@@ -148,15 +148,15 @@
   box-shadow: 0 8px 28px rgba(0,0,0,0.13);
   min-width: 220px;
   overflow: hidden;
-  animation: pi-dropdown-appear 0.15s ease;
+  animation: aa-pi-dropdown-appear 0.15s ease;
 }
 
-@keyframes pi-dropdown-appear {
+@keyframes aa-pi-dropdown-appear {
   from { opacity: 0; transform: translateY(-6px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
-.pi-dropdown-item {
+.aa-pi-dropdown-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -170,18 +170,18 @@
   text-align: left;
   transition: background 0.1s;
 }
-.pi-dropdown-item:hover { background: #f4f2fd; }
-.pi-dropdown-item.active { background: #eeeafc; font-weight: 600; color: #5b4fcf; }
-.pi-dropdown-item.bold { font-weight: 700; }
+.aa-pi-dropdown-item:hover { background: #f4f2fd; }
+.aa-pi-dropdown-item.active { background: #eeeafc; font-weight: 600; color: #5b4fcf; }
+.aa-pi-dropdown-item.bold { font-weight: 700; }
 
-.pi-date-range-label {
+.aa-pi-date-range-label {
   font-size: 11.5px;
   color: #888;
   margin-left: 8px;
 }
 
 /* ── Custom Date Picker ──────────────────────────────────────────────────── */
-.pi-custom-picker {
+.aa-pi-custom-picker {
   position: absolute;
   top: calc(100% + 6px);
   left: 0;
@@ -191,26 +191,26 @@
   border-radius: 12px;
   box-shadow: 0 12px 36px rgba(0,0,0,0.16);
   padding: 20px;
-  animation: pi-dropdown-appear 0.15s ease;
+  animation: aa-pi-dropdown-appear 0.15s ease;
 }
 
-.pi-custom-calendars {
+.aa-pi-custom-calendars {
   display: flex;
   gap: 24px;
 }
 
-.pi-calendar {
+.aa-pi-calendar {
   min-width: 240px;
 }
 
-.pi-calendar-label {
+.aa-pi-calendar-label {
   font-size: 13px;
   font-weight: 600;
   color: #444;
   margin-bottom: 10px;
 }
 
-.pi-calendar-nav {
+.aa-pi-calendar-nav {
   display: flex;
   align-items: center;
   gap: 4px;
@@ -220,7 +220,7 @@
   color: #333;
 }
 
-.pi-calendar-nav button {
+.aa-pi-calendar-nav button {
   background: transparent;
   border: none;
   cursor: pointer;
@@ -230,19 +230,19 @@
   border-radius: 4px;
   transition: background 0.1s;
 }
-.pi-calendar-nav button:hover { background: #eeeafc; }
+.aa-pi-calendar-nav button:hover { background: #eeeafc; }
 
-.pi-calendar-nav span {
+.aa-pi-calendar-nav span {
   padding: 0 4px;
 }
 
-.pi-calendar-grid {
+.aa-pi-calendar-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 2px;
 }
 
-.pi-cal-header {
+.aa-pi-cal-header {
   font-size: 11px;
   font-weight: 600;
   color: #999;
@@ -250,7 +250,7 @@
   padding: 4px 0;
 }
 
-.pi-cal-cell {
+.aa-pi-cal-cell {
   aspect-ratio: 1;
   display: flex;
   align-items: center;
@@ -263,11 +263,11 @@
   color: #333;
   transition: background 0.1s, color 0.1s;
 }
-.pi-cal-cell:hover { background: #f0ecfd; }
-.pi-cal-cell.selected { background: #5b4fcf; color: #fff; font-weight: 700; }
-.pi-cal-cell.empty { cursor: default; background: transparent; }
+.aa-pi-cal-cell:hover { background: #f0ecfd; }
+.aa-pi-cal-cell.selected { background: #5b4fcf; color: #fff; font-weight: 700; }
+.aa-pi-cal-cell.empty { cursor: default; background: transparent; }
 
-.pi-custom-actions {
+.aa-pi-custom-actions {
   display: flex;
   justify-content: flex-end;
   gap: 16px;
@@ -276,7 +276,7 @@
   padding-top: 12px;
 }
 
-.pi-btn-ghost {
+.aa-pi-btn-ghost {
   background: transparent;
   border: none;
   cursor: pointer;
@@ -287,9 +287,9 @@
   border-radius: 6px;
   transition: background 0.1s;
 }
-.pi-btn-ghost:hover { background: #f0f0f0; }
+.aa-pi-btn-ghost:hover { background: #f0f0f0; }
 
-.pi-btn-primary-text {
+.aa-pi-btn-primary-text {
   background: transparent;
   border: none;
   cursor: pointer;
@@ -300,10 +300,10 @@
   border-radius: 6px;
   transition: background 0.1s;
 }
-.pi-btn-primary-text:hover { background: #f0ecfd; }
+.aa-pi-btn-primary-text:hover { background: #f0ecfd; }
 
 /* ── Create Button ───────────────────────────────────────────────────────── */
-.pi-create-btn {
+.aa-pi-create-btn {
   height: 38px;
   padding: 0 20px;
   background: #4f46e5;
@@ -317,33 +317,33 @@
   white-space: nowrap;
   box-shadow: 0 2px 8px rgba(79,70,229,0.3);
 }
-.pi-create-btn:hover {
+.aa-pi-create-btn:hover {
   background: #4338ca;
   box-shadow: 0 4px 14px rgba(79,70,229,0.4);
   transform: translateY(-1px);
 }
-.pi-create-btn:active { transform: translateY(0); }
+.aa-pi-create-btn:active { transform: translateY(0); }
 
 /* ── Table ───────────────────────────────────────────────────────────────── */
-.pi-table-wrap {
+.aa-pi-table-wrap {
   background: #fff;
   border-radius: 12px;
   border: 1px solid #e8e8f0;
-  overflow: hidden;
+  overflow: visible;
   box-shadow: 0 1px 4px rgba(0,0,0,0.06);
 }
 
-.pi-table {
+.aa-pi-table {
   width: 100%;
   border-collapse: collapse;
 }
 
-.pi-table thead tr {
+.aa-pi-table thead tr {
   background: #f8f8fb;
   border-bottom: 1.5px solid #e8e8f0;
 }
 
-.pi-table th {
+.aa-pi-table th {
   padding: 13px 16px;
   text-align: left;
   font-size: 13px;
@@ -352,7 +352,7 @@
   white-space: nowrap;
 }
 
-.pi-sort-icon {
+.aa-pi-sort-icon {
   display: inline-flex;
   align-items: center;
   color: #aaa;
@@ -360,22 +360,22 @@
   vertical-align: middle;
 }
 
-.pi-table td {
+.aa-pi-table td {
   padding: 14px 16px;
   font-size: 13.5px;
   color: #2c2c3e;
   border-bottom: 1px solid #f0f0f8;
 }
 
-.pi-table tbody tr:last-child td {
+.aa-pi-table tbody tr:last-child td {
   border-bottom: none;
 }
 
-.pi-table tbody tr:hover {
+.aa-pi-table tbody tr:hover {
   background: #fafafc;
 }
 
-.pi-empty {
+.aa-pi-empty {
   text-align: center;
   padding: 48px !important;
   color: #aaa;
@@ -383,36 +383,36 @@
 }
 
 /* ── Status Badge ────────────────────────────────────────────────────────── */
-.pi-status-badge {
+.aa-pi-status-badge {
   display: inline-block;
   padding: 3px 12px;
   border-radius: 20px;
   font-size: 12.5px;
   font-weight: 600;
 }
-.pi-status-badge.open {
+.aa-pi-status-badge.open {
   color: #e6a817;
   background: #fef9ec;
   border: 1px solid #f5e0a0;
 }
-.pi-status-badge.closed {
+.aa-pi-status-badge.closed {
   color: #666;
   background: #f0f0f0;
   border: 1px solid #ddd;
 }
 
 /* ── Row Actions ─────────────────────────────────────────────────────────── */
-.pi-actions-cell {
+.aa-pi-actions-cell {
   text-align: right;
   width: 48px;
 }
 
-.pi-menu-wrap {
+.aa-pi-menu-wrap {
   position: relative;
   display: inline-block;
 }
 
-.pi-kebab-btn {
+.aa-pi-kebab-btn {
   width: 30px;
   height: 30px;
   background: transparent;
@@ -427,9 +427,9 @@
   transition: background 0.1s, color 0.1s;
   letter-spacing: -1px;
 }
-.pi-kebab-btn:hover { background: #f0f0f4; color: #333; }
+.aa-pi-kebab-btn:hover { background: #f0f0f4; color: #333; }
 
-.pi-row-menu {
+.aa-pi-row-menu {
   position: absolute;
   right: 0;
   top: calc(100% + 4px);
@@ -440,10 +440,10 @@
   box-shadow: 0 8px 28px rgba(0,0,0,0.13);
   min-width: 170px;
   overflow: hidden;
-  animation: pi-dropdown-appear 0.15s ease;
+  animation: aa-pi-dropdown-appear 0.15s ease;
 }
 
-.pi-row-menu button {
+.aa-pi-row-menu button {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -457,14 +457,14 @@
   text-align: left;
   transition: background 0.1s;
 }
-.pi-row-menu button:hover { background: #f5f4fd; }
-.pi-delete-item { color: #e53e3e !important; }
-.pi-delete-item:hover { background: #fff5f5 !important; }
+.aa-pi-row-menu button:hover { background: #f5f4fd; }
+.aa-pi-delete-item { color: #e53e3e !important; }
+.aa-pi-delete-item:hover { background: #fff5f5 !important; }
 
-.pi-menu-icon { display: flex; align-items: center; flex-shrink: 0; }
+.aa-pi-menu-icon { display: flex; align-items: center; flex-shrink: 0; }
 
 /* ── Modals ──────────────────────────────────────────────────────────────── */
-.pi-modal-overlay {
+.aa-pi-modal-overlay {
   position: fixed;
   inset: 0;
   background: rgba(20, 20, 40, 0.45);
@@ -472,15 +472,15 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  animation: pi-fade-in 0.2s ease;
+  animation: aa-pi-fade-in 0.2s ease;
 }
 
-@keyframes pi-fade-in {
+@keyframes aa-pi-fade-in {
   from { opacity: 0; }
   to   { opacity: 1; }
 }
 
-.pi-modal {
+.aa-pi-modal {
   background: #fff;
   border-radius: 16px;
   width: 100%;
@@ -488,17 +488,17 @@
   max-height: 90vh;
   overflow-y: auto;
   box-shadow: 0 20px 60px rgba(0,0,0,0.22);
-  animation: pi-modal-slide 0.2s ease;
+  animation: aa-pi-modal-slide 0.2s ease;
 }
 
-@keyframes pi-modal-slide {
+@keyframes aa-pi-modal-slide {
   from { opacity: 0; transform: translateY(20px) scale(0.97); }
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-.pi-form-modal { max-width: 460px; }
+.aa-pi-form-modal { max-width: 460px; }
 
-.pi-modal-header {
+.aa-pi-modal-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -506,14 +506,14 @@
   border-bottom: 1px solid #eee;
 }
 
-.pi-modal-header h2 {
+.aa-pi-modal-header h2 {
   margin: 0;
   font-size: 17px;
   font-weight: 700;
   color: #1a1a2e;
 }
 
-.pi-modal-close {
+.aa-pi-modal-close {
   background: transparent;
   border: none;
   cursor: pointer;
@@ -527,16 +527,16 @@
   justify-content: center;
   transition: background 0.1s, color 0.1s;
 }
-.pi-modal-close:hover { background: #f0f0f0; color: #333; }
+.aa-pi-modal-close:hover { background: #f0f0f0; color: #333; }
 
-.pi-modal-body {
+.aa-pi-modal-body {
   padding: 20px 24px;
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
-.pi-modal-footer {
+.aa-pi-modal-footer {
   display: flex;
   gap: 12px;
   justify-content: flex-end;
@@ -545,22 +545,22 @@
 }
 
 /* ── Settings Cards ──────────────────────────────────────────────────────── */
-.pi-settings-card {
+.aa-pi-settings-card {
   border: 1.5px solid #e8e8f0;
   border-radius: 10px;
   padding: 16px;
   background: #fff;
 }
-.pi-settings-card.enabled { background: #faf9fd; border-color: #d8d3f4; }
+.aa-pi-settings-card.enabled { background: #faf9fd; border-color: #d8d3f4; }
 
-.pi-settings-row {
+.aa-pi-settings-row {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
 }
 
-.pi-settings-title {
+.aa-pi-settings-title {
   font-size: 14px;
   font-weight: 600;
   color: #1a1a2e;
@@ -570,32 +570,32 @@
   margin-bottom: 3px;
 }
 
-.pi-settings-desc {
+.aa-pi-settings-desc {
   font-size: 12px;
   color: #888;
   line-height: 1.4;
 }
 
-.pi-settings-fields {
+.aa-pi-settings-fields {
   margin-top: 14px;
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
-.pi-settings-fields .pi-field {
+.aa-pi-settings-fields .aa-pi-field {
   display: flex;
   flex-direction: column;
   gap: 5px;
 }
 
-.pi-settings-fields .pi-field label {
+.aa-pi-settings-fields .aa-pi-field label {
   font-size: 12px;
   font-weight: 600;
   color: #666;
 }
 
-.pi-settings-fields .pi-field input {
+.aa-pi-settings-fields .aa-pi-field input {
   height: 38px;
   padding: 0 12px;
   border: 1.5px solid #dde1e7;
@@ -605,16 +605,16 @@
   outline: none;
   transition: border-color 0.15s;
 }
-.pi-settings-fields .pi-field input:focus { border-color: #5b4fcf; box-shadow: 0 0 0 3px rgba(91,79,207,0.1); }
+.aa-pi-settings-fields .aa-pi-field input:focus { border-color: #5b4fcf; box-shadow: 0 0 0 3px rgba(91,79,207,0.1); }
 
-.pi-proforma-preview {
+.aa-pi-proforma-preview {
   font-size: 12.5px;
   color: #777;
   margin-top: -4px;
 }
 
 /* ── New Badge ───────────────────────────────────────────────────────────── */
-.pi-new-badge {
+.aa-pi-new-badge {
   display: inline-block;
   padding: 2px 7px;
   background: #4f46e5;
@@ -626,7 +626,7 @@
 }
 
 /* ── Toggle ──────────────────────────────────────────────────────────────── */
-.pi-toggle {
+.aa-pi-toggle {
   position: relative;
   display: inline-flex;
   width: 44px;
@@ -635,14 +635,14 @@
   cursor: pointer;
 }
 
-.pi-toggle input {
+.aa-pi-toggle input {
   opacity: 0;
   width: 0;
   height: 0;
   position: absolute;
 }
 
-.pi-toggle-slider {
+.aa-pi-toggle-slider {
   position: absolute;
   inset: 0;
   background: #ccc;
@@ -650,7 +650,7 @@
   transition: background 0.2s;
 }
 
-.pi-toggle-slider::before {
+.aa-pi-toggle-slider::before {
   content: "";
   position: absolute;
   width: 18px;
@@ -663,35 +663,35 @@
   box-shadow: 0 1px 3px rgba(0,0,0,0.2);
 }
 
-.pi-toggle input:checked + .pi-toggle-slider {
+.aa-pi-toggle input:checked + .aa-pi-toggle-slider {
   background: #4f46e5;
 }
 
-.pi-toggle input:checked + .pi-toggle-slider::before {
+.aa-pi-toggle input:checked + .aa-pi-toggle-slider::before {
   transform: translateX(20px);
 }
 
 /* ── Form Fields ─────────────────────────────────────────────────────────── */
-.pi-form-grid {
+.aa-pi-form-grid {
   display: flex;
   flex-direction: column;
   gap: 14px;
 }
 
-.pi-field {
+.aa-pi-field {
   display: flex;
   flex-direction: column;
   gap: 5px;
 }
 
-.pi-field label {
+.aa-pi-field label {
   font-size: 12.5px;
   font-weight: 600;
   color: #555;
 }
 
-.pi-field input,
-.pi-field select {
+.aa-pi-field input,
+.aa-pi-field select {
   height: 40px;
   padding: 0 12px;
   border: 1.5px solid #dde1e7;
@@ -704,14 +704,14 @@
   appearance: auto;
 }
 
-.pi-field input:focus,
-.pi-field select:focus {
+.aa-pi-field input:focus,
+.aa-pi-field select:focus {
   border-color: #5b4fcf;
   box-shadow: 0 0 0 3px rgba(91,79,207,0.1);
 }
 
 /* ── Modal Buttons ───────────────────────────────────────────────────────── */
-.pi-btn-cancel {
+.aa-pi-btn-cancel {
   height: 40px;
   padding: 0 24px;
   background: #fff;
@@ -723,9 +723,9 @@
   cursor: pointer;
   transition: border-color 0.15s, background 0.15s;
 }
-.pi-btn-cancel:hover { border-color: #bbb; background: #f8f8f8; }
+.aa-pi-btn-cancel:hover { border-color: #bbb; background: #f8f8f8; }
 
-.pi-btn-save {
+.aa-pi-btn-save {
   height: 40px;
   padding: 0 28px;
   background: #4f46e5;
@@ -738,19 +738,19 @@
   transition: background 0.15s, box-shadow 0.15s;
   box-shadow: 0 2px 8px rgba(79,70,229,0.3);
 }
-.pi-btn-save:hover { background: #4338ca; box-shadow: 0 4px 14px rgba(79,70,229,0.4); }
+.aa-pi-btn-save:hover { background: #4338ca; box-shadow: 0 4px 14px rgba(79,70,229,0.4); }
 
 /* ── Edit History ────────────────────────────────────────────────────────── */
-.pi-history-entry {
+.aa-pi-history-entry {
   display: flex;
   align-items: flex-start;
   gap: 12px;
   padding: 10px 0;
   border-bottom: 1px solid #f0f0f8;
 }
-.pi-history-entry:last-child { border-bottom: none; }
+.aa-pi-history-entry:last-child { border-bottom: none; }
 
-.pi-history-dot {
+.aa-pi-history-dot {
   width: 10px;
   height: 10px;
   border-radius: 50%;
@@ -759,13 +759,13 @@
   margin-top: 4px;
 }
 
-.pi-history-action {
+.aa-pi-history-action {
   font-size: 13.5px;
   font-weight: 600;
   color: #1a1a2e;
 }
 
-.pi-history-time {
+.aa-pi-history-time {
   font-size: 12px;
   color: #999;
   margin-top: 2px;
@@ -773,17 +773,17 @@
 
 /* ── Responsive ──────────────────────────────────────────────────────────── */
 @media (max-width: 700px) {
-  .pi-root { padding: 14px; }
-  .pi-custom-calendars { flex-direction: column; }
-  .pi-table th, .pi-table td { padding: 10px 10px; font-size: 12px; }
-  .pi-create-btn { font-size: 12px; padding: 0 14px; }
+  .aa-pi-root { padding: 14px; }
+  .aa-pi-custom-calendars { flex-direction: column; }
+  .aa-pi-table th, .aa-pi-table td { padding: 10px 10px; font-size: 12px; }
+  .aa-pi-create-btn { font-size: 12px; padding: 0 14px; }
 }
 
 /* ── Clickable table rows ── */
-.pi-tr-clickable {
+.aa-pi-tr-clickable {
   cursor: pointer;
   transition: background 0.12s;
 }
-.pi-tr-clickable:hover {
+.aa-pi-tr-clickable:hover {
   background: #f0f4ff;
 }

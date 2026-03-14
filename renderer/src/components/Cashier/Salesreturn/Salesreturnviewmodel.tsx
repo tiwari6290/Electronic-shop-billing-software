@@ -368,16 +368,30 @@ export default function SalesReturnViewModel() {
   const [versions, setVersions] = useState<VersionEntry[]>([]);
 
   useEffect(() => {
+    // Try getSalesReturns first (reads from localStorage "salesReturns" key)
+    let found: SalesReturn | undefined;
     const all = getSalesReturns();
-    const found = all.find(x => x.id === id);
+    found = all.find(x => String(x.id) === String(id));
+
+    // If not found, try parsing the raw salesReturns array with looser matching
+    if (!found) {
+      try {
+        const raw = localStorage.getItem("salesReturns");
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          found = parsed.find((x: any) => String(x.id) === String(id));
+        }
+      } catch {}
+    }
+
     setSr(found || null);
 
     // Load or seed version history
     const vKey = `sr-versions-${id}`;
     try {
-      const raw = localStorage.getItem(vKey);
-      if (raw) {
-        setVersions(JSON.parse(raw));
+      const vRaw = localStorage.getItem(vKey);
+      if (vRaw) {
+        setVersions(JSON.parse(vRaw));
       } else if (found) {
         const initial: VersionEntry[] = [{
           version: "1.0",
@@ -393,7 +407,7 @@ export default function SalesReturnViewModel() {
   }, [id]);
 
   const handleDelete = () => {
-    const all = getSalesReturns().filter(x => x.id !== id);
+    const all = getSalesReturns().filter(x => String(x.id) !== String(id));
     localStorage.setItem("salesReturns", JSON.stringify(all));
     navigate("/cashier/sales-return");
   };
