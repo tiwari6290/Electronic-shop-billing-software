@@ -1,26 +1,16 @@
 import "./PaymentOut.css";
-import { Calendar, ChevronDown, X, ArrowLeft, Settings } from "lucide-react";
+import { Calendar, ChevronDown, X, ArrowLeft } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import emptyImg from "../../../assets/5.png";
 import Navbar from "../Navbar";
 import { useNavigate } from "react-router-dom";
-
-/* ══════════════════════════════════════════
-   SETTINGS — localStorage helpers
-══════════════════════════════════════════ */
-const SETTINGS_KEY = "paymentOutSettings";
-
-function loadSettings(): { prefix: string; sequenceNumber: number } {
-  try {
-    const raw = localStorage.getItem(SETTINGS_KEY);
-    if (raw) return JSON.parse(raw);
-  } catch {}
-  return { prefix: "ME/PT/26-27/", sequenceNumber: 1 };
-}
-
-function persistSettings(prefix: string, sequenceNumber: number) {
-  localStorage.setItem(SETTINGS_KEY, JSON.stringify({ prefix, sequenceNumber }));
-}
+import {
+  createPaymentOut,
+  getPaymentOutSettings,
+  updatePaymentOutSettings,
+} from "@/services/paymentOutService";
+import { getAllParties } from "@/services/partyService";
+import api from "@/lib/axios";
 
 /* ══════════════════════════════════════════
    INLINE SETTINGS MODAL
@@ -30,120 +20,184 @@ interface SettingsModalProps {
 }
 
 function PaymentOutSettingsModal({ onClose }: SettingsModalProps) {
-  const current = loadSettings();
-  const [prefix, setPrefix] = useState(current.prefix);
-  const [seqNum, setSeqNum] = useState(String(current.sequenceNumber));
+  const [prefix, setPrefix] = useState("");
+  const [seqNum, setSeqNum] = useState("1");
 
-  const handleSave = () => {
+  useEffect(() => {
+    getPaymentOutSettings()
+      .then((res) => {
+        setPrefix(res.data.prefix || "");
+        setSeqNum(String(res.data.sequenceNumber || 1));
+      })
+      .catch((err) => console.error("Failed to load settings", err));
+  }, []);
+
+  const handleSave = async () => {
     const num = parseInt(seqNum) || 1;
-    persistSettings(prefix, num);
+    await updatePaymentOutSettings({ prefix });
     onClose(true, prefix, num);
   };
 
-  const handleCancel = () => onClose(false, current.prefix, current.sequenceNumber);
+  const handleCancel = () => onClose(false, prefix, parseInt(seqNum) || 1);
 
   return (
     <div
       style={{
-        position: "fixed", inset: 0, zIndex: 1000,
+        position: "fixed",
+        inset: 0,
+        zIndex: 1000,
         background: "rgba(0,0,0,0.4)",
-        display: "flex", alignItems: "center", justifyContent: "center",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
       }}
       onClick={handleCancel}
     >
       <div
         style={{
-          background: "#fff", borderRadius: 12, width: 420,
+          background: "#fff",
+          borderRadius: 12,
+          width: 420,
           boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
           overflow: "hidden",
         }}
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
-        <div style={{
-          display: "flex", alignItems: "center", justifyContent: "space-between",
-          padding: "16px 20px", borderBottom: "1px solid #e4e7ec",
-        }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            padding: "16px 20px",
+            borderBottom: "1px solid #e4e7ec",
+          }}
+        >
           <span style={{ fontWeight: 700, fontSize: 15, color: "#1d2939" }}>
             Payment Out Settings
           </span>
           <button
             onClick={handleCancel}
-            style={{ background: "none", border: "none", cursor: "pointer", color: "#667085", display: "flex" }}
+            style={{
+              background: "none",
+              border: "none",
+              cursor: "pointer",
+              color: "#667085",
+              display: "flex",
+            }}
           >
             <X size={18} />
           </button>
         </div>
 
-        {/* Body */}
         <div style={{ padding: "20px" }}>
-          <p style={{ fontSize: 13, color: "#667085", marginBottom: 16, margin: "0 0 16px" }}>
-            Set the prefix and starting sequence number for Payment Out vouchers.
+          <p style={{ fontSize: 13, color: "#667085", margin: "0 0 16px" }}>
+            Set the prefix for Payment Out vouchers. The sequence number is
+            managed automatically by the server.
           </p>
-
           <div style={{ display: "flex", gap: 12 }}>
             <div style={{ flex: 1 }}>
-              <label style={{
-                display: "block", fontSize: 12, fontWeight: 600,
-                color: "#344054", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.04em",
-              }}>
+              <label
+                style={{
+                  display: "block",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: "#344054",
+                  marginBottom: 6,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.04em",
+                }}
+              >
                 Prefix
               </label>
               <input
                 value={prefix}
                 onChange={(e) => setPrefix(e.target.value)}
                 style={{
-                  width: "100%", padding: "8px 12px", border: "1px solid #d0d5dd",
-                  borderRadius: 6, fontSize: 13, color: "#1d2939",
-                  outline: "none", boxSizing: "border-box", fontFamily: "inherit",
+                  width: "100%",
+                  padding: "8px 12px",
+                  border: "1px solid #d0d5dd",
+                  borderRadius: 6,
+                  fontSize: 13,
+                  color: "#1d2939",
+                  outline: "none",
+                  boxSizing: "border-box",
+                  fontFamily: "inherit",
                 }}
               />
             </div>
-
             <div style={{ flex: 1 }}>
-              <label style={{
-                display: "block", fontSize: 12, fontWeight: 600,
-                color: "#344054", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.04em",
-              }}>
+              <label
+                style={{
+                  display: "block",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: "#344054",
+                  marginBottom: 6,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.04em",
+                }}
+              >
                 Sequence Number
               </label>
               <input
                 type="number"
                 min={1}
                 value={seqNum}
-                onChange={(e) => setSeqNum(e.target.value)}
+                readOnly
                 style={{
-                  width: "100%", padding: "8px 12px", border: "1px solid #d0d5dd",
-                  borderRadius: 6, fontSize: 13, color: "#1d2939",
-                  outline: "none", boxSizing: "border-box", fontFamily: "inherit",
+                  width: "100%",
+                  padding: "8px 12px",
+                  border: "1px solid #d0d5dd",
+                  borderRadius: 6,
+                  fontSize: 13,
+                  color: "#667085",
+                  outline: "none",
+                  boxSizing: "border-box",
+                  fontFamily: "inherit",
+                  background: "#f9fafb",
+                  cursor: "not-allowed",
                 }}
               />
             </div>
           </div>
-
-          {/* Preview */}
-          <div style={{
-            marginTop: 14, padding: "10px 14px", background: "#f9fafb",
-            borderRadius: 6, border: "1px solid #e4e7ec",
-          }}>
-            <span style={{ fontSize: 12, color: "#667085" }}>Payment Out Number Preview: </span>
+          <div
+            style={{
+              marginTop: 14,
+              padding: "10px 14px",
+              background: "#f9fafb",
+              borderRadius: 6,
+              border: "1px solid #e4e7ec",
+            }}
+          >
+            <span style={{ fontSize: 12, color: "#667085" }}>Preview: </span>
             <span style={{ fontSize: 13, fontWeight: 700, color: "#4361ee" }}>
-              {prefix}{parseInt(seqNum) || 1}
+              {prefix}
+              {parseInt(seqNum) || 1}
             </span>
           </div>
         </div>
 
-        {/* Footer */}
-        <div style={{
-          display: "flex", justifyContent: "flex-end", gap: 10,
-          padding: "14px 20px", borderTop: "1px solid #e4e7ec",
-        }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "flex-end",
+            gap: 10,
+            padding: "14px 20px",
+            borderTop: "1px solid #e4e7ec",
+          }}
+        >
           <button
             onClick={handleCancel}
             style={{
-              padding: "8px 20px", border: "1px solid #d0d5dd", borderRadius: 6,
-              background: "#fff", color: "#344054", fontSize: 13,
-              fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
+              padding: "8px 20px",
+              border: "1px solid #d0d5dd",
+              borderRadius: 6,
+              background: "#fff",
+              color: "#344054",
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: "pointer",
+              fontFamily: "inherit",
             }}
           >
             Cancel
@@ -151,9 +205,15 @@ function PaymentOutSettingsModal({ onClose }: SettingsModalProps) {
           <button
             onClick={handleSave}
             style={{
-              padding: "8px 20px", border: "none", borderRadius: 6,
-              background: "#4361ee", color: "#fff", fontSize: 13,
-              fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
+              padding: "8px 20px",
+              border: "none",
+              borderRadius: 6,
+              background: "#4361ee",
+              color: "#fff",
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: "pointer",
+              fontFamily: "inherit",
             }}
           >
             Save
@@ -172,24 +232,62 @@ export default function PaymentOut() {
   const dateInputRef = useRef<HTMLInputElement>(null);
   const [openSettings, setOpenSettings] = useState(false);
 
-  /* ================= EDIT MODE ================= */
-  const [editingId, setEditingId] = useState<number | null>(null);
-  const editingIdRef = useRef<number | null>(null);
-
-  /* ================= PARTY DROPDOWN ================= */
+  /* ── PARTY DROPDOWN ── */
   const [showPartyDropdown, setShowPartyDropdown] = useState(false);
   const [partySearch, setPartySearch] = useState("");
   const partyDropdownRef = useRef<HTMLDivElement>(null);
   const partySearchRef = useRef<HTMLInputElement>(null);
+  const [parties, setParties] = useState<any[]>([]);
 
-  const parties = [
-    { id: 1, name: "Party A" },
-    { id: 2, name: "Party B" },
-    { id: 3, name: "Party C" },
-  ];
+  const [invoices, setInvoices] = useState<any[]>([]);
+  const [invoicesLoading, setInvoicesLoading] = useState(false);
+
+  /* ── FORM DATA ── */
+  const [formData, setFormData] = useState({
+    partyId: "",
+    partyName: "",
+    amountPaid: "",
+    discount: "",
+    paymentDate: new Date().toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    }),
+    paymentMode: "Cash",
+    prefix: "",
+    number: "",
+    notes: "",
+  });
+
+  /* ── LOAD PARTIES ── */
+  useEffect(() => {
+    getAllParties()
+      .then((res) => setParties(res.data))
+      .catch((err) => console.error("Failed to load parties", err));
+  }, []);
+
+  /* ── LOAD SETTINGS FROM BACKEND ── */
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const res = await getPaymentOutSettings();
+        const settings = res.data;
+
+        setFormData((prev) => ({
+          ...prev,
+          prefix: settings.prefix || "",
+          number: String(settings.sequenceNumber || 1),
+        }));
+      } catch (err) {
+        console.error("Failed to load settings", err);
+      }
+    };
+
+    loadSettings();
+  }, []);
 
   const filteredParties = parties.filter((p) =>
-    p.name.toLowerCase().includes(partySearch.toLowerCase())
+    p.name.toLowerCase().includes(partySearch.toLowerCase()),
   );
 
   useEffect(() => {
@@ -202,68 +300,16 @@ export default function PaymentOut() {
         setPartySearch("");
       }
     };
-    if (showPartyDropdown) {
+    if (showPartyDropdown)
       document.addEventListener("mousedown", handleClickOutside);
-    }
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showPartyDropdown]);
 
   useEffect(() => {
-    if (showPartyDropdown) {
-      setTimeout(() => partySearchRef.current?.focus(), 0);
-    }
+    if (showPartyDropdown) setTimeout(() => partySearchRef.current?.focus(), 0);
   }, [showPartyDropdown]);
 
-  /* ================= FORM DATA ================= */
-  const [formData, setFormData] = useState(() => {
-    const s = loadSettings();
-    return {
-      partyName: "",
-      amountPaid: "",
-      discount: "",
-      paymentDate: "08 Feb 2026",
-      paymentMode: "Cash",
-      prefix: s.prefix,
-      number: String(s.sequenceNumber),
-      notes: "",
-    };
-  });
-
-  /* ================= LOAD EDITING DATA ================= */
-  useEffect(() => {
-    const editing = localStorage.getItem("editingPayment");
-    if (editing) {
-      const payment = JSON.parse(editing);
-      setEditingId(payment.id);
-      editingIdRef.current = payment.id;
-
-      const lastSlash = payment.paymentNumber?.lastIndexOf("/");
-      const prefix =
-        lastSlash !== -1
-          ? payment.paymentNumber.substring(0, lastSlash + 1)
-          : loadSettings().prefix;
-      const number =
-        lastSlash !== -1
-          ? payment.paymentNumber.substring(lastSlash + 1)
-          : payment.paymentNumber;
-
-      setFormData((prev) => ({
-        ...prev,
-        partyName: payment.partyName || "",
-        amountPaid: payment.amountReceived || "",
-        discount: payment.discount || "",
-        paymentDate: payment.date || "08 Feb 2026",
-        paymentMode: payment.paymentMode || "Cash",
-        prefix,
-        number,
-        notes: payment.notes || "",
-      }));
-
-      localStorage.removeItem("editingPayment");
-    }
-  }, []);
-
-  /* ================= HANDLERS ================= */
+  /* ── HANDLERS ── */
   const openPartyDropdown = () => setShowPartyDropdown(true);
 
   const togglePartyDropdown = () => {
@@ -271,96 +317,94 @@ export default function PaymentOut() {
     if (showPartyDropdown) setPartySearch("");
   };
 
-  const selectParty = (partyName: string) => {
-    setFormData({ ...formData, partyName });
+  const selectParty = async (party: any) => {
+    setFormData((prev) => ({
+      ...prev,
+      partyId: String(party.id),
+      partyName: party.name,
+    }));
     setShowPartyDropdown(false);
     setPartySearch("");
+
+    try {
+      setInvoicesLoading(true);
+      const res = await api.get(`/purchase-invoices/party/${party.id}/pending`);
+
+      let invoiceData = [];
+
+      if (Array.isArray(res.data)) {
+        invoiceData = res.data;
+      } else if (Array.isArray(res.data.data)) {
+        invoiceData = res.data.data;
+      }
+
+      setInvoices(invoiceData);
+    } catch (err) {
+      console.error("Failed to load invoices", err);
+      setInvoices([]);
+    } finally {
+      setInvoicesLoading(false);
+    }
   };
 
   const clearParty = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setFormData({ ...formData, partyName: "" });
+    setFormData((prev) => ({ ...prev, partyId: "", partyName: "" }));
     setShowPartyDropdown(false);
     setPartySearch("");
+    setInvoices([]);
   };
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+    >,
   ) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  /* Settings modal closed — if saved, update prefix + number in form */
   const handleSettingsClose = (
     saved: boolean,
     prefix: string,
-    sequenceNumber: number
+    sequenceNumber: number,
   ) => {
     setOpenSettings(false);
-    if (saved && editingIdRef.current === null) {
+    if (saved)
       setFormData((prev) => ({
         ...prev,
         prefix,
         number: String(sequenceNumber),
       }));
-    }
   };
 
-  /* ================= SAVE ================= */
-  const handleSave = () => {
-    if (!formData.partyName || !formData.amountPaid) {
-      alert("Please fill required fields");
+  /* ── SAVE ── */
+  const handleSave = async () => {
+    if (!formData.partyId || !formData.amountPaid) {
+      alert("Please select a party and enter amount paid");
       return;
     }
 
-    const existing: any[] = JSON.parse(
-      localStorage.getItem("paymentOutList") || "[]"
-    );
-
-    const currentEditingId = editingIdRef.current;
-
-    if (currentEditingId !== null) {
-      const updated = existing.map((p) =>
-        p.id === currentEditingId
-          ? {
-              ...p,
-              date: formData.paymentDate,
-              paymentNumber: `${formData.prefix}${formData.number}`,
-              partyName: formData.partyName,
-              totalAmountSettled: formData.amountPaid,
-              amountReceived: formData.amountPaid,
-              paymentMode: formData.paymentMode,
-              notes: formData.notes,
-              discount: formData.discount,
-            }
-          : p
-      );
-      localStorage.setItem("paymentOutList", JSON.stringify(updated));
-    } else {
-      const newPayment = {
-        id: Date.now(),
-        date: formData.paymentDate,
-        paymentNumber: `${formData.prefix}${formData.number}`,
-        partyName: formData.partyName,
-        totalAmountSettled: formData.amountPaid,
-        amountReceived: formData.amountPaid,
+    try {
+      const payload = {
+        partyId: Number(formData.partyId),
+        date: new Date(formData.paymentDate),
+        amountPaid: Number(formData.amountPaid),
+        discount: Number(formData.discount || 0),
         paymentMode: formData.paymentMode,
-        notes: formData.notes,
-        discount: formData.discount,
+        notes: formData.notes || null,
       };
-      localStorage.setItem(
-        "paymentOutList",
-        JSON.stringify([...existing, newPayment])
-      );
-      // Auto-increment sequence number after each new save
-      persistSettings(formData.prefix, (parseInt(formData.number) || 1) + 1);
-    }
 
-    navigate("/cashier/payment-out-list");
+      await createPaymentOut(payload);
+      navigate("/cashier/payment-out-list");
+    } catch (err: any) {
+      console.error(err);
+      const msg = err?.response?.data?.message || "Failed to create payment";
+      alert(msg);
+    }
   };
 
-  /* ================= UI ================= */
+  /* ── UI ── */
   return (
     <>
       <div className="navbar-wrapper">
@@ -368,23 +412,17 @@ export default function PaymentOut() {
           <ArrowLeft size={20} />
         </button>
         <Navbar
-          title={editingId ? "Edit Payment Out" : "Payment Out"}
+          title="Payment Out"
           showSettings
           onSettingsClick={() => setOpenSettings(true)}
-          cancelAction={{
-            label: "Cancel",
-            onClick: () => navigate(-1),
-          }}
-          primaryAction={{
-            label: editingId ? "Save Changes" : "Save",
-            onClick: handleSave,
-          }}
+          cancelAction={{ label: "Cancel", onClick: () => navigate(-1) }}
+          primaryAction={{ label: "Save", onClick: handleSave }}
         />
       </div>
 
       <div className="paymentout-page">
         <div className="paymentout-top">
-          {/* ================= LEFT CARD ================= */}
+          {/* ── LEFT CARD ── */}
           <div className="card">
             <div className="field">
               <label>Party Name</label>
@@ -432,14 +470,10 @@ export default function PaymentOut() {
                       filteredParties.map((party) => (
                         <div
                           key={party.id}
-                          className={`dropdown-item${
-                            formData.partyName === party.name
-                              ? " dropdown-item--selected"
-                              : ""
-                          }`}
+                          className={`dropdown-item${formData.partyName === party.name ? " dropdown-item--selected" : ""}`}
                           onMouseDown={(e) => {
                             e.preventDefault();
-                            selectParty(party.name);
+                            selectParty(party);
                           }}
                         >
                           {party.name}
@@ -459,13 +493,14 @@ export default function PaymentOut() {
                 <input
                   type="text"
                   inputMode="numeric"
-                  pattern="[0-9]*"
                   name="amountPaid"
                   value={formData.amountPaid}
-                  onChange={(e) => {
-                    const val = e.target.value.replace(/[^0-9.]/g, "");
-                    setFormData({ ...formData, amountPaid: val });
-                  }}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      amountPaid: e.target.value.replace(/[^0-9.]/g, ""),
+                    }))
+                  }
                   placeholder="0"
                 />
               </div>
@@ -475,20 +510,21 @@ export default function PaymentOut() {
                 <input
                   type="text"
                   inputMode="numeric"
-                  pattern="[0-9]*"
                   name="discount"
                   value={formData.discount}
-                  onChange={(e) => {
-                    const val = e.target.value.replace(/[^0-9.]/g, "");
-                    setFormData({ ...formData, discount: val });
-                  }}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      discount: e.target.value.replace(/[^0-9.]/g, ""),
+                    }))
+                  }
                   placeholder="0"
                 />
               </div>
             </div>
           </div>
 
-          {/* ================= RIGHT CARD ================= */}
+          {/* ── RIGHT CARD ── */}
           <div className="card">
             <div className="row">
               <div className="field">
@@ -509,14 +545,17 @@ export default function PaymentOut() {
                     ref={dateInputRef}
                     style={{ position: "absolute", opacity: 0 }}
                     onChange={(e) => {
-                      const formattedDate = new Date(
-                        e.target.value
+                      const formatted = new Date(
+                        e.target.value,
                       ).toLocaleDateString("en-GB", {
                         day: "2-digit",
                         month: "short",
                         year: "numeric",
                       });
-                      setFormData({ ...formData, paymentDate: formattedDate });
+                      setFormData((prev) => ({
+                        ...prev,
+                        paymentDate: formatted,
+                      }));
                     }}
                   />
                 </div>
@@ -529,9 +568,11 @@ export default function PaymentOut() {
                   value={formData.paymentMode}
                   onChange={handleChange}
                 >
-                  <option>Cash</option>
-                  <option>Bank</option>
-                  <option>UPI</option>
+                  <option value="Cash">Cash</option>
+                  <option value="UPI">UPI</option>
+                  <option value="Card">Card</option>
+                  <option value="Bank">Bank</option>
+                  <option value="EMI">EMI</option>
                 </select>
               </div>
             </div>
@@ -545,16 +586,37 @@ export default function PaymentOut() {
                   onChange={handleChange}
                 />
               </div>
-
               <div className="field">
                 <label>Payment Out Number</label>
+                {/* Read-only — sequence is managed by the backend */}
                 <input
                   name="number"
                   value={formData.number}
-                  onChange={handleChange}
+                  readOnly
+                  style={{ background: "#f9fafb", cursor: "not-allowed", color: "#667085" }}
                 />
               </div>
             </div>
+
+            {/* Voucher preview */}
+            {formData.prefix && formData.number && (
+              <div
+                style={{
+                  marginTop: 4,
+                  padding: "8px 12px",
+                  background: "#f0f4ff",
+                  borderRadius: 6,
+                  border: "1px solid #c7d2fe",
+                  fontSize: 13,
+                }}
+              >
+                <span style={{ color: "#667085" }}>Voucher Preview: </span>
+                <span style={{ fontWeight: 700, color: "#4361ee" }}>
+                  {formData.prefix}
+                  {formData.number}
+                </span>
+              </div>
+            )}
 
             <div className="field">
               <label>Notes</label>
@@ -568,16 +630,71 @@ export default function PaymentOut() {
           </div>
         </div>
 
-        {/* ================= EMPTY STATE ================= */}
-        <div className="paymentout-empty">
-          <img src={emptyImg} alt="No transactions" />
-          <h3>No Transactions yet!</h3>
-          <p>Select Party Name to view transactions</p>
-          <button onClick={openPartyDropdown}>Select Party</button>
-        </div>
+        {/* INVOICE TABLE / EMPTY STATE */}
+        {!formData.partyId ? (
+          <div className="paymentout-empty">
+            <img src={emptyImg} alt="No transactions" />
+            <h3>No Transactions yet!</h3>
+            <p>Select Party Name to view transactions</p>
+            <button onClick={openPartyDropdown}>Select Party</button>
+          </div>
+        ) : invoicesLoading ? (
+          <div className="paymentout-empty">
+            <p style={{ color: "#667085" }}>Loading invoices...</p>
+          </div>
+        ) : invoices.length === 0 ? (
+          <div className="paymentout-empty">
+            <h3>No Pending Invoices</h3>
+            <p>This party has no outstanding purchase invoices</p>
+          </div>
+        ) : (
+          <div className="paymentout-invoice-table-wrapper">
+            <table className="paymentout-invoice-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Invoice Number</th>
+                  <th>Invoice Amount</th>
+                  <th>Balance Due</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {invoices.map((inv: any) => (
+                  <tr key={inv.id}>
+                    <td>
+                      {new Date(inv.date).toLocaleDateString("en-GB", {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </td>
+                    <td>{inv.invoiceNumber}</td>
+                    <td>₹ {Number(inv.totalAmount).toLocaleString("en-IN")}</td>
+                    <td>
+                      ₹ {Number(inv.balanceAmount ?? 0).toLocaleString("en-IN")}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div
+              style={{
+                marginTop: "12px",
+                textAlign: "right",
+                fontWeight: 600,
+                fontSize: "14px",
+              }}
+            >
+              Outstanding Balance: ₹{" "}
+              {invoices
+                .reduce((sum, inv) => sum + Number(inv.balanceAmount || 0), 0)
+                .toLocaleString("en-IN")}
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Inline settings modal — no external dependency */}
       {openSettings && (
         <PaymentOutSettingsModal onClose={handleSettingsClose} />
       )}

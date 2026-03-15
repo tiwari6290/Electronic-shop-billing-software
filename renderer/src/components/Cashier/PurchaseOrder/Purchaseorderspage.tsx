@@ -1,5 +1,8 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import "./Purchaseorderspage.css";
+import api from "@/lib/axios";
+import { getAllParties } from "@/services/partyService";
+
 
 /* ══════════════════════════════════════════ ICONS ══ */
 const IC = {
@@ -56,33 +59,8 @@ const fmtMoney = (n:number) => n===0?"₹0":`₹${Math.abs(n).toLocaleString("en
 const fmtAmt   = (n:number) => `₹ ${n.toLocaleString("en-IN")}`;
 const todayStr = () => { const d=new Date(); return `${d.getDate().toString().padStart(2,"0")} ${["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][d.getMonth()]} ${d.getFullYear()}`; };
 
-const PARTIES:Party[] = [
-  {id:1,name:"Aditya",phone:"",pan:"",balance:0},
-  {id:2,name:"anando",phone:"0987643211",pan:"ljjjmkpmp",balance:-65744},
-  {id:3,name:"Cash Sale",phone:"9555780835",pan:"",balance:0},
-  {id:4,name:"cgfwh",phone:"",pan:"",balance:0},
-  {id:5,name:"MONDIAL ELECTRONIC",phone:"",pan:"",balance:0},
-  {id:6,name:"akash pandey",phone:"9876543210",pan:"",balance:0},
-];
 
-const CATALOG:CatalogItem[] = [
-  {id:1,name:"BILLING SOFTWARE MOBILE APP",code:"",stock:"",salesPrice:256,purchasePrice:0},
-  {id:2,name:"BILLING SOFTWARE WITH GST",code:"",stock:"",salesPrice:169875,purchasePrice:0},
-  {id:3,name:"BILLING SOFTWARE WITHOUT GST",code:"",stock:"",salesPrice:3556,purchasePrice:0},
-  {id:4,name:"GODREJ FRIDGE",code:"34567",stock:"144 ACS",salesPrice:42000,purchasePrice:0},
-  {id:5,name:"HEKER AC",code:"1234",stock:"93 PCS",salesPrice:45000,purchasePrice:38000},
-  {id:6,name:"HISENSE 32 INCH",code:"",stock:"38 PCS",salesPrice:21000,purchasePrice:18000},
-  {id:7,name:"HISENSE 43INCG TV",code:"00974",stock:"119 PCS",salesPrice:30000,purchasePrice:0},
-];
 
-const SEED_ORDERS:PurchaseOrder[] = [
-  {id:1,date:"2026-03-02",poNumber:2,partyName:"anando",partyId:2,partyPhone:"0987643211",
-   validTill:"-",amount:190000,status:"Open",items:[],charges:[],
-   discountEnabled:false,discountType:"%",discountVal:0,roundOff:false,roundOffDir:"+Add",roundOffVal:0},
-  {id:2,date:"2026-02-27",poNumber:1,partyName:"Cash Sale",partyId:3,partyPhone:"9555780835",
-   validTill:"-",amount:0,status:"Open",items:[],charges:[],
-   discountEnabled:false,discountType:"%",discountVal:0,roundOff:false,roundOffDir:"+Add",roundOffVal:0},
-];
 
 /* ══════════════════════════════════════════ CALENDAR ══ */
 function CalendarPicker({onApply,onCancel}:{onApply:(f:Date,t:Date)=>void;onCancel:()=>void}) {
@@ -222,7 +200,6 @@ interface CreatePOProps {
   seqNo: number;
   onBack: ()=>void;
   onSaved: (po:PurchaseOrder, isEdit:boolean)=>void;
-  // FIX 3: Save & New callback — parent saves bill and bumps sequence, child resets
   onSaveAndNew: (po:PurchaseOrder)=>void;
   allParties: Party[];
   setAllParties: React.Dispatch<React.SetStateAction<Party[]>>;
@@ -239,7 +216,6 @@ function CreatePurchaseOrderPage({mode,editData,seqNo,onBack,onSaved,onSaveAndNe
   const [partySearch,setPartySearch]=useState("");
   const [selectedParty,setSelectedParty]=useState<Party|null>(initParty);
   const [items,setItems]=useState<POItem[]>(editData?[...editData.items]:[]);
-  // FIX 2: poNo is derived from seqNo prop (which reflects settings.sequenceNumber)
   const [charges,setCharges]=useState<POCharge[]>(editData?[...editData.charges]:[]);
   const [showDiscount,setShowDiscount]=useState(editData?editData.discountEnabled:false);
   const [discountType,setDiscountType]=useState<"%"|"₹">(editData?editData.discountType:"%");
@@ -271,7 +247,6 @@ function CreatePurchaseOrderPage({mode,editData,seqNo,onBack,onSaved,onSaveAndNe
   const [shipPin,setShipPin]=useState("");
   const [shipSaved,setShipSaved]=useState(false);
 
-  /* FIX 1: refs for fixed-position party dropdown */
   const partyRef        = useRef<HTMLDivElement>(null);
   const partyBoxRef     = useRef<HTMLDivElement>(null);
   const [ddPos, setDdPos] = useState<{top:number;left:number;width:number}>({top:0,left:0,width:320});
@@ -315,16 +290,18 @@ function CreatePurchaseOrderPage({mode,editData,seqNo,onBack,onSaved,onSaveAndNe
 
   const showT=(m:string)=>{setToast(m);setTimeout(()=>setToast(null),2400);};
 
-  /* Calculations */
+  /* ── FIX 3: Tax now calculated on (qty*price - discount) per item ── */
   const subtotal      = items.reduce((s,i)=>s+(i.qty*i.price-i.discount),0);
-  const totalTax      = items.reduce((s,i)=>s+(i.qty*i.price*i.tax/100),0);
+  const totalTax      = items.reduce((s,i)=>{
+    const taxable = (i.qty * i.price) - i.discount;
+    return s + (taxable * i.tax / 100);
+  },0);
   const chargesTotal  = charges.reduce((s,c)=>s+c.amount,0);
   const taxableAmount = subtotal+chargesTotal;
   const discountAmt   = showDiscount?(discountType==="%"?taxableAmount*discountVal/100:discountVal):0;
   const roundOffAmt   = roundOff?(roundOffDir==="+Add"?roundOffVal:-roundOffVal):0;
   const totalAmt      = taxableAmount-discountAmt+totalTax+roundOffAmt;
 
-  /* FIX 2: poNo always reflects the current seqNo from settings */
   const poNo = isEdit ? String(editData!.poNumber) : String(seqNo);
   const poDate = isEdit ? fmtDate(new Date(editData!.date)) : todayStr();
 
@@ -334,7 +311,35 @@ function CreatePurchaseOrderPage({mode,editData,seqNo,onBack,onSaved,onSaveAndNe
     setShipAddr("");setShipCity("");setShipState("");setShipPin("");
   };
   const filtParties=allParties.filter(p=>p.name.toLowerCase().includes(partySearch.toLowerCase()));
-  const filtCatalog=CATALOG.filter(c=>c.name.toLowerCase().includes(itemSearch.toLowerCase())||c.code.toLowerCase().includes(itemSearch.toLowerCase()));
+
+  /* ── Live catalog from backend ── */
+  const [catalog,setCatalog]=useState<CatalogItem[]>([]);
+  useEffect(()=>{
+    api.get("/items")
+      .then((res:any)=>{
+        const list:any[] = res.data?.data ?? res.data;
+        setCatalog(
+          list.map((i:any)=>({
+            id: i.id,
+            name: i.name,
+            code: i.itemCode ?? "",
+            /* ── FIX 2: Read stock from ProductStock relation if present ── */
+            stock: i.ProductStock?.length
+              ? `${i.ProductStock.reduce((s:any,x:any)=>s+(Number(x.openingStock)||0),0)} ${i.unit ?? ""}`.trim()
+              : i.currentStock != null
+                ? `${i.currentStock} ${i.unit ?? ""}`.trim()
+                : "",
+            salesPrice:    Number(i.salesPrice    ?? 0),
+            purchasePrice: Number(i.purchasePrice ?? 0),
+          }))
+        );
+      })
+      .catch((err)=>{
+        console.error("Failed to fetch items:", err);
+      });
+  },[]);
+
+  const filtCatalog=catalog.filter(c=>c.name.toLowerCase().includes(itemSearch.toLowerCase())||c.code.toLowerCase().includes(itemSearch.toLowerCase()));
 
   const saveParty=()=>{
     if(!cpName.trim()){setCpErr(true);return;}
@@ -356,8 +361,19 @@ function CreatePurchaseOrderPage({mode,editData,seqNo,onBack,onSaved,onSaveAndNe
   const setPendingQty=(id:number,v:number)=>setPendingQtys(p=>({...p,[id]:Math.max(1,v)}));
   const addToBill=()=>{
     const newItems:POItem[]=addedIds.map(id=>{
-      const ex=items.find(i=>i.id===id);const cat=CATALOG.find(c=>c.id===id)!;
-      return ex?{...ex,qty:pendingQtys[id]??ex.qty}:{id:cat.id,name:cat.name,hsn:"",qty:pendingQtys[id]??1,price:cat.purchasePrice||cat.salesPrice,discount:0,tax:0};
+      const ex=items.find(i=>i.id===id);const cat=catalog.find(c=>c.id===id)!;
+      return ex
+        ? {...ex,qty:pendingQtys[id]??ex.qty}
+        : {
+            id: cat.id,
+            name: cat.name,
+            hsn: "",
+            qty: pendingQtys[id] ?? 1,
+            /* ── FIX 4: Prefer purchasePrice > 0, fall back to salesPrice ── */
+            price: cat.purchasePrice > 0 ? cat.purchasePrice : cat.salesPrice,
+            discount: 0,
+            tax: 0,
+          };
     });
     setItems(newItems);setShowAddItems(false);setItemSearch("");
   };
@@ -388,11 +404,10 @@ function CreatePurchaseOrderPage({mode,editData,seqNo,onBack,onSaved,onSaveAndNe
     onSaved(buildPO(), isEdit);
   };
 
-  /* FIX 3: Save & New — save current bill then reset all form state */
   const handleSaveAndNew=()=>{
     if(!selectedParty){showT("Please select a party first");return;}
     onSaveAndNew(buildPO());
-    // Reset form state
+    /* Reset form state */
     setPartyState("empty");
     setPartySearch("");
     setSelectedParty(null);
@@ -445,7 +460,7 @@ function CreatePurchaseOrderPage({mode,editData,seqNo,onBack,onSaved,onSaveAndNe
 
   return (
     <div className="cpi-page">
-      {/* ── Topbar — matches reference UI exactly ── */}
+      {/* ── Topbar ── */}
       <div style={{
         display: "flex",
         alignItems: "center",
@@ -459,7 +474,6 @@ function CreatePurchaseOrderPage({mode,editData,seqNo,onBack,onSaved,onSaveAndNe
         zIndex: 100,
         flexShrink: 0,
       }}>
-        {/* Left: back arrow + title */}
         <div style={{ display:"flex", alignItems:"center", gap:12 }}>
           <button
             onClick={onBack}
@@ -490,7 +504,6 @@ function CreatePurchaseOrderPage({mode,editData,seqNo,onBack,onSaved,onSaveAndNe
           </h2>
         </div>
 
-        {/* Right: grid + settings + save & new + save */}
         <div style={{ display:"flex", alignItems:"center", gap:8, flexShrink:0 }}>
           <button className="po-grid-btn"><IC.Grid/></button>
           <button className="btn-topbar-settings" onClick={onOpenSettings}>
@@ -560,7 +573,7 @@ function CreatePurchaseOrderPage({mode,editData,seqNo,onBack,onSaved,onSaveAndNe
             )}
           </div>
 
-          {/* RIGHT: PO fields — FIX 2: poNo now shows seqNo from settings */}
+          {/* RIGHT: PO fields */}
           <div className="cpi-invoice-fields">
             <div className="inv-fields-top-row">
               <div className="inv-field-group" style={{flex:"0 0 80px"}}>
@@ -627,7 +640,8 @@ function CreatePurchaseOrderPage({mode,editData,seqNo,onBack,onSaved,onSaveAndNe
                   <td>
                     <div style={{display:"flex",flexDirection:"column",gap:3}}>
                       <div style={{fontSize:11,color:"#667085"}}>{item.tax}%</div>
-                      <div style={{fontSize:11,color:"#667085"}}>(₹ {(item.qty*item.price*item.tax/100).toLocaleString("en-IN")})</div>
+                      {/* FIX 3: Tax display also uses discount-adjusted taxable amount */}
+                      <div style={{fontSize:11,color:"#667085"}}>(₹ {(((item.qty*item.price)-item.discount)*item.tax/100).toLocaleString("en-IN")})</div>
                     </div>
                   </td>
                   <td>
@@ -1023,28 +1037,52 @@ export default function PurchaseOrdersModule() {
   const [page,setPage]=useState<POPage>("list");
   const [prevPage,setPrevPage]=useState<"create"|"edit">("create");
   const [editTarget,setEditTarget]=useState<PurchaseOrder|null>(null);
-  const [orders,setOrders]=useState<PurchaseOrder[]>(SEED_ORDERS);
-  const [allParties,setAllParties]=useState<Party[]>(PARTIES);
-  const [settings,setSettings]=useState<POSettings>({prefixEnabled:true,prefix:"",sequenceNumber:4,showItemImage:true,priceHistory:true});
+  const [orders,setOrders]=useState<PurchaseOrder[]>([]);
+  const [allParties,setAllParties]=useState<Party[]>([]);
+  const [settings,setSettings]=useState<POSettings>({prefixEnabled:true,prefix:"",sequenceNumber:1,showItemImage:true,priceHistory:true});
   const [showSettings,setShowSettings]=useState(false);
 
-  const handleSaved=(po:PurchaseOrder,isEdit:boolean)=>{
-    if(isEdit) setOrders(p=>p.map(o=>o.id===po.id?po:o));
-    else {
-      setOrders(p=>[po,...p]);
-      // FIX 2: increment sequence after each save
-      setSettings(s=>({...s,sequenceNumber:s.sequenceNumber+1}));
+  /* ── Load parties from backend on mount ── */
+  useEffect(()=>{
+    getAllParties().then((res:any)=>{
+      const list:any[]=res.data??res;
+      setAllParties(list.map((p:any)=>({
+        id:      p.id,
+        name:    p.partyName??p.name??"",
+        phone:   p.mobileNumber??p.phone??"",
+        pan:     p.gstin??p.pan??"",
+        balance: Number(p.balance??0),
+      })));
+    }).catch((err:any)=>console.error("Failed to load parties:",err));
+  },[]);
+
+  /* ── FIX 1: handleSaved now persists to backend and re-fetches ── */
+  const handleSaved = async (po: PurchaseOrder, isEdit: boolean) => {
+    try {
+      if (isEdit) {
+        await api.put(`/purchase-orders/${po.id}`, po);
+      } else {
+        await api.post("/purchase-orders", po);
+      }
+
+      /* Re-fetch the full list so UI always matches DB */
+      const res = await api.get("/purchase-orders");
+      setOrders(res.data?.data ?? res.data);
+
+      if (!isEdit) {
+        setSettings(s => ({ ...s, sequenceNumber: s.sequenceNumber + 1 }));
+      }
+
+      setEditTarget(null);
+      setPage("list");
+    } catch (err) {
+      console.error("PO save failed", err);
     }
-    setEditTarget(null);
-    setPage("list");
   };
 
-  // FIX 3: Save & New — add to list, bump seq, stay on create page (child resets itself)
   const handleSaveAndNew=(po:PurchaseOrder)=>{
     setOrders(p=>[po,...p]);
     setSettings(s=>({...s,sequenceNumber:s.sequenceNumber+1}));
-    // page stays "create", but we need child to remount with new seqNo
-    // We force remount by toggling page briefly, or we use a key counter
     setSaveAndNewKey(k=>k+1);
   };
   const [saveAndNewKey,setSaveAndNewKey]=useState(0);

@@ -603,7 +603,7 @@ const ItemDetailPage = ({ item, onBack, onDelete, onAdjust, onEdit, loading }: {
                   <tbody>
                     {item.stockDetails.map((s,i)=>(
                       <tr key={i}>
-                        <td>{s.date}</td>
+                        <td>{new Date(s.date).toLocaleDateString("en-GB")}</td>
                         <td><span className={`tx-badge tx-${s.transactionType.toLowerCase().includes("sales")?"sales":s.transactionType.toLowerCase().includes("purchase")?"purchase":s.transactionType.toLowerCase().includes("opening")?"opening":"adjust"}`}>{s.transactionType}</span></td>
                         <td className={s.quantity.startsWith("-")?"qty-neg":"qty-pos"}>{s.quantity}</td>
                         <td>{s.invoiceNumber||"-"}</td>
@@ -1024,37 +1024,78 @@ export default function ItemsPage() {
 
   // ─── Fetch Single Item Detail ─────────────────────────────────────────────
   const fetchItemById = async (id: string): Promise<void> => {
-    setDetailLoading(true);
-    try {
-      const res = await api.get(`/items/${id}`);
-      const d = res.data.data;
-      const fullItem: Item = {
-        id:              String(d.id),
-        itemName:        d.itemName,
-        itemCode:        d.itemCode,
-        stockQty:        d.stockQty,
-        stockNumber:     d.stockNumber,
-        sellingPrice:    d.sellingPrice,
-        purchasePrice:   d.purchasePrice,
-        category:        d.category,
-        gstTaxRate:      d.gstTaxRate,
-        hsnCode:         d.hsnCode,
-        secondaryUnit:   d.secondaryUnit,
-        lowStockQty:     d.lowStockQty,
-        lowStockWarning: d.lowStockWarning,
-        itemDescription: d.itemDescription,
-        stockDetails:    d.stockDetails    ?? [],
-        partyWiseReport: d.partyWiseReport ?? [],
-        godownStock:     d.godownStock     ?? [],
-        partyWisePrices: d.partyWisePrices ?? [],
-      };
-      setItems(prev => prev.map(it => it.id === id ? fullItem : it));
-    } catch (err) {
-      console.error("fetchItemById error:", err);
-    } finally {
-      setDetailLoading(false);
-    }
+  setDetailLoading(true);
+
+  try {
+
+   const [itemRes, ledgerRes, purchaseRes] = await Promise.all([
+  api.get(`/items/${id}`),
+  api.get(`/stock-ledger/product/${id}`),
+  api.get(`/purchase-invoices`)
+]);
+const purchaseMap: Record<number, string> = {};
+
+(purchaseRes.data.data || purchaseRes.data).forEach((p: any) => {
+  purchaseMap[p.id] = p.purchaseInvNo;
+});
+
+    const d = itemRes.data.data;
+    const ledger = (ledgerRes.data.data || []).map((l: any) => {
+
+  let invoiceNo = "-";
+
+  if (l.transactionType === "Purchase Invoice") {
+    invoiceNo = purchaseMap[l.invoiceNumber] || l.invoiceNumber;
+  }
+
+  if (l.transactionType === "Sales Invoice") {
+    invoiceNo = l.invoiceNumber;
+  }
+
+  // Stock adjustment should not have invoice number
+  if (l.transactionType === "Stock Adjustment") {
+    invoiceNo = "-";
+  }
+
+  return {
+    ...l,
+    invoiceNumber: invoiceNo
   };
+});
+
+    const fullItem: Item = {
+      id: String(d.id),
+      itemName: d.itemName,
+      itemCode: d.itemCode,
+      stockQty: d.stockQty,
+      stockNumber: d.stockNumber,
+      sellingPrice: d.sellingPrice,
+      purchasePrice: d.purchasePrice,
+      category: d.category,
+      gstTaxRate: d.gstTaxRate,
+      hsnCode: d.hsnCode,
+      secondaryUnit: d.secondaryUnit,
+      lowStockQty: d.lowStockQty,
+      lowStockWarning: d.lowStockWarning,
+      itemDescription: d.itemDescription,
+
+      stockDetails: ledger,
+
+      partyWiseReport: d.partyWiseReport ?? [],
+      godownStock: d.godownStock ?? [],
+      partyWisePrices: d.partyWisePrices ?? [],
+    };
+
+    setItems(prev =>
+      prev.map(it => (it.id === id ? fullItem : it))
+    );
+
+  } catch (err) {
+    console.error("fetchItemById error:", err);
+  } finally {
+    setDetailLoading(false);
+  }
+};
 
   useEffect(() => { fetchItems(setItems); }, []);
 

@@ -1,15 +1,30 @@
 import "./PaymentOutList.css";
-import { Search, Calendar, Settings2, ChevronDown, MoreVertical, Pencil, Trash2, ArrowLeft, Download, Printer, Info, Share2 } from "lucide-react";
+import { Search, Calendar, Settings2, ChevronDown, MoreVertical, Trash2, ArrowLeft, Download, Printer, Info, Share2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState, useRef, useEffect } from "react";
+import { getAllPaymentOut, getPaymentOutById, deletePaymentOut } from "@/services/paymentOutService";
 
 /* ══════════════════════════════════════════
    PAYMENT OUT VIEW (detail page)
+   Uses PaymentOut schema:
+     paymentNumber  String
+     date           DateTime
+     amountPaid     Decimal
+     discount       Decimal?
+     paymentMode    PaymentMode
+     notes          String?
+     party          Party { name }
+     invoices       PaymentOutInvoice[] {
+       invoiceAmount  Decimal
+       discount       Decimal?
+       amountPaid     Decimal
+       balanceAmount  Decimal
+       purchaseInvoice PurchaseInvoice { purchaseInvNo, invoiceDate, totalAmount }
+     }
 ══════════════════════════════════════════ */
-function PaymentOutView({ payment, onBack, onEdit, onDelete }: {
+function PaymentOutView({ payment, onBack, onDelete }: {
   payment: any;
   onBack: () => void;
-  onEdit: (payment: any) => void;
   onDelete: (id: number) => void;
 }) {
   const [showShareDD, setShowShareDD] = useState(false);
@@ -17,47 +32,35 @@ function PaymentOutView({ payment, onBack, onEdit, onDelete }: {
 
   useEffect(() => {
     const h = (e: MouseEvent) => {
-      if (shareRef.current && !shareRef.current.contains(e.target as Node))
-        setShowShareDD(false);
+      if (shareRef.current && !shareRef.current.contains(e.target as Node)) setShowShareDD(false);
     };
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
   }, []);
 
-  const settledInvoices: any[] = payment.settledInvoices || [];
+  const formatDate = (dateStr: string) =>
+    new Date(dateStr).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+
+  // PaymentOut.invoices → PaymentOutInvoice[]
+  const settledInvoices: any[] = payment.invoices || [];
 
   return (
     <div className="pov-page">
       {/* ── TOP BAR ── */}
       <div className="pov-topbar">
         <div className="pov-topbar-left">
-          <button className="pov-back-btn" onClick={onBack}>
-            <ArrowLeft size={18} />
-          </button>
-          <h2 className="pov-title">
-            Payment Out #{payment.paymentNumber || payment.id}
-          </h2>
+          <button className="pov-back-btn" onClick={onBack}><ArrowLeft size={18} /></button>
+          <h2 className="pov-title">Payment Out #{payment.paymentNumber || payment.id}</h2>
         </div>
 
         <div className="pov-topbar-right">
-          <button className="pov-action-btn">
-            <Download size={15} /> Download PDF
-          </button>
-          <button className="pov-action-btn">
-            <Printer size={15} /> Print PDF
-          </button>
-          <button className="pov-action-btn pov-info-btn">
-            <Info size={15} />
-          </button>
+          <button className="pov-action-btn"><Download size={15} /> Download PDF</button>
+          <button className="pov-action-btn"><Printer size={15} /> Print PDF</button>
+          <button className="pov-action-btn pov-info-btn"><Info size={15} /></button>
 
           <div className="pov-split-btn" ref={shareRef}>
-            <button className="pov-action-btn pov-share-main">
-              <Share2 size={15} /> Share
-            </button>
-            <button
-              className="pov-action-btn pov-split-arr"
-              onClick={() => setShowShareDD((v) => !v)}
-            >
+            <button className="pov-action-btn pov-share-main"><Share2 size={15} /> Share</button>
+            <button className="pov-action-btn pov-split-arr" onClick={() => setShowShareDD((v) => !v)}>
               <ChevronDown size={14} />
             </button>
             {showShareDD && (
@@ -69,9 +72,6 @@ function PaymentOutView({ payment, onBack, onEdit, onDelete }: {
             )}
           </div>
 
-          <button className="pov-edit-btn" onClick={() => onEdit(payment)}>
-            <Pencil size={14} /> Edit
-          </button>
           <button className="pov-delete-btn" onClick={() => onDelete(payment.id)}>
             <Trash2 size={14} />
           </button>
@@ -84,31 +84,33 @@ function PaymentOutView({ payment, onBack, onEdit, onDelete }: {
         <div className="pov-details-grid">
           <div className="pov-detail-col">
             <div className="pov-detail-label">Party Name</div>
-            <div className="pov-detail-value">{payment.partyName || "—"}</div>
+            {/* PaymentOut.party.name — nested relation */}
+            <div className="pov-detail-value">{payment.party?.name || "—"}</div>
           </div>
           <div className="pov-detail-col">
             <div className="pov-detail-label">Payment Date</div>
-            <div className="pov-detail-value">{payment.date || "—"}</div>
+            {/* PaymentOut.date DateTime */}
+            <div className="pov-detail-value">{payment.date ? formatDate(payment.date) : "—"}</div>
           </div>
           <div className="pov-detail-col">
             <div className="pov-detail-label">Amount Paid</div>
-            <div className="pov-detail-value">
-              ₹ {Number(payment.amountReceived || 0).toLocaleString("en-IN")}
-            </div>
+            {/* PaymentOut.amountPaid Decimal */}
+            <div className="pov-detail-value">₹ {Number(payment.amountPaid || 0).toLocaleString("en-IN")}</div>
           </div>
           <div className="pov-detail-col">
-            <div className="pov-detail-label">Payment Out Discount</div>
-            <div className="pov-detail-value">
-              ₹ {Number(payment.discount || 0).toLocaleString("en-IN")}
-            </div>
+            <div className="pov-detail-label">Discount</div>
+            {/* PaymentOut.discount Decimal? */}
+            <div className="pov-detail-value">₹ {Number(payment.discount || 0).toLocaleString("en-IN")}</div>
           </div>
           <div className="pov-detail-col">
             <div className="pov-detail-label">Payment Mode</div>
+            {/* PaymentOut.paymentMode PaymentMode enum */}
             <div className="pov-detail-value">{payment.paymentMode || "—"}</div>
           </div>
         </div>
         <div className="pov-notes-row">
           <div className="pov-detail-label">Notes</div>
+          {/* PaymentOut.notes String? */}
           {payment.notes
             ? <div className="pov-notes-val">{payment.notes}</div>
             : <div className="pov-notes-empty">--</div>
@@ -116,7 +118,15 @@ function PaymentOutView({ payment, onBack, onEdit, onDelete }: {
         </div>
       </div>
 
-      {/* ── SETTLED INVOICES CARD ── */}
+      {/* ── SETTLED INVOICES CARD ──
+          PaymentOutInvoice fields:
+            invoiceAmount  Decimal
+            discount       Decimal?
+            amountPaid     Decimal
+            balanceAmount  Decimal
+            purchaseInvoice.purchaseInvNo  String
+            purchaseInvoice.invoiceDate    DateTime
+      */}
       <div className="pov-card">
         <div className="pov-card-heading">Invoices settled with this payment</div>
         <table className="pov-invoices-table">
@@ -132,10 +142,10 @@ function PaymentOutView({ payment, onBack, onEdit, onDelete }: {
           </thead>
           <tbody>
             {settledInvoices.length > 0 ? (
-              settledInvoices.map((inv: any, i: number) => (
-                <tr key={i}>
-                  <td>{inv.date}</td>
-                  <td>{inv.invoiceNumber}</td>
+              settledInvoices.map((inv: any) => (
+                <tr key={inv.id}>
+                  <td>{inv.purchaseInvoice?.invoiceDate ? formatDate(inv.purchaseInvoice.invoiceDate) : "—"}</td>
+                  <td>{inv.purchaseInvoice?.purchaseInvNo || "—"}</td>
                   <td>₹ {Number(inv.invoiceAmount || 0).toLocaleString("en-IN")}</td>
                   <td>₹ {Number(inv.discount || 0).toLocaleString("en-IN")}</td>
                   <td>₹ {Number(inv.amountPaid || 0).toLocaleString("en-IN")}</td>
@@ -144,9 +154,7 @@ function PaymentOutView({ payment, onBack, onEdit, onDelete }: {
               ))
             ) : (
               <tr>
-                <td colSpan={6} className="pov-empty-row">
-                  No invoices have been settled with this payment
-                </td>
+                <td colSpan={6} className="pov-empty-row">No invoices settled with this payment</td>
               </tr>
             )}
           </tbody>
@@ -161,19 +169,27 @@ function PaymentOutView({ payment, onBack, onEdit, onDelete }: {
 ══════════════════════════════════════════ */
 export default function PaymentOutList() {
   const navigate = useNavigate();
-
-  // null = list view, object = detail view
   const [viewingPayment, setViewingPayment] = useState<any | null>(null);
 
-  /* ================= LOAD PAYMENTS ================= */
+  /* ── LOAD PAYMENTS ──
+   * GET /payment-out → PaymentOut[] with party relation
+   * Fields: id, paymentNumber, date, amountPaid, paymentMode, party.name
+   */
   const [payments, setPayments] = useState<any[]>([]);
 
   useEffect(() => {
-    const storedPayments = JSON.parse(localStorage.getItem("paymentOutList") || "[]");
-    setPayments(storedPayments);
+    const loadPayments = async () => {
+      try {
+        const res = await getAllPaymentOut();
+        setPayments(res.data);
+      } catch (err) {
+        console.error("Failed to load payments", err);
+      }
+    };
+    loadPayments();
   }, []);
 
-  /* ================= ACTION DROPDOWN ================= */
+  /* ── ACTION DROPDOWN ── */
   const [openActionId, setOpenActionId] = useState<number | null>(null);
   const actionRefs = useRef<{ [key: number]: HTMLDivElement | null }>({});
 
@@ -188,56 +204,94 @@ export default function PaymentOutList() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [openActionId]);
 
-  /* ================= DATE DROPDOWN ================= */
+  /* ── DATE FILTER ── */
   const [showDateDropdown, setShowDateDropdown] = useState(false);
-  const [selectedLabel, setSelectedLabel] = useState("Today");
-  const [selectedRange, setSelectedRange] = useState({ start: new Date(), end: new Date() });
+  const [selectedLabel, setSelectedLabel] = useState("This Month");
+  const [selectedRange, setSelectedRange] = useState(() => getRange("This Month"));
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  function getRange(label: string): { start: Date; end: Date } {
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
+    const end = new Date(now);
+    end.setHours(23, 59, 59, 999);
+
+    switch (label) {
+      case "Today": return { start: now, end };
+      case "Yesterday": {
+        const s = new Date(now); s.setDate(s.getDate() - 1);
+        const e = new Date(s); e.setHours(23, 59, 59, 999);
+        return { start: s, end: e };
+      }
+      case "This Week": {
+        const s = new Date(now); s.setDate(s.getDate() - s.getDay());
+        return { start: s, end };
+      }
+      case "Last Week": {
+        const s = new Date(now); s.setDate(s.getDate() - s.getDay() - 7);
+        const e = new Date(s); e.setDate(e.getDate() + 6); e.setHours(23, 59, 59, 999);
+        return { start: s, end: e };
+      }
+      case "Last 7 Days": {
+        const s = new Date(now); s.setDate(s.getDate() - 6);
+        return { start: s, end };
+      }
+      case "This Month": {
+        const s = new Date(now.getFullYear(), now.getMonth(), 1);
+        return { start: s, end };
+      }
+      case "Previous Month": {
+        const s = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        const e = new Date(now.getFullYear(), now.getMonth(), 0); e.setHours(23, 59, 59, 999);
+        return { start: s, end: e };
+      }
+      case "Last 30 Days": {
+        const s = new Date(now); s.setDate(s.getDate() - 29);
+        return { start: s, end };
+      }
+      case "This Quarter": {
+        const q = Math.floor(now.getMonth() / 3);
+        const s = new Date(now.getFullYear(), q * 3, 1);
+        return { start: s, end };
+      }
+      case "Previous Quarter": {
+        const q = Math.floor(now.getMonth() / 3);
+        const s = new Date(now.getFullYear(), (q - 1) * 3, 1);
+        const e = new Date(now.getFullYear(), q * 3, 0); e.setHours(23, 59, 59, 999);
+        return { start: s, end: e };
+      }
+      case "Current Fiscal Year": {
+        const fy = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1;
+        return { start: new Date(fy, 3, 1), end };
+      }
+      case "Previous Fiscal Year": {
+        const fy = now.getMonth() >= 3 ? now.getFullYear() - 1 : now.getFullYear() - 2;
+        const e = new Date(fy + 1, 2, 31); e.setHours(23, 59, 59, 999);
+        return { start: new Date(fy, 3, 1), end: e };
+      }
+      case "Last 365 Days": {
+        const s = new Date(now); s.setDate(s.getDate() - 364);
+        return { start: s, end };
+      }
+      default: return { start: new Date(0), end };
+    }
+  }
 
   const formatDisplay = (date: Date) =>
     date.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 
-  const getRange = (label: string): { start: Date; end: Date } => {
-    const start = new Date(today);
-    const end = new Date(today);
-    switch (label) {
-      case "Today": break;
-      case "Yesterday":
-        start.setDate(today.getDate() - 1); end.setDate(today.getDate() - 1); break;
-      case "This Week": { const day = today.getDay(); start.setDate(today.getDate() - day); break; }
-      case "Last Week": { const day = today.getDay(); start.setDate(today.getDate() - day - 7); end.setDate(today.getDate() - day - 1); break; }
-      case "Last 7 Days": start.setDate(today.getDate() - 6); break;
-      case "This Month": start.setDate(1); break;
-      case "Previous Month": start.setMonth(today.getMonth() - 1); start.setDate(1); end.setMonth(today.getMonth()); end.setDate(0); break;
-      case "Last 30 Days": start.setDate(today.getDate() - 29); break;
-      case "This Quarter": { const q = Math.floor(today.getMonth() / 3); start.setMonth(q * 3); start.setDate(1); end.setMonth(q * 3 + 3); end.setDate(0); break; }
-      case "Previous Quarter": { const q = Math.floor(today.getMonth() / 3) - 1; const aq = q < 0 ? 3 : q; const yo = q < 0 ? -1 : 0; start.setFullYear(today.getFullYear() + yo); start.setMonth(aq * 3); start.setDate(1); end.setFullYear(today.getFullYear() + yo); end.setMonth(aq * 3 + 3); end.setDate(0); break; }
-      case "Current Fiscal Year": { const fs = today.getMonth() >= 3 ? today.getFullYear() : today.getFullYear() - 1; start.setFullYear(fs); start.setMonth(3); start.setDate(1); end.setFullYear(fs + 1); end.setMonth(2); end.setDate(31); break; }
-      case "Previous Fiscal Year": { const fs = (today.getMonth() >= 3 ? today.getFullYear() : today.getFullYear() - 1) - 1; start.setFullYear(fs); start.setMonth(3); start.setDate(1); end.setFullYear(fs + 1); end.setMonth(2); end.setDate(31); break; }
-      case "Last 365 Days": start.setDate(today.getDate() - 364); break;
-      default: break;
-    }
-    start.setHours(0, 0, 0, 0); end.setHours(23, 59, 59, 999);
-    return { start, end };
-  };
-
   const getRangeDisplay = (label: string) => {
-    const { start, end } = getRange(label);
-    return `${formatDisplay(start)} to ${formatDisplay(end)}`;
+    const r = getRange(label);
+    return `${formatDisplay(r.start)} – ${formatDisplay(r.end)}`;
   };
-
-  useEffect(() => { setSelectedRange(getRange("Today")); }, []);
 
   const dateOptions = [
     "Today", "Yesterday", "This Week", "Last Week", "Last 7 Days",
     "This Month", "Previous Month", "Last 30 Days", "This Quarter",
     "Previous Quarter", "Current Fiscal Year", "Previous Fiscal Year",
-    "Last 365 Days", "Custom Date Range",
+    "Last 365 Days",
   ];
 
   useEffect(() => {
@@ -249,59 +303,66 @@ export default function PaymentOutList() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showDateDropdown]);
 
-  /* ================= PARSE DATE ================= */
-  const parsePaymentDate = (dateStr: string): Date => {
-    const parsed = new Date(dateStr);
-    if (!isNaN(parsed.getTime())) return parsed;
-    const parts = dateStr.split(" ");
-    if (parts.length === 3) {
-      const months: Record<string, number> = { Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11 };
-      return new Date(parseInt(parts[2]), months[parts[1]], parseInt(parts[0]));
-    }
-    return new Date();
-  };
+  /* ── FORMAT DATE ── */
+  const formatDate = (dateStr: string) =>
+    new Date(dateStr).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 
-  /* ================= FILTERED PAYMENTS ================= */
+  /* ── FILTER ──
+   * payment.date         → PaymentOut.date DateTime (ISO string from DB)
+   * payment.party.name   → PaymentOut.party.name (nested relation)
+   * payment.paymentNumber → PaymentOut.paymentNumber String
+   */
   const filteredPayments = payments.filter((payment) => {
-    const paymentDate = parsePaymentDate(payment.date);
+    const paymentDate = new Date(payment.date);
     paymentDate.setHours(12, 0, 0, 0);
     const inRange = paymentDate >= selectedRange.start && paymentDate <= selectedRange.end;
+    const partyName = payment.party?.name || "";
     const matchesSearch =
       !searchQuery ||
-      payment.partyName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      partyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       payment.paymentNumber?.toLowerCase().includes(searchQuery.toLowerCase());
     return inRange && matchesSearch;
   });
 
-  /* ================= DELETE ================= */
-  const handleDelete = (id: number) => {
-    const updated = payments.filter((p) => p.id !== id);
-    setPayments(updated);
-    localStorage.setItem("paymentOutList", JSON.stringify(updated));
-    setOpenActionId(null);
-    setViewingPayment(null);
+  /* ── DELETE ── */
+  const handleDelete = async (id: number) => {
+    try {
+      await deletePaymentOut(id);
+      setPayments((prev) => prev.filter((p) => p.id !== id));
+      setOpenActionId(null);
+      setViewingPayment(null);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
-  /* ================= EDIT ================= */
-  const handleEdit = (payment: any) => {
-    localStorage.setItem("editingPayment", JSON.stringify(payment));
-    navigate("/cashier/payment-out");
-    setOpenActionId(null);
+  /* ── VIEW DETAIL ──
+   * Fetches full PaymentOut with:
+   *   party relation
+   *   invoices → PaymentOutInvoice[] with purchaseInvoice relation
+   */
+  const handleViewPayment = async (payment: any) => {
+    try {
+      const res = await getPaymentOutById(payment.id);
+      setViewingPayment(res.data);
+    } catch (err) {
+      console.error("Failed to load payment details", err);
+      setViewingPayment(payment); // fallback to list data
+    }
   };
 
-  /* ================= DETAIL VIEW ================= */
+  /* ── DETAIL VIEW ── */
   if (viewingPayment) {
     return (
       <PaymentOutView
         payment={viewingPayment}
         onBack={() => setViewingPayment(null)}
-        onEdit={(p) => handleEdit(p)}
         onDelete={(id) => handleDelete(id)}
       />
     );
   }
 
-  /* ================= LIST VIEW ================= */
+  /* ── LIST VIEW ── */
   return (
     <div className="paymentoutlist-page">
       <div className="paymentoutlist-header">
@@ -348,7 +409,11 @@ export default function PaymentOutList() {
                     <div
                       key={option}
                       className={`date-dropdown-row ${selectedLabel === option ? "active-date" : ""}`}
-                      onClick={() => { setSelectedLabel(option); setSelectedRange(getRange(option)); setShowDateDropdown(false); }}
+                      onClick={() => {
+                        setSelectedLabel(option);
+                        setSelectedRange(getRange(option));
+                        setShowDateDropdown(false);
+                      }}
                     >
                       <span className="date-label">{option}</span>
                       <span className="date-range">{getRangeDisplay(option)}</span>
@@ -360,10 +425,7 @@ export default function PaymentOutList() {
           </div>
         </div>
 
-        <button
-          className="create-btn"
-          onClick={() => { localStorage.removeItem("editingPayment"); navigate("/cashier/payment-out"); }}
-        >
+        <button className="create-btn" onClick={() => navigate("/cashier/payment-out")}>
           Create Payment Out
         </button>
       </div>
@@ -375,8 +437,8 @@ export default function PaymentOutList() {
               <th>Date ⇅</th>
               <th>Payment Number</th>
               <th>Party Name</th>
-              <th>Total Amount Settled</th>
-              <th>Amount Received</th>
+              <th>Amount Paid</th>
+              <th>Discount</th>
               <th>Payment Mode</th>
               <th>Action</th>
             </tr>
@@ -384,16 +446,18 @@ export default function PaymentOutList() {
           <tbody>
             {filteredPayments.length > 0 ? (
               filteredPayments.map((payment) => (
-                <tr
-                  key={payment.id}
-                  className="pol-clickable-row"
-                  onClick={() => setViewingPayment(payment)}
-                >
-                  <td>{payment.date}</td>
+                <tr key={payment.id} className="pol-clickable-row" onClick={() => handleViewPayment(payment)}>
+                  {/* PaymentOut.date DateTime */}
+                  <td>{formatDate(payment.date)}</td>
+                  {/* PaymentOut.paymentNumber String */}
                   <td>{payment.paymentNumber}</td>
-                  <td>{payment.partyName}</td>
-                  <td>₹ {payment.totalAmountSettled}</td>
-                  <td>₹ {payment.amountReceived}</td>
+                  {/* PaymentOut.party.name — nested relation */}
+                  <td>{payment.partyName || "—"}</td>
+                  {/* PaymentOut.amountPaid Decimal */}
+                  <td>₹ {Number(payment.amountPaid || 0).toLocaleString("en-IN")}</td>
+                  {/* PaymentOut.discount Decimal? */}
+                  <td>₹ {Number(payment.discount || 0).toLocaleString("en-IN")}</td>
+                  {/* PaymentOut.paymentMode PaymentMode enum */}
                   <td>{payment.paymentMode}</td>
                   <td>
                     <div
@@ -409,10 +473,10 @@ export default function PaymentOutList() {
                       </button>
                       {openActionId === payment.id && (
                         <div className="action-dropdown">
-                          <button className="action-dropdown-item edit" onClick={(e) => { e.stopPropagation(); handleEdit(payment); }}>
-                            <Pencil size={14} /> Edit
-                          </button>
-                          <button className="action-dropdown-item delete" onClick={(e) => { e.stopPropagation(); handleDelete(payment.id); }}>
+                          <button
+                            className="action-dropdown-item delete"
+                            onClick={(e) => { e.stopPropagation(); handleDelete(payment.id); }}
+                          >
                             <Trash2 size={14} /> Delete
                           </button>
                         </div>

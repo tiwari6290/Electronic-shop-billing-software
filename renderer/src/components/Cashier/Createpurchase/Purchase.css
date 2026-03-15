@@ -102,6 +102,7 @@ td.td-amt{font-weight:600;color:#1d2939;}
 .s-badge{display:inline-block;padding:2px 9px;border-radius:12px;font-size:11px;font-weight:600;}
 .s-paid{background:#ecfdf3;color:#027a48;}
 .s-unpaid{background:#fef3f2;color:#b42318;}
+.s-partial{background:#fff4e5;color:#b54708;}
 .tdot-btn{background:none;border:none;cursor:pointer;color:#98a2b3;padding:4px 6px;border-radius:5px;display:flex;align-items:center;}
 .tdot-btn:hover{background:#f2f4f7;color:#344054;}
 .tdot-btn svg{width:16px;height:16px;}
