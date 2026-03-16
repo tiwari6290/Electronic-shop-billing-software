@@ -30,7 +30,6 @@ function loadTdsRates(): { label: string; rate: number }[] {
     return [...DEFAULT_TDS_RATES, ...custom];
   } catch { return DEFAULT_TDS_RATES; }
 }
-
 function persistCustomTdsRate(r: { label: string; rate: number }) {
   try {
     const custom = JSON.parse(localStorage.getItem("customTdsRates") || "[]");
@@ -43,7 +42,13 @@ interface SalesInvoice {
   id: string;
   invoiceNo: number;
   invoiceDate: string;
-  party: { name: string; mobile?: string; billingAddress?: string; gstin?: string } | null;
+  // The backend may return either `receivedAmount` (Prisma field) or
+  // `amountReceived` (legacy frontend field). We handle both.
+  amountReceived: number;
+  receivedAmount?: number;
+  outstandingAmount?: number;
+  totalAmount?: number;
+  party: { id?: number; name: string; mobile?: string; billingAddress?: string; gstin?: string } | null;
   shipTo?: { name: string; mobile?: string; billingAddress?: string } | null;
   billItems: { name?: string; description?: string; hsn?: string; qty: number; unit?: string; price: number; discountPct: number; discountAmt: number; taxRate: number; taxLabel?: string; amount: number }[];
   additionalCharges: { label?: string; amount: number }[];
@@ -54,7 +59,6 @@ interface SalesInvoice {
   tcsLabel?: string;
   tcsBase?: string;
   roundOffAmt: number;
-  amountReceived: number;
   notes?: string;
   termsConditions?: string;
   eWayBillNo?: string;
@@ -75,26 +79,24 @@ interface SavedTemplate {
   ts: { hsnSummary: boolean; showDesc: boolean; capitalize: boolean; cols: Record<string, boolean>; backgroundUrl: string; backgroundOpacity: number };
   inv: { companyName: string; slogan: string; address: string; gstin: string; phone: string; email: string; pan: string; bank: string; ifsc: string; terms: string };
 }
-
 interface Business {
   companyName: string; address: string; gstin: string;
   phone: string; email: string; pan: string; bank: string; ifsc: string;
 }
-
 interface Props {
   invoice: SalesInvoice;
   template: SavedTemplate | null;
   business: Business;
   onClose: () => void;
   onEdit: () => void;
-  onPrint: () => void;
-  onDownload: () => void;
   onPaymentSaved?: () => void;
   onDuplicate?: () => void;
   onDelete?: () => void;
   onCancel?: () => void;
   onCreditNote?: () => void;
   onProfitDetails?: () => void;
+  onPrint?: () => void;
+  onDownload?: () => void;
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -109,7 +111,7 @@ function fmtDateGB(iso: string) {
 function fmtC(n: number) {
   return "₹" + n.toLocaleString("en-IN", { maximumFractionDigits: 2 });
 }
-function calcTotal(inv: Pick<SalesInvoice,"billItems"|"additionalCharges"|"discountPct"|"discountAmt"|"applyTCS"|"tcsRate"|"tcsBase"|"roundOffAmt">): number {
+function calcTotal(inv: Pick<SalesInvoice, "billItems"|"additionalCharges"|"discountPct"|"discountAmt"|"applyTCS"|"tcsRate"|"tcsBase"|"roundOffAmt">): number {
   const items = inv.billItems.reduce((s, i) => s + i.amount, 0);
   const charges = inv.additionalCharges.reduce((s, c) => s + c.amount, 0);
   const taxable = items + charges;
@@ -119,6 +121,14 @@ function calcTotal(inv: Pick<SalesInvoice,"billItems"|"additionalCharges"|"disco
   const tcs = inv.applyTCS ? tcsBaseAmt * (inv.tcsRate / 100) : 0;
   return Math.round((after + tcs + inv.roundOffAmt) * 100) / 100;
 }
+
+// ── Read the "already received" amount from whichever field the backend set ──
+function getAlreadyReceived(inv: SalesInvoice): number {
+  // Backend (Prisma) uses `receivedAmount`; legacy frontend used `amountReceived`
+  if (inv.receivedAmount != null) return Number(inv.receivedAmount);
+  return Number(inv.amountReceived ?? 0);
+}
+
 function numToWords(n: number): string {
   const ones = ["","One","Two","Three","Four","Five","Six","Seven","Eight","Nine","Ten","Eleven","Twelve","Thirteen","Fourteen","Fifteen","Sixteen","Seventeen","Eighteen","Nineteen"];
   const tens = ["","","Twenty","Thirty","Forty","Fifty","Sixty","Seventy","Eighty","Ninety"];
@@ -145,7 +155,6 @@ function AddTdsRateModal({ onClose, onSaved }: { onClose: () => void; onSaved: (
   const [section, setSection] = useState("");
   const [rate, setRate] = useState(0);
   const canSave = taxName.trim().length > 0;
-
   function handleSave() {
     if (!canSave) return;
     const label = `${rate}% - ${section.trim() ? section.trim() + " " : ""}${taxName.trim()}`;
@@ -153,9 +162,7 @@ function AddTdsRateModal({ onClose, onSaved }: { onClose: () => void; onSaved: (
     persistCustomTdsRate(r);
     onSaved(r);
   }
-
   const inp: React.CSSProperties = { width: "100%", padding: "10px 12px", border: "1px solid #e5e7eb", borderRadius: 8, fontSize: 13, outline: "none", boxSizing: "border-box" };
-
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 4000, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={onClose}>
       <div style={{ background: "#fff", borderRadius: 14, width: 500, maxWidth: "95vw", boxShadow: "0 24px 60px rgba(0,0,0,.22)", fontFamily: "Segoe UI, sans-serif" }} onClick={e => e.stopPropagation()}>
@@ -164,18 +171,9 @@ function AddTdsRateModal({ onClose, onSaved }: { onClose: () => void; onSaved: (
           <button onClick={onClose} style={{ background: "none", border: "1px solid #e5e7eb", borderRadius: 8, width: 30, height: 30, cursor: "pointer", color: "#374151", fontSize: 16, display: "flex", alignItems: "center", justifyContent: "center" }}>✕</button>
         </div>
         <div style={{ padding: "22px 24px", display: "flex", flexDirection: "column", gap: 18 }}>
-          <div>
-            <label style={{ fontSize: 13, color: "#374151", fontWeight: 500, display: "block", marginBottom: 6 }}>Tax name</label>
-            <input value={taxName} onChange={e => setTaxName(e.target.value)} placeholder="Enter Tax Name" style={inp} />
-          </div>
-          <div>
-            <label style={{ fontSize: 13, color: "#374151", fontWeight: 500, display: "block", marginBottom: 6 }}>Enter Section Name</label>
-            <input value={section} onChange={e => setSection(e.target.value)} placeholder="Enter Section Name" style={inp} />
-          </div>
-          <div>
-            <label style={{ fontSize: 13, color: "#374151", fontWeight: 500, display: "block", marginBottom: 6 }}>Enter Rate (in %)</label>
-            <input type="number" value={rate} onChange={e => setRate(Number(e.target.value))} style={inp} />
-          </div>
+          <div><label style={{ fontSize: 13, color: "#374151", fontWeight: 500, display: "block", marginBottom: 6 }}>Tax name</label><input value={taxName} onChange={e => setTaxName(e.target.value)} placeholder="Enter Tax Name" style={inp} /></div>
+          <div><label style={{ fontSize: 13, color: "#374151", fontWeight: 500, display: "block", marginBottom: 6 }}>Enter Section Name</label><input value={section} onChange={e => setSection(e.target.value)} placeholder="Enter Section Name" style={inp} /></div>
+          <div><label style={{ fontSize: 13, color: "#374151", fontWeight: 500, display: "block", marginBottom: 6 }}>Enter Rate (in %)</label><input type="number" value={rate} onChange={e => setRate(Number(e.target.value))} style={inp} /></div>
         </div>
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, padding: "16px 24px", borderTop: "1px solid #f3f4f6" }}>
           <button onClick={onClose} style={{ padding: "9px 22px", border: "1px solid #e5e7eb", background: "#fff", borderRadius: 8, fontSize: 14, cursor: "pointer", color: "#374151", fontWeight: 500 }}>Close</button>
@@ -189,81 +187,111 @@ function AddTdsRateModal({ onClose, onSaved }: { onClose: () => void; onSaved: (
 // ─── Record Payment Modal ─────────────────────────────────────────────────────
 const PM_LIST = ["Cash", "UPI", "Card", "Netbanking", "Bank Transfer", "Cheque"] as const;
 
-function RecordPaymentModal({ invoice, onClose, onSaved }: { invoice: SalesInvoice; onClose: () => void; onSaved: (updated: SalesInvoice) => void }) {
-  const grandTotal = calcTotal(invoice);
-  const pending = Math.max(0, grandTotal - invoice.amountReceived);
+function RecordPaymentModal({
+  invoice,
+  onClose,
+  onSaved,
+}: {
+  invoice: SalesInvoice;
+  onClose: () => void;
+  onSaved: (updated: SalesInvoice) => void;
+}) {
+  const grandTotal      = calcTotal(invoice);
+  const alreadyReceived = getAlreadyReceived(invoice);
+  // Use outstandingAmount from backend if available, otherwise derive it
+  const pending = invoice.outstandingAmount != null
+    ? Number(invoice.outstandingAmount)
+    : Math.max(0, grandTotal - alreadyReceived);
 
-  const [amount, setAmount] = useState(String(Math.round(pending * 100) / 100));
-  const [discount, setDiscount] = useState("0");
-  const [applyTds, setApplyTds] = useState(false);
-  const [tdsRates, setTdsRates] = useState<{ label: string; rate: number }[]>(loadTdsRates);
-  const [selTds, setSelTds] = useState<{ label: string; rate: number } | null>(null);
-  const [showTdsDrop, setShowTdsDrop] = useState(false);
-  const [showAddTds, setShowAddTds] = useState(false);
-  const [payDate, setPayDate] = useState(new Date().toISOString().split("T")[0]);
-  const [payMode, setPayMode] = useState<typeof PM_LIST[number]>("Cash");
+  const [amount,       setAmount]       = useState(String(Math.round(pending * 100) / 100));
+  const [discount,     setDiscount]     = useState("0");
+  const [applyTds,     setApplyTds]     = useState(false);
+  const [tdsRates,     setTdsRates]     = useState<{ label: string; rate: number }[]>(loadTdsRates);
+  const [selTds,       setSelTds]       = useState<{ label: string; rate: number } | null>(null);
+  const [showTdsDrop,  setShowTdsDrop]  = useState(false);
+  const [showAddTds,   setShowAddTds]   = useState(false);
+  const [payDate,      setPayDate]      = useState(new Date().toISOString().split("T")[0]);
+  const [payMode,      setPayMode]      = useState<typeof PM_LIST[number]>("Cash");
   const [showModeDrop, setShowModeDrop] = useState(false);
-  const [notes, setNotes] = useState("");
+  const [notes,        setNotes]        = useState("");
+  const [saving,       setSaving]       = useState(false);
+  const [saveError,    setSaveError]    = useState("");
 
-  const tdsRef = useRef<HTMLDivElement>(null);
+  const tdsRef  = useRef<HTMLDivElement>(null);
   const modeRef = useRef<HTMLDivElement>(null);
   const dateRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     function h(e: MouseEvent) {
-      if (tdsRef.current && !tdsRef.current.contains(e.target as Node)) setShowTdsDrop(false);
+      if (tdsRef.current  && !tdsRef.current.contains(e.target as Node))  setShowTdsDrop(false);
       if (modeRef.current && !modeRef.current.contains(e.target as Node)) setShowModeDrop(false);
     }
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
   }, []);
 
-  const amt = parseFloat(amount) || 0;
-  const disc = parseFloat(discount) || 0;
+  const amt    = parseFloat(amount)   || 0;
+  const disc   = parseFloat(discount) || 0;
   const tdsAmt = applyTds && selTds ? pending * selTds.rate / 100 : 0;
   const balance = Math.max(0, pending - amt - disc - tdsAmt);
 
-  function handleSave() {
-    const invoices: SalesInvoice[] = JSON.parse(localStorage.getItem("salesInvoices") || "[]");
-    const idx = invoices.findIndex(i => i.id === invoice.id);
-    if (idx < 0) { onClose(); return; }
-    const total = calcTotal(invoices[idx]);
-    const newAmt = Math.min(invoice.amountReceived + amt, total);
-    invoices[idx].amountReceived = newAmt;
-    invoices[idx].status = newAmt >= total ? "Paid" : newAmt > 0 ? "Partially Paid" : "Unpaid";
-    localStorage.setItem("salesInvoices", JSON.stringify(invoices));
+  async function handleSave() {
+    if (amt <= 0) { setSaveError("Please enter a valid amount."); return; }
 
-    // Save to payment-in list
-    const settings = JSON.parse(localStorage.getItem("paymentInSettings") || "{}");
-    const piList = JSON.parse(localStorage.getItem("paymentInList") || "[]");
-    const nextSeq = settings.seqNo || piList.length + 1;
-    const prefix = settings.prefix || "";
-    piList.push({
-      id: `pi-${Date.now()}`,
-      date: payDate,
-      paymentNumber: prefix + String(nextSeq),
-      partyName: invoice.party?.name || "",
-      totalAmountSettled: amt,
-      amountReceived: amt,
-      discount: disc,
-      paymentMode: payMode,
-      notes,
-      settledInvoices: [{
-        invoiceId: invoice.id,
-        invoiceNo: invoice.invoiceNo,
-        invoiceDate: invoice.invoiceDate,
-        dueDate: invoice.dueDate || "",
-        totalAmount: grandTotal,
-        tds: tdsAmt,
-        discount: disc,
-        amountReceived: amt,
-        balanceAmount: balance,
-      }],
-    });
-    localStorage.setItem("paymentInList", JSON.stringify(piList));
-    localStorage.setItem("paymentInSettings", JSON.stringify({ ...settings, seqNo: nextSeq + 1 }));
-    onSaved(invoices[idx]);
-    onClose();
+    const invoiceNumericId = Number(invoice.id);
+    if (isNaN(invoiceNumericId) || invoiceNumericId <= 0) {
+      setSaveError("Invalid invoice ID — cannot record payment.");
+      return;
+    }
+
+    // partyId — handle both mapper shapes
+    const partyId: number | undefined =
+      invoice.party?.id ??
+      (invoice as any).partyId ??
+      undefined;
+
+    if (!partyId) { setSaveError("Invoice has no party — cannot record payment."); return; }
+
+    setSaving(true);
+    setSaveError("");
+    try {
+      // POST /api/payments-in — creates PaymentIn record (shows on Payment In page)
+      // and allocates it to this invoice (updates outstanding + status)
+      const res = await fetch("/api/payments-in", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          partyId,
+          date:        payDate,
+          mode:        payMode,
+          amount:      amt,
+          notes:       notes || undefined,
+          allocations: [{
+            invoiceId: invoiceNumericId,
+            amount:    amt,
+          }],
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.message ?? `Server error ${res.status}`);
+
+      // Optimistically update the invoice shown in the view modal
+      const totalSettled   = amt + disc + tdsAmt;
+      const newReceived    = Math.min(alreadyReceived + amt, grandTotal);
+      const newOutstanding = Math.max(0, pending - totalSettled);
+      const updated: SalesInvoice = {
+        ...invoice,
+        amountReceived:    newReceived,
+        receivedAmount:    newReceived,
+        outstandingAmount: newOutstanding,
+        status: newOutstanding <= 0 ? "Paid" : newReceived > 0 ? "Partially Paid" : "Unpaid",
+      };
+      onSaved(updated);
+    } catch (e: any) {
+      setSaveError(e.message ?? "Something went wrong. Please try again.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   const dropItem = (label: string, active: boolean): React.CSSProperties => ({
@@ -271,8 +299,17 @@ function RecordPaymentModal({ invoice, onClose, onSaved }: { invoice: SalesInvoi
     cursor: "pointer", background: active ? "#ede9fe" : "transparent",
     fontWeight: active ? 600 : 400, borderBottom: "1px solid #f9fafb",
   });
-  const inp: React.CSSProperties = { width: "100%", padding: "10px 12px", border: "1px solid #e5e7eb", borderRadius: 8, fontSize: 14, outline: "none", boxSizing: "border-box", background: "#fff", fontFamily: "inherit" };
-  const dropBox: React.CSSProperties = { position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0, zIndex: 200, background: "#fff", border: "1px solid #e5e7eb", borderRadius: 10, boxShadow: "0 10px 28px rgba(0,0,0,.13)", maxHeight: 250, overflowY: "auto" };
+  const inp: React.CSSProperties = {
+    width: "100%", padding: "10px 12px", border: "1px solid #e5e7eb",
+    borderRadius: 8, fontSize: 14, outline: "none", boxSizing: "border-box",
+    background: "#fff", fontFamily: "inherit",
+  };
+  const dropBox: React.CSSProperties = {
+    position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0,
+    zIndex: 200, background: "#fff", border: "1px solid #e5e7eb",
+    borderRadius: 10, boxShadow: "0 10px 28px rgba(0,0,0,.13)",
+    maxHeight: 250, overflowY: "auto",
+  };
 
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)", zIndex: 3000, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={onClose}>
@@ -289,8 +326,6 @@ function RecordPaymentModal({ invoice, onClose, onSaved }: { invoice: SalesInvoi
 
           {/* LEFT */}
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-
-            {/* Amount + Discount + TDS */}
             <div style={{ background: "#f9fafb", borderRadius: 12, padding: "18px 18px 16px", border: "1px solid #e5e7eb" }}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 14 }}>
                 <div>
@@ -307,16 +342,14 @@ function RecordPaymentModal({ invoice, onClose, onSaved }: { invoice: SalesInvoi
 
               {/* Apply TDS */}
               <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13.5, color: "#374151", cursor: "pointer", userSelect: "none", marginBottom: applyTds ? 12 : 0 }}>
-                <input type="checkbox" checked={applyTds} onChange={e => { setApplyTds(e.target.checked); if (!e.target.checked) setSelTds(null); }}
-                  style={{ width: 16, height: 16, accentColor: "#4f46e5", cursor: "pointer" }} />
+                <input type="checkbox" checked={applyTds} onChange={e => { setApplyTds(e.target.checked); if (!e.target.checked) setSelTds(null); }} style={{ width: 16, height: 16, accentColor: "#4f46e5", cursor: "pointer" }} />
                 Apply TDS
               </label>
 
               {/* TDS Dropdown */}
               {applyTds && (
                 <div ref={tdsRef} style={{ position: "relative" }}>
-                  <div onClick={() => setShowTdsDrop(v => !v)}
-                    style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 12px", border: "1px solid #e5e7eb", borderRadius: 8, background: "#fff", cursor: "pointer", fontSize: 13, color: selTds ? "#111827" : "#9ca3af", userSelect: "none" }}>
+                  <div onClick={() => setShowTdsDrop(v => !v)} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 12px", border: "1px solid #e5e7eb", borderRadius: 8, background: "#fff", cursor: "pointer", fontSize: 13, color: selTds ? "#111827" : "#9ca3af", userSelect: "none" }}>
                     <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", paddingRight: 8 }}>{selTds ? selTds.label : "Select Tds Rate"}</span>
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 14, height: 14, flexShrink: 0, transform: showTdsDrop ? "rotate(180deg)" : "" }}><polyline points="6 9 12 15 18 9" /></svg>
                   </div>
@@ -350,13 +383,10 @@ function RecordPaymentModal({ invoice, onClose, onSaved }: { invoice: SalesInvoi
                 <label style={{ fontSize: 12, color: "#6b7280", fontWeight: 500, display: "block", marginBottom: 5 }}>Payment Date</label>
                 <div onClick={() => dateRef.current?.showPicker?.()}
                   style={{ display: "flex", alignItems: "center", gap: 8, padding: "0 12px", border: "1px solid #e5e7eb", borderRadius: 8, height: 40, cursor: "pointer", background: "#fff", position: "relative" }}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 15, height: 15, color: "#6b7280", flexShrink: 0 }}>
-                    <rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
-                  </svg>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 15, height: 15, color: "#6b7280", flexShrink: 0 }}><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
                   <span style={{ flex: 1, fontSize: 13, color: "#111827" }}>{fmtDateGB(payDate)}</span>
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 13, height: 13, color: "#9ca3af" }}><polyline points="6 9 12 15 18 9" /></svg>
-                  <input ref={dateRef} type="date" value={payDate} onChange={e => setPayDate(e.target.value)}
-                    style={{ position: "absolute", opacity: 0, width: 0, height: 0, pointerEvents: "none" }} />
+                  <input ref={dateRef} type="date" value={payDate} onChange={e => setPayDate(e.target.value)} style={{ position: "absolute", opacity: 0, width: 0, height: 0, pointerEvents: "none" }} />
                 </div>
               </div>
               <div ref={modeRef} style={{ position: "relative" }}>
@@ -415,7 +445,7 @@ function RecordPaymentModal({ invoice, onClose, onSaved }: { invoice: SalesInvoi
                   <span>Payment In Discount</span><span>{fmtC(disc)}</span>
                 </div>
                 {applyTds && tdsAmt > 0 && (
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "#374151", padding: "10px 12px", borderBottom: "none" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, color: "#374151", padding: "10px 12px" }}>
                     <span>TDS Deducted</span><span>- {fmtC(tdsAmt)}</span>
                   </div>
                 )}
@@ -429,9 +459,19 @@ function RecordPaymentModal({ invoice, onClose, onSaved }: { invoice: SalesInvoi
         </div>
 
         {/* Footer */}
-        <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, padding: "16px 26px", borderTop: "1px solid #f3f4f6", flexShrink: 0 }}>
-          <button onClick={onClose} style={{ padding: "9px 26px", border: "1px solid #e5e7eb", background: "#fff", borderRadius: 8, fontSize: 14, cursor: "pointer", color: "#374151", fontWeight: 500 }}>Close</button>
-          <button onClick={handleSave} style={{ padding: "9px 28px", background: "#4f46e5", color: "#fff", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: "pointer" }}>Save</button>
+        <div style={{ borderTop: "1px solid #f3f4f6", flexShrink: 0 }}>
+          {saveError && (
+            <div style={{ margin: "10px 26px 0", padding: "9px 14px", background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 8, color: "#dc2626", fontSize: 13 }}>
+              {saveError}
+            </div>
+          )}
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, padding: "16px 26px" }}>
+            <button onClick={onClose} disabled={saving} style={{ padding: "9px 26px", border: "1px solid #e5e7eb", background: "#fff", borderRadius: 8, fontSize: 14, cursor: "pointer", color: "#374151", fontWeight: 500 }}>Close</button>
+            <button onClick={handleSave} disabled={saving || amt <= 0}
+              style={{ padding: "9px 28px", background: saving || amt <= 0 ? "#a5b4fc" : "#4f46e5", color: "#fff", border: "none", borderRadius: 8, fontSize: 14, fontWeight: 700, cursor: saving || amt <= 0 ? "not-allowed" : "pointer" }}>
+              {saving ? "Saving…" : "Save"}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -446,7 +486,10 @@ function RecordPaymentModal({ invoice, onClose, onSaved }: { invoice: SalesInvoi
 }
 
 // ─── Main InvoiceViewModal ────────────────────────────────────────────────────
-export default function InvoiceViewModal({ invoice: initialInvoice, template, business, onClose, onEdit, onPrint, onDownload, onPaymentSaved, onDuplicate, onDelete, onCancel, onCreditNote, onProfitDetails }: Props) {
+export default function InvoiceViewModal({
+  invoice: initialInvoice, template, business, onClose, onEdit,
+  onPaymentSaved, onDuplicate, onDelete, onCancel, onCreditNote, onProfitDetails,
+}: Props) {
   const printRef = useRef<HTMLDivElement>(null);
   const [invoice, setInvoice] = useState<SalesInvoice>(initialInvoice);
   const [showRecordPayment, setShowRecordPayment] = useState(false);
@@ -454,74 +497,130 @@ export default function InvoiceViewModal({ invoice: initialInvoice, template, bu
   const [showProfitModal, setShowProfitModal] = useState(false);
   const dotsRef = useRef<HTMLDivElement>(null);
 
-  const tc = template?.style.themeColor ?? "#4f46e5";
-  const font = template?.style.font ?? "Inter";
-  const fontSize = template?.style.textSize ?? "13px";
-  const borderColor = template?.style.borderColor ?? "#e5e7eb";
-  const borderWidth = template?.style.borderWidth ?? "1";
-  const bw = `${borderWidth}px solid ${borderColor}`;
-  const bgUrl = template?.ts.backgroundUrl ?? "";
-  const bgOpacity = template?.ts.backgroundOpacity ?? 15;
-  const showLogo = template?.style.showLogo && template?.style.logoUrl;
-  const logoUrl = template?.style.logoUrl ?? "";
-  const companyName = template?.inv.companyName || business.companyName;
-  const address = template?.inv.address || business.address;
-  const gstin = template?.inv.gstin || business.gstin;
-  const phone = template?.inv.phone || business.phone;
-  const email = template?.inv.email || business.email;
-  const pan = template?.inv.pan || business.pan;
-  const bankInfo = template?.inv.bank || business.bank;
-  const ifsc = template?.inv.ifsc || business.ifsc;
-  const defaultTerms = template?.inv.terms || "Goods once sold will not be taken back.";
-  const vis = template?.vis ?? { companyName: true, address: true, gstin: true, phone: true, email: true, slogan: false, pan: false };
+  const tc          = template?.style.themeColor  ?? "#4f46e5";
+  const font        = template?.style.font         ?? "Inter";
+  const fontSize    = template?.style.textSize     ?? "13px";
+  const borderColor = template?.style.borderColor  ?? "#e5e7eb";
+  const borderWidth = template?.style.borderWidth  ?? "1";
+  const bw          = `${borderWidth}px solid ${borderColor}`;
+  const bgUrl       = template?.ts.backgroundUrl   ?? "";
+  const bgOpacity   = template?.ts.backgroundOpacity ?? 15;
+  const showLogo    = template?.style.showLogo && template?.style.logoUrl;
+  const logoUrl     = template?.style.logoUrl      ?? "";
+  const companyName = template?.inv.companyName    || business.companyName;
+  const address     = template?.inv.address        || business.address;
+  const gstin       = template?.inv.gstin          || business.gstin;
+  const phone       = template?.inv.phone          || business.phone;
+  const email       = template?.inv.email          || business.email;
+  const pan         = template?.inv.pan            || business.pan;
+  const bankInfo    = template?.inv.bank           || business.bank;
+  const ifsc        = template?.inv.ifsc           || business.ifsc;
+  const defaultTerms = template?.inv.terms         || "Goods once sold will not be taken back.";
+  const vis  = template?.vis  ?? { companyName: true, address: true, gstin: true, phone: true, email: true, slogan: false, pan: false };
   const misc = template?.misc ?? { showNotes: true, amountWords: true, showTerms: true, receiverSig: false, signatureUrl: "" };
-  const ts = template?.ts ?? { hsnSummary: false, showDesc: true, capitalize: false, cols: {}, backgroundUrl: "", backgroundOpacity: 15 };
+  const ts   = template?.ts   ?? { hsnSummary: false, showDesc: true, capitalize: false, cols: {}, backgroundUrl: "", backgroundOpacity: 15 };
 
   const showSerial = ts.cols["Serial Number"] !== false;
-  const showHSN = ts.cols["HSN"] !== false;
-  const showQty = ts.cols["Quantity"] !== false;
-  const showRate = ts.cols["Rate/Item"] !== false;
-  const showAmt = ts.cols["Amount"] !== false;
+  const showHSN    = ts.cols["HSN"] !== false;
+  const showQty    = ts.cols["Quantity"] !== false;
+  const showRate   = ts.cols["Rate/Item"] !== false;
+  const showAmt    = ts.cols["Amount"] !== false;
 
-  const subtotal = invoice.billItems.reduce((s, i) => s + i.qty * i.price, 0);
-  const totalTax = invoice.billItems.reduce((s, i) => {
+  // Use the normalised helper so both `receivedAmount` and `amountReceived` work
+  const alreadyReceived = getAlreadyReceived(invoice);
+
+  const subtotal    = invoice.billItems.reduce((s, i) => s + i.qty * i.price, 0);
+  const totalTax    = invoice.billItems.reduce((s, i) => {
     const base = i.qty * i.price - (i.qty * i.price * i.discountPct / 100) - i.discountAmt;
     return s + base * i.taxRate / 100;
   }, 0);
   const chargesTotal = invoice.additionalCharges.reduce((s, c) => s + c.amount, 0);
-  const taxable = subtotal + chargesTotal;
-  const discVal = taxable * invoice.discountPct / 100 || invoice.discountAmt;
-  const afterDisc = taxable - discVal;
-  const tcsValue = invoice.applyTCS ? afterDisc * invoice.tcsRate / 100 : 0;
-  const grandTotal = afterDisc + tcsValue + invoice.roundOffAmt;
-  const balance = grandTotal - invoice.amountReceived;
+  const taxable     = subtotal + chargesTotal;
+  const discVal     = taxable * invoice.discountPct / 100 || invoice.discountAmt;
+  const afterDisc   = taxable - discVal;
+  const tcsValue    = invoice.applyTCS ? afterDisc * invoice.tcsRate / 100 : 0;
+  const grandTotal  = afterDisc + tcsValue + invoice.roundOffAmt;
+  const balance     = grandTotal - alreadyReceived;
 
   const hsnGroups: Record<string, { taxable: number; cgst: number; sgst: number }> = {};
   invoice.billItems.forEach(item => {
-    const hsn = item.hsn || "–";
+    const hsn  = item.hsn || "–";
     const base = item.qty * item.price - (item.qty * item.price * item.discountPct / 100) - item.discountAmt;
-    const tax = base * item.taxRate / 100;
+    const tax  = base * item.taxRate / 100;
     if (!hsnGroups[hsn]) hsnGroups[hsn] = { taxable: 0, cgst: 0, sgst: 0 };
     hsnGroups[hsn].taxable += base;
-    hsnGroups[hsn].cgst += tax / 2;
-    hsnGroups[hsn].sgst += tax / 2;
+    hsnGroups[hsn].cgst    += tax / 2;
+    hsnGroups[hsn].sgst    += tax / 2;
   });
+
+  function buildInvoiceHtml(content: string) {
+    return `<!DOCTYPE html><html><head><meta charset="utf-8"/>
+    <title>Invoice #${invoice.invoiceNo}</title>
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=${font.replace(/ /g,"+")}:wght@400;500;600;700&display=swap');
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+      body { font-family: '${font}', 'Segoe UI', Arial, sans-serif; font-size: ${fontSize}; color: #1a1a1a; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .inv-print { padding: 32px; max-width: 900px; margin: 0 auto; }
+      table { width: 100%; border-collapse: collapse; }
+      th, td { padding: 7px 10px; font-size: ${fontSize}; }
+      .ivm-inv-header { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 12px; }
+      .ivm-inv-company { font-size: 20px; font-weight: 700; margin-bottom: 4px; }
+      .ivm-inv-meta { font-size: 12px; color: #6b7280; margin-bottom: 2px; }
+      .ivm-inv-meta-box { text-align: right; min-width: 180px; }
+      .ivm-inv-meta-row { display: flex; justify-content: space-between; gap: 16px; font-size: 12px; color: #6b7280; margin-bottom: 4px; }
+      .ivm-inv-logo { height: 56px; width: auto; object-fit: contain; }
+      .ivm-party-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0; }
+      .ivm-party-box { padding: 10px 12px; border-radius: 6px; }
+      .ivm-party-label { font-size: 10px; font-weight: 700; letter-spacing: 0.8px; margin-bottom: 4px; text-transform: uppercase; }
+      .ivm-party-name { font-weight: 700; font-size: 14px; margin-bottom: 2px; }
+      .ivm-party-detail { font-size: 12px; color: #6b7280; }
+      .ivm-items-table { margin: 12px 0; }
+      .ivm-items-table thead tr th { font-size: 11px; font-weight: 600; text-align: left; padding: 8px 10px; }
+      .ivm-items-table tbody tr td { padding: 8px 10px; vertical-align: top; }
+      .ivm-items-table .center { text-align: center; } .ivm-items-table .right { text-align: right; }
+      .ivm-totals-row { display: flex; gap: 16px; margin-top: 8px; align-items: flex-start; }
+      .ivm-bank-box { padding: 10px 12px; border-radius: 6px; font-size: 12px; flex: 1; }
+      .ivm-totals-table { min-width: 280px; }
+      .ivm-totals-table td { padding: 6px 10px; font-size: 13px; } .ivm-totals-table .right { text-align: right; }
+      .ivm-hsn-summary { margin-top: 12px; }
+      .ivm-words-row { font-size: 12px; margin: 8px 0; padding: 8px 12px; background: #f9fafb; border-radius: 6px; }
+      .ivm-terms-box { font-size: 12px; margin: 8px 0; padding: 8px 12px; background: #f9fafb; border-radius: 6px; }
+      .ivm-notes-box { font-size: 12px; margin: 8px 0; }
+      .ivm-signature-row { display: flex; justify-content: space-between; margin-top: 24px; padding-top: 8px; }
+      .ivm-sig-box { text-align: center; min-width: 160px; }
+      .ivm-sig-line { border-top: 1px solid #d1d5db; margin-bottom: 4px; }
+      .ivm-sig-label { font-size: 11px; color: #6b7280; }
+      .ivm-computer-gen { text-align: center; font-size: 10px; color: #9ca3af; margin-top: 16px; }
+      @media print { body { margin: 0; } .inv-print { padding: 16px; } }
+    </style></head>
+    <body><div class="inv-print">${content}</div></body></html>`;
+  }
 
   function handlePrint() {
     const content = printRef.current?.innerHTML ?? "";
     const w = window.open("", "_blank");
-    if (!w) return;
-    w.document.write(`<!DOCTYPE html><html><head><title>Invoice #${invoice.invoiceNo}</title>
-      <style>
-        @import url('https://fonts.googleapis.com/css2?family=${font.replace(/ /g,"+")}:wght@400;500;600;700&display=swap');
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: '${font}', sans-serif; font-size: ${fontSize}; color: #1a1a1a; }
-        .inv-print { padding: 32px; } table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 7px 10px; font-size: ${fontSize}; }
-        @media print { body { margin: 0; } }
-      </style></head><body><div class="inv-print">${content}</div></body></html>`);
-    w.document.close(); w.focus();
-    setTimeout(() => { w.print(); w.close(); }, 500);
+    if (!w) { alert("Please allow popups to print."); return; }
+    w.document.write(buildInvoiceHtml(content));
+    w.document.close();
+    w.focus();
+    setTimeout(() => { w.print(); }, 800);
+  }
+
+  function handleDownload() {
+    const content = printRef.current?.innerHTML ?? "";
+    const html = buildInvoiceHtml(content);
+    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+    const url  = URL.createObjectURL(blob);
+    const w = window.open(url, "_blank");
+    if (!w) {
+      const a = document.createElement("a");
+      a.href = url; a.download = `Invoice-${invoice.invoiceNo}.html`; a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+      return;
+    }
+    w.addEventListener("load", () => {
+      setTimeout(() => { w.print(); setTimeout(() => URL.revokeObjectURL(url), 60000); }, 800);
+    });
   }
 
   useEffect(() => {
@@ -530,7 +629,10 @@ export default function InvoiceViewModal({ invoice: initialInvoice, template, bu
     return () => document.removeEventListener("keydown", h);
   }, [showRecordPayment]);
 
-  const statusColor = invoice.status === "Paid" ? "#16a34a" : invoice.status === "Unpaid" ? "#dc2626" : invoice.status === "Partially Paid" ? "#d97706" : "#6b7280";
+  const statusColor = invoice.status === "Paid" ? "#16a34a"
+    : invoice.status === "Unpaid" ? "#dc2626"
+    : invoice.status === "Partially Paid" ? "#d97706"
+    : "#6b7280";
 
   return (
     <>
@@ -564,7 +666,7 @@ export default function InvoiceViewModal({ invoice: initialInvoice, template, bu
                       { icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{width:14,height:14}}><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.99"/></svg>, label:"Edit History", action: () => {} },
                       { icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{width:14,height:14}}><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>, label:"Duplicate", action: onDuplicate },
                       { icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{width:14,height:14}}><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>, label:"Issue Credit Note", action: onCreditNote },
-                      null, // separator
+                      null,
                       { icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{width:14,height:14}}><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>, label:"Cancel Invoice", action: onCancel, warning: true },
                       { icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{width:14,height:14}}><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>, label:"Delete", action: onDelete, danger: true },
                     ].map((item, i) => item === null ? (
@@ -595,7 +697,7 @@ export default function InvoiceViewModal({ invoice: initialInvoice, template, bu
                 <button className="ivm-action-split"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9"/></svg></button>
               </div>
               <div className="ivm-action-group">
-                <button className="ivm-action-btn" onClick={onDownload}>
+                <button className="ivm-action-btn" onClick={handleDownload}>
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
                   Download PDF
                 </button>
@@ -618,7 +720,6 @@ export default function InvoiceViewModal({ invoice: initialInvoice, template, bu
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                 Generate e-Invoice
               </button>
-              {/* ← NOW opens the Record Payment Modal */}
               <button className="ivm-record-btn" onClick={e => { e.stopPropagation(); setShowRecordPayment(true); }}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                 Record Payment In
@@ -709,7 +810,7 @@ export default function InvoiceViewModal({ invoice: initialInvoice, template, bu
                     <table className="ivm-totals-table">
                       <tbody>
                         <tr><td>TOTAL</td><td>{invoice.billItems.reduce((s,i)=>s+i.qty,0)}</td><td className="right">₹{totalTax.toFixed(2)}</td><td className="right">₹{grandTotal.toLocaleString("en-IN")}</td></tr>
-                        <tr><td colSpan={2}>RECEIVED AMOUNT</td><td colSpan={2} className="right">₹{invoice.amountReceived.toLocaleString("en-IN")}</td></tr>
+                        <tr><td colSpan={2}>RECEIVED AMOUNT</td><td colSpan={2} className="right">₹{alreadyReceived.toLocaleString("en-IN")}</td></tr>
                         <tr><td colSpan={2}>BALANCE AMOUNT</td><td colSpan={2} className="right" style={{ color: balance>0 ? "#dc2626" : "#16a34a", fontWeight:700 }}>₹{balance.toLocaleString("en-IN")}</td></tr>
                       </tbody>
                     </table>
@@ -743,15 +844,15 @@ export default function InvoiceViewModal({ invoice: initialInvoice, template, bu
             <div className="ivm-sidebar">
               <div className="ivm-sidebar-title">Payment History</div>
               <div className="ivm-ph-row"><span>Invoice Amount</span><strong>₹{grandTotal.toLocaleString("en-IN")}</strong></div>
-              <div className="ivm-ph-row"><span>Initial Amount Received</span><strong>₹{invoice.amountReceived.toLocaleString("en-IN")}</strong></div>
-              {invoice.amountReceived > 0 && (
+              <div className="ivm-ph-row"><span>Total Amount Received</span><strong>₹{alreadyReceived.toLocaleString("en-IN")}</strong></div>
+              {alreadyReceived > 0 && (
                 <div className="ivm-ph-entry">
-                  <div className="ivm-ph-entry-top"><span>Payment Received</span><strong style={{ color:"#16a34a" }}>₹{invoice.amountReceived.toLocaleString("en-IN")}</strong></div>
+                  <div className="ivm-ph-entry-top"><span>Payment Received</span><strong style={{ color:"#16a34a" }}>₹{alreadyReceived.toLocaleString("en-IN")}</strong></div>
                   <div className="ivm-ph-entry-date">{fmtDate(invoice.createdAt)}</div>
                 </div>
               )}
               <div style={{ flex:1 }}/>
-              <div className="ivm-ph-total-row"><span>Total Amount Received</span><strong>₹{invoice.amountReceived.toLocaleString("en-IN")}</strong></div>
+              <div className="ivm-ph-total-row"><span>Total Amount Received</span><strong>₹{alreadyReceived.toLocaleString("en-IN")}</strong></div>
               <div className="ivm-ph-balance-row"><span>Balance Amount</span><strong style={{ color: balance>0 ? "#dc2626" : "#16a34a" }}>₹{balance.toLocaleString("en-IN")}</strong></div>
             </div>
           </div>
@@ -771,7 +872,6 @@ export default function InvoiceViewModal({ invoice: initialInvoice, template, bu
         />
       )}
 
-      {/* Dots click-outside overlay */}
       {dotsOpen && <div style={{ position:"fixed", inset:0, zIndex:499 }} onClick={() => setDotsOpen(false)} />}
 
       {/* Profit Details Modal */}

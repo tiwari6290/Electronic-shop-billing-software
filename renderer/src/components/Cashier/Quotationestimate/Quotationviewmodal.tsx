@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { QuotationData, fmtDate, saveQuotation } from "./Quotationtypes";
+import { QuotationData, fmtDate, apiDuplicateQuotation, apiDeleteQuotation, apiToFormData } from "./Quotationtypes";
 import "./QuotationViewModal.css";
 
 // ─── Exact SavedTemplate shape from InvoiceBuilder ───────────────────────────
@@ -88,31 +88,28 @@ export default function QuotationViewModal({
     alert("Edit History coming soon!");
   }
 
-  function handleDuplicate() {
+  async function handleDuplicate() {
     setShowDotMenu(false);
-    // Create a deep copy with a new id and next quotation number
-    const allQuotations: QuotationData[] = JSON.parse(localStorage.getItem("quotations") || "[]");
-    const maxNo = allQuotations.length > 0 ? Math.max(...allQuotations.map(q => q.quotationNo)) : 0;
-    const duplicate: QuotationData = {
-      ...JSON.parse(JSON.stringify(quotation)),
-      id: `q-${Date.now()}`,
-      quotationNo: maxNo + 1,
-      createdAt: new Date().toISOString().split("T")[0],
-      status: "Open",
-    };
-    saveQuotation(duplicate);
-    if (onDuplicate) onDuplicate(duplicate);
-    else alert(`Quotation duplicated as #${duplicate.quotationNo}`);
+    if (!quotation.id) return;
+    try {
+      const newQ = await apiDuplicateQuotation(Number(quotation.id));
+      if (onDuplicate) onDuplicate(apiToFormData(newQ));
+      else alert(`Quotation duplicated as #${newQ.quotationNo}`);
+    } catch (err: any) {
+      alert(`Failed to duplicate: ${err.message}`);
+    }
   }
 
-  function handleDelete() {
+  async function handleDelete() {
     setShowDotMenu(false);
     if (!window.confirm(`Delete Quotation #${quotation.quotationNo}? This cannot be undone.`)) return;
-    const allQuotations: QuotationData[] = JSON.parse(localStorage.getItem("quotations") || "[]");
-    const updated = allQuotations.filter(q => q.id !== quotation.id);
-    localStorage.setItem("quotations", JSON.stringify(updated));
-    if (onDelete) onDelete(quotation.id);
-    else { alert("Quotation deleted."); onClose(); }
+    try {
+      await apiDeleteQuotation(Number(quotation.id));
+      if (onDelete) onDelete(quotation.id);
+      else { alert("Quotation deleted."); onClose(); }
+    } catch (err: any) {
+      alert(`Failed to delete: ${err.message}`);
+    }
   }
 
   // ── Convert to Invoice ────────────────────────────────────────────────────

@@ -102,7 +102,7 @@ function CalendarPicker({ value, onChange, onClose }: CalendarPickerProps) {
 }
 
 interface QuotationMetaFieldsProps {
-  quotationNo: number;
+  quotationNo: string;
   quotationDate: string;
   showDueDate: boolean;
   validFor: number;

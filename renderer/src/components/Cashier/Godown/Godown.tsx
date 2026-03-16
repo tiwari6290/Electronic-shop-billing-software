@@ -1,7 +1,8 @@
+import api from "../../../lib/axios";
 import { useState, useRef, useEffect } from "react";
 import "./Godown.css";
 
-// ─── Types (must match ItemsPage) ────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 interface GodownStock {
   godownName: string;
@@ -13,7 +14,7 @@ interface Item {
   id: string;
   itemName: string;
   itemCode: string;
-  stockQty: string;
+  stockQty: number;         // ✅ number, not string (backend returns number)
   sellingPrice: number | null;
   purchasePrice: number | null;
   godownStock: GodownStock[];
@@ -29,38 +30,18 @@ interface Godown {
   city: string;
 }
 
-// ─── Shared items data — import from your store / context in real app ─────────
-// This mirrors ITEMS_INIT from ItemsPage.tsx so both pages stay in sync.
-// In production, replace with a shared Zustand / Context store.
-
-const ITEMS_INIT: Item[] = [
-  { id: "1", itemName: "BILLING SOFTWARE MOBILE APP", itemCode: "", stockQty: "-", sellingPrice: 256, purchasePrice: null, godownStock: [] },
-  { id: "2", itemName: "BILLING SOFTWARE WITH GST",   itemCode: "", stockQty: "-", sellingPrice: 369875, purchasePrice: null, godownStock: [] },
-  { id: "3", itemName: "BILLING SOFTWARE WITHOUT GST",itemCode: "", stockQty: "-", sellingPrice: 3556,   purchasePrice: null, godownStock: [] },
-  { id: "4", itemName: "GODREJ FRIDGE",   itemCode: "34567", stockQty: "143 ACS", sellingPrice: 42000, purchasePrice: 0,     godownStock: [{ godownName: "mondal electronic", stockAvailable: "143 ACS", address: "" }] },
-  { id: "5", itemName: "HERIER AC",       itemCode: "1234",  stockQty: "93 PCS",  sellingPrice: 45000, purchasePrice: 38000, godownStock: [{ godownName: "mondal electronic", stockAvailable: "93 PCS",  address: "" }] },
-  { id: "6", itemName: "HISENSE 32 INCH", itemCode: "",      stockQty: "39 PCS",  sellingPrice: 21000, purchasePrice: 18000, godownStock: [{ godownName: "mondal electronic", stockAvailable: "39 PCS",  address: "" }] },
-  { id: "7", itemName: "HISENSE 43INCG TV", itemCode: "00974", stockQty: "119 PCS", sellingPrice: 30000, purchasePrice: null, godownStock: [{ godownName: "mondal electronic", stockAvailable: "119 PCS", address: "" }] },
-  { id: "8", itemName: "maggi",   itemCode: "", stockQty: "-9 PCS", sellingPrice: null, purchasePrice: null, godownStock: [{ godownName: "mondal electronic", stockAvailable: "-9 PCS", address: "" }] },
-  { id: "9", itemName: "uayufuy", itemCode: "", stockQty: "0 PCS",  sellingPrice: 5547, purchasePrice: null, godownStock: [] },
-];
-
-const GODOWNS_INIT: Godown[] = [
-  { id: "g1", name: "mondal electronic", isMain: true,  streetAddress: "", state: "", pincode: "", city: "" },
-];
-
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const fmtPrice = (n: number | null | undefined) => {
   if (n === null || n === undefined) return "₹0";
-  return `₹${n.toLocaleString("en-IN")}.0`;
+  return `₹${n.toLocaleString("en-IN")}`;
 };
 
-const calcStockValue = (item: Item, godownName: string): string => {
-  const gs = item.godownStock.find(g => g.godownName === godownName);
-  if (!gs || !item.sellingPrice) return "₹0";
-  const qty = parseInt(gs.stockAvailable) || 0;
-  const val = qty * item.sellingPrice;
+// ✅ Stock value uses purchasePrice (falls back to sellingPrice if null)
+const calcStockValue = (item: Item): string => {
+  const qty = item.stockQty ?? 0;
+  const price = item.purchasePrice ?? item.sellingPrice ?? 0;
+  const val = qty * price;
   if (val === 0) return "₹0";
   return `₹${val.toLocaleString("en-IN")}`;
 };
@@ -118,13 +99,7 @@ const IcSearch = () => (
   </svg>
 );
 
-// ─── Edit Godown Modal ────────────────────────────────────────────────────────
-
-interface EditModalProps {
-  godown: Godown;
-  onClose: () => void;
-  onSave: (updated: Godown) => void;
-}
+// ─── Indian States ────────────────────────────────────────────────────────────
 
 const INDIAN_STATES = [
   "Andhra Pradesh","Arunachal Pradesh","Assam","Bihar","Chhattisgarh",
@@ -135,6 +110,14 @@ const INDIAN_STATES = [
   "Andaman and Nicobar Islands","Chandigarh","Delhi","Jammu and Kashmir",
   "Ladakh","Lakshadweep","Puducherry",
 ];
+
+// ─── Edit Godown Modal ────────────────────────────────────────────────────────
+
+interface EditModalProps {
+  godown: Godown;
+  onClose: () => void;
+  onSave: (updated: Godown) => void;
+}
 
 const EditGodownModal = ({ godown, onClose, onSave }: EditModalProps) => {
   const [form, setForm] = useState({ ...godown });
@@ -148,9 +131,8 @@ const EditGodownModal = ({ godown, onClose, onSave }: EditModalProps) => {
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (stateRef.current && !stateRef.current.contains(e.target as Node)) {
+      if (stateRef.current && !stateRef.current.contains(e.target as Node))
         setStateOpen(false);
-      }
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
@@ -158,55 +140,44 @@ const EditGodownModal = ({ godown, onClose, onSave }: EditModalProps) => {
 
   const set = (k: keyof typeof form, v: string) => setForm(f => ({ ...f, [k]: v }));
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.name.trim()) { alert("Godown name is required"); return; }
-    onSave(form);
-    onClose();
+    try {
+      await api.put(`/godowns/${form.id}`, {
+        godownName: form.name,
+        streetAddress: form.streetAddress,
+        stateName: form.state,
+        cityName: form.city,
+        pincode: form.pincode,
+      });
+      onSave(form);
+      onClose();
+    } catch (error) {
+      console.error("Edit godown failed", error);
+    }
   };
 
   return (
     <div className="gd-overlay" onClick={onClose}>
       <div className="gd-modal" onClick={e => e.stopPropagation()}>
-        {/* Header */}
         <div className="gd-modal-header">
           <span className="gd-modal-title">Edit Godown</span>
           <button className="gd-modal-close" onClick={onClose}><IcX /></button>
         </div>
-
-        {/* Body */}
         <div className="gd-modal-body">
-          {/* Godown Name */}
           <div className="gd-field">
             <label className="gd-label">Godown Name <span className="gd-required">*</span></label>
-            <input
-              className="gd-input"
-              value={form.name}
-              onChange={e => set("name", e.target.value)}
-              placeholder="Enter godown name"
-            />
+            <input className="gd-input" value={form.name} onChange={e => set("name", e.target.value)} placeholder="Enter godown name" />
           </div>
-
-          {/* Street Address */}
           <div className="gd-field">
             <label className="gd-label">Street Address</label>
-            <textarea
-              className="gd-textarea"
-              value={form.streetAddress}
-              onChange={e => set("streetAddress", e.target.value)}
-              placeholder="Enter Street Address"
-              rows={2}
-            />
+            <textarea className="gd-textarea" value={form.streetAddress} onChange={e => set("streetAddress", e.target.value)} placeholder="Enter Street Address" rows={2} />
           </div>
-
-          {/* State + Pincode */}
           <div className="gd-row-2">
             <div className="gd-field">
               <label className="gd-label">State</label>
               <div className="gd-state-wrap" ref={stateRef}>
-                <div
-                  className={`gd-state-trigger${stateOpen ? " open" : ""}`}
-                  onClick={() => setStateOpen(v => !v)}
-                >
+                <div className={`gd-state-trigger${stateOpen ? " open" : ""}`} onClick={() => setStateOpen(v => !v)}>
                   <IcSearch />
                   <input
                     className="gd-state-input"
@@ -221,15 +192,8 @@ const EditGodownModal = ({ godown, onClose, onSave }: EditModalProps) => {
                   <div className="gd-state-dropdown">
                     {filteredStates.length > 0
                       ? filteredStates.map(s => (
-                          <div
-                            key={s}
-                            className={`gd-state-option${form.state === s ? " selected" : ""}`}
-                            onClick={() => {
-                              set("state", s);
-                              setStateSearch(s);
-                              setStateOpen(false);
-                            }}
-                          >
+                          <div key={s} className={`gd-state-option${form.state === s ? " selected" : ""}`}
+                            onClick={() => { set("state", s); setStateSearch(s); setStateOpen(false); }}>
                             {s}
                           </div>
                         ))
@@ -239,32 +203,16 @@ const EditGodownModal = ({ godown, onClose, onSave }: EditModalProps) => {
                 )}
               </div>
             </div>
-
             <div className="gd-field">
               <label className="gd-label">Pincode</label>
-              <input
-                className="gd-input"
-                value={form.pincode}
-                onChange={e => set("pincode", e.target.value)}
-                placeholder="ex: 560029"
-                maxLength={6}
-              />
+              <input className="gd-input" value={form.pincode} onChange={e => set("pincode", e.target.value)} placeholder="ex: 560029" maxLength={6} />
             </div>
           </div>
-
-          {/* City */}
           <div className="gd-field">
             <label className="gd-label">City</label>
-            <input
-              className="gd-input"
-              value={form.city}
-              onChange={e => set("city", e.target.value)}
-              placeholder="ex: Bangalore"
-            />
+            <input className="gd-input" value={form.city} onChange={e => set("city", e.target.value)} placeholder="ex: Bangalore" />
           </div>
         </div>
-
-        {/* Footer */}
         <div className="gd-modal-footer">
           <button className="gd-btn-secondary" onClick={onClose}>Close</button>
           <button className="gd-btn-primary" onClick={handleSave}>Save</button>
@@ -276,13 +224,9 @@ const EditGodownModal = ({ godown, onClose, onSave }: EditModalProps) => {
 
 // ─── Delete Godown Confirm Modal ──────────────────────────────────────────────
 
-interface DeleteModalProps {
-  godownName: string;
-  onCancel: () => void;
-  onConfirm: () => void;
-}
-
-const DeleteGodownModal = ({ godownName, onCancel, onConfirm }: DeleteModalProps) => (
+const DeleteGodownModal = ({ godownName, onCancel, onConfirm }: {
+  godownName: string; onCancel: () => void; onConfirm: () => void;
+}) => (
   <div className="gd-overlay" onClick={onCancel}>
     <div className="gd-confirm-modal" onClick={e => e.stopPropagation()}>
       <div className="gd-confirm-header">
@@ -302,12 +246,10 @@ const DeleteGodownModal = ({ godownName, onCancel, onConfirm }: DeleteModalProps
 
 // ─── Create Godown Modal ──────────────────────────────────────────────────────
 
-interface CreateGodownModalProps {
+const CreateGodownModal = ({ onClose, onCreate }: {
   onClose: () => void;
   onCreate: (godown: Godown) => void;
-}
-
-const CreateGodownModal = ({ onClose, onCreate }: CreateGodownModalProps) => {
+}) => {
   const [form, setForm] = useState({ name: "", streetAddress: "", state: "", pincode: "", city: "" });
   const [stateSearch, setStateSearch] = useState("");
   const [stateOpen, setStateOpen] = useState(false);
@@ -327,18 +269,30 @@ const CreateGodownModal = ({ onClose, onCreate }: CreateGodownModalProps) => {
 
   const set = (k: keyof typeof form, v: string) => setForm(f => ({ ...f, [k]: v }));
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!form.name.trim()) { alert("Godown name is required"); return; }
-    onCreate({
-      id: `g${Date.now()}`,
-      name: form.name,
-      isMain: false,
-      streetAddress: form.streetAddress,
-      state: form.state,
-      pincode: form.pincode,
-      city: form.city,
-    });
-    onClose();
+    try {
+      const res = await api.post("/godowns/create", {
+        godownName: form.name,
+        streetAddress: form.streetAddress,
+        stateName: form.state,
+        cityName: form.city,
+        pincode: form.pincode,
+      });
+      const g = res.data.data;
+      onCreate({
+        id: String(g.godown_id),
+        name: g.godown_name,
+        isMain: false,
+        streetAddress: g.street_address || "",
+        state: g.state_name || "",
+        pincode: g.pincode || "",
+        city: g.city_name || "",
+      });
+      onClose();
+    } catch (error) {
+      console.error("Create godown failed", error);
+    }
   };
 
   return (
@@ -409,54 +363,110 @@ const CreateGodownModal = ({ onClose, onCreate }: CreateGodownModalProps) => {
 // ─── Main Godown Page ─────────────────────────────────────────────────────────
 
 export default function GodownPage() {
-  const [items, setItems] = useState<Item[]>(ITEMS_INIT);
-  const [godowns, setGodowns] = useState<Godown[]>(GODOWNS_INIT);
-  const [selectedGodownId, setSelectedGodownId] = useState<string>(GODOWNS_INIT[0].id);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [editingGodown, setEditingGodown] = useState<Godown | null>(null);
+  const [items, setItems]                   = useState<Item[]>([]);
+  const [godowns, setGodowns]               = useState<Godown[]>([]);
+  const [selectedGodownId, setSelectedGodownId] = useState<string>("");
+  const [dropdownOpen, setDropdownOpen]     = useState(false);
+  const [editingGodown, setEditingGodown]   = useState<Godown | null>(null);
   const [deletingGodown, setDeletingGodown] = useState<Godown | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const selectedGodown = godowns.find(g => g.id === selectedGodownId) ?? godowns[0];
+  // ── Fetch all godowns ──────────────────────────────────────────────────────
+  const fetchGodowns = async () => {
+    try {
+      const res = await api.get("/godowns");
+      const mapped: Godown[] = res.data.data.map((g: any) => ({
+        id: String(g.godown_id),
+        name: g.godown_name,
+        isMain: false,
+        streetAddress: g.street_address || "",
+        state: g.state_name || "",
+        pincode: g.pincode || "",
+        city: g.city_name || "",
+      }));
+      setGodowns(mapped);
+      // Auto-select first godown
+      if (mapped.length > 0 && !selectedGodownId) {
+        setSelectedGodownId(mapped[0].id);
+      }
+    } catch (error) {
+      console.error("Failed to fetch godowns", error);
+    }
+  };
+
+  // ── Fetch items for selected godown ───────────────────────────────────────
+  // Uses GET /items/godown/:godownId → getItemsByGodown controller
+  // Backend returns: { id, name, itemCode, salesPrice, purchasePrice, stockQty }
+  const fetchItemsByGodown = async (godownId: string) => {
+    if (!godownId) return;
+    try {
+      const res = await api.get(`/items/godown/${godownId}`);
+
+      // ✅ Map backend fields exactly to Item interface
+      const mappedItems: Item[] = res.data.data.map((item: any) => ({
+        id: String(item.id),
+        itemName: item.name ?? "",
+        itemCode: item.itemCode ?? "",
+        stockQty: Number(item.stockQty ?? 0),    // backend returns number
+        sellingPrice: item.salesPrice != null ? Number(item.salesPrice) : null,
+        purchasePrice: item.purchasePrice != null ? Number(item.purchasePrice) : null,
+        godownStock: [],
+      }));
+
+      setItems(mappedItems);
+    } catch (error) {
+      console.error("Failed to fetch items for godown", error);
+      setItems([]);
+    }
+  };
 
   // Close dropdown on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node))
         setDropdownOpen(false);
-      }
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  // Items visible in selected godown
-  const godownItems = items.filter(item =>
-    item.godownStock.some(gs => gs.godownName === selectedGodown?.name)
-  );
+  // Load godowns on mount
+  useEffect(() => {
+    fetchGodowns();
+  }, []);
+
+  // Reload items whenever selected godown changes
+  useEffect(() => {
+    if (selectedGodownId) {
+      fetchItemsByGodown(selectedGodownId);
+    }
+  }, [selectedGodownId]);
+
+  const selectedGodown = godowns.find(g => g.id === selectedGodownId);
+
+  // ── Handlers ──────────────────────────────────────────────────────────────
 
   const handleEditSave = (updated: Godown) => {
-    // Also update godownStock references if name changed
-    const oldName = editingGodown?.name ?? "";
-    if (updated.name !== oldName) {
-      setItems(prev => prev.map(item => ({
-        ...item,
-        godownStock: item.godownStock.map(gs =>
-          gs.godownName === oldName ? { ...gs, godownName: updated.name } : gs
-        ),
-      })));
-    }
     setGodowns(prev => prev.map(g => g.id === updated.id ? updated : g));
     setEditingGodown(null);
   };
 
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = async () => {
     if (!deletingGodown) return;
-    setGodowns(prev => prev.filter(g => g.id !== deletingGodown.id));
-    // Switch to first remaining godown
-    const remaining = godowns.filter(g => g.id !== deletingGodown.id);
-    if (remaining.length > 0) setSelectedGodownId(remaining[0].id);
+    try {
+      await api.delete(`/godowns/${deletingGodown.id}`);
+      const remaining = godowns.filter(g => g.id !== deletingGodown.id);
+      setGodowns(remaining);
+      if (remaining.length > 0) {
+        setSelectedGodownId(remaining[0].id);
+      } else {
+        setSelectedGodownId("");
+        setItems([]);
+      }
+    } catch (error) {
+      console.error("Delete godown failed", error);
+    }
     setDeletingGodown(null);
   };
 
@@ -465,9 +475,10 @@ export default function GodownPage() {
     setSelectedGodownId(g.id);
   };
 
+  // ── Render ─────────────────────────────────────────────────────────────────
+
   return (
     <div className="gd-page">
-      {/* ── Page Title ── */}
       <h1 className="gd-page-title">Godown Management</h1>
 
       {/* ── Top Bar ── */}
@@ -482,7 +493,6 @@ export default function GodownPage() {
             <span>{selectedGodown?.name ?? "Select Godown"}</span>
             <IcChevDown />
           </button>
-
           {dropdownOpen && (
             <div className="gd-dropdown-menu">
               <div className="gd-dropdown-section-label">Active Godown</div>
@@ -518,18 +528,10 @@ export default function GodownPage() {
             {selectedGodown.isMain && <span className="gd-main-badge">Main Godown</span>}
           </div>
           <div className="gd-name-actions">
-            <button
-              className="gd-icon-btn edit"
-              title="Edit Godown"
-              onClick={() => setEditingGodown(selectedGodown)}
-            >
+            <button className="gd-icon-btn edit" title="Edit Godown" onClick={() => setEditingGodown(selectedGodown)}>
               <IcEdit />
             </button>
-            <button
-              className="gd-icon-btn delete"
-              title="Delete Godown"
-              onClick={() => setDeletingGodown(selectedGodown)}
-            >
+            <button className="gd-icon-btn delete" title="Delete Godown" onClick={() => setDeletingGodown(selectedGodown)}>
               <IcTrash />
             </button>
           </div>
@@ -542,7 +544,7 @@ export default function GodownPage() {
           <thead>
             <tr>
               <th className="gd-th-check"><input type="checkbox" /></th>
-              <th>Item name</th>
+              <th>Item Name</th>
               <th>Item Code</th>
               <th>Item Batch</th>
               <th>Stock QTY</th>
@@ -552,19 +554,21 @@ export default function GodownPage() {
             </tr>
           </thead>
           <tbody>
-            {godownItems.length > 0 ? (
-              godownItems.map(item => {
-                const gs = item.godownStock.find(g => g.godownName === selectedGodown?.name);
-                const stockQty = gs?.stockAvailable ?? "-";
-                const isNeg = parseInt(stockQty) < 0;
+            {items.length > 0 ? (
+              items.map(item => {
+                const isNeg = item.stockQty < 0;
                 return (
                   <tr key={item.id} className="gd-row">
                     <td><input type="checkbox" /></td>
                     <td className="gd-td-name">{item.itemName}</td>
-                    <td className="gd-td-secondary">{item.itemCode || ""}</td>
+                    <td className="gd-td-secondary">{item.itemCode || "—"}</td>
                     <td className="gd-td-secondary">—</td>
-                    <td className={isNeg ? "gd-qty-neg" : "gd-td-secondary"}>{stockQty}</td>
-                    <td className="gd-td-secondary">{calcStockValue(item, selectedGodown?.name ?? "")}</td>
+                    {/* ✅ stockQty is already a number, display directly */}
+                    <td className={isNeg ? "gd-qty-neg" : "gd-td-secondary"}>
+                      {item.stockQty}
+                    </td>
+                    {/* ✅ Stock value calculated properly */}
+                    <td className="gd-td-secondary">{calcStockValue(item)}</td>
                     <td className="gd-td-secondary">{fmtPrice(item.sellingPrice)}</td>
                     <td className="gd-td-secondary">{fmtPrice(item.purchasePrice)}</td>
                   </tr>
@@ -589,7 +593,6 @@ export default function GodownPage() {
           onSave={handleEditSave}
         />
       )}
-
       {deletingGodown && (
         <DeleteGodownModal
           godownName={deletingGodown.name}
@@ -597,7 +600,6 @@ export default function GodownPage() {
           onConfirm={handleDeleteConfirm}
         />
       )}
-
       {showCreateModal && (
         <CreateGodownModal
           onClose={() => setShowCreateModal(false)}

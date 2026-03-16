@@ -7,7 +7,7 @@ export type UserRole = "Admin" | "Cashier" | "Accountant";
 
 export const useLogin = () => {
   const navigate = useNavigate();
-  
+
   const [selectedRole, setSelectedRole] = useState<UserRole>("Cashier");
   const [selectedStore, setSelectedStore] = useState("01");
   const [email, setEmail] = useState("");
@@ -19,7 +19,6 @@ export const useLogin = () => {
   const handleLogin = async () => {
     setError("");
 
-    // ✅ Keep your existing validation
     const errorMsg = validateLoginForm({
       role: selectedRole,
       branch: selectedStore,
@@ -35,8 +34,6 @@ export const useLogin = () => {
     try {
       setLoading(true);
 
-
-      // ✅ REAL BACKEND CALL
       const response = await loginApi({
         role: selectedRole,
         branch: selectedStore,
@@ -44,14 +41,23 @@ export const useLogin = () => {
         password,
       });
 
-      // ✅ Store backend response
+      // ✅ Correctly read role from backend response
+      const userRole = response.user.role;
+      const userBranch = response.user.branch;
+
+      // ✅ Store in localStorage
       localStorage.setItem("token", response.token);
-      localStorage.setItem("role", response.role);
-      localStorage.setItem("branch", selectedStore);
+      localStorage.setItem("role", userRole);
+      localStorage.setItem("branch", userBranch);
 
-
-      // ✅ Redirect (same as before)
-      window.location.href = "/create-party";
+      // ✅ Role-based redirect
+      if (userRole === "Admin") {
+        navigate("/admin/dashboard");
+      } else if (userRole === "Cashier") {
+        navigate("/cashier/create-party");
+      } else if (userRole === "Accountant") {
+        navigate("/accountant/dashboard");
+      }
 
     } catch (err: any) {
       setError(
@@ -76,5 +82,3 @@ export const useLogin = () => {
     handleLogin,
   };
 };
-
-

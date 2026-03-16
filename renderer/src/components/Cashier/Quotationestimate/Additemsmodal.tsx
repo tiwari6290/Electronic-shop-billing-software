@@ -1,15 +1,15 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Item, getItems, BillItem } from "./Quotationtypes";
+import { Item, BillItem, apiGetItems } from "./Quotationtypes";
 import "./AddItemsModal.css";
 
 const SAMPLE_ITEMS: Item[] = [
-  { id: 1, name: "BILLING SOFTWARE MOBILE APP", itemCode: "-", stock: "-", salesPrice: 256, purchasePrice: 0, unit: "PCS", category: "" },
-  { id: 2, name: "BILLING SOFTWARE WITH GST", itemCode: "-", stock: "-", salesPrice: 369875, purchasePrice: 0, unit: "PCS", category: "" },
-  { id: 3, name: "BILLING SOFTWARE WITHOUT GST", itemCode: "-", stock: "-", salesPrice: 3556, purchasePrice: 0, unit: "PCS", category: "" },
-  { id: 4, name: "GODREJ FRIDGE", itemCode: "34567", stock: "143 ACS", salesPrice: 42000, purchasePrice: 0, unit: "ACS", category: "Electronics" },
-  { id: 5, name: "HERIER AC", itemCode: "1234", stock: "93 PCS", salesPrice: 45000, purchasePrice: 38000, unit: "PCS", category: "Electronics" },
-  { id: 6, name: "HISENSE 32 INCH", itemCode: "-", stock: "39 PCS", salesPrice: 21000, purchasePrice: 18000, unit: "PCS", category: "Electronics" },
+  { id: 1, name: "BILLING SOFTWARE MOBILE APP", itemCode: "-", stock: "-", salesPrice: 256, purchasePrice: 0, unit: "PCS", hsn: "", category: "" },
+  { id: 2, name: "BILLING SOFTWARE WITH GST", itemCode: "-", stock: "-", salesPrice: 369875, purchasePrice: 0, unit: "PCS", hsn: "", category: "" },
+  { id: 3, name: "BILLING SOFTWARE WITHOUT GST", itemCode: "-", stock: "-", salesPrice: 3556, purchasePrice: 0, unit: "PCS", hsn: "", category: "" },
+  { id: 4, name: "GODREJ FRIDGE", itemCode: "34567", stock: "143 ACS", salesPrice: 42000, purchasePrice: 0, unit: "ACS", hsn: "", category: "Electronics" },
+  { id: 5, name: "HERIER AC", itemCode: "1234", stock: "93 PCS", salesPrice: 45000, purchasePrice: 38000, unit: "PCS", hsn: "", category: "Electronics" },
+  { id: 6, name: "HISENSE 32 INCH", itemCode: "-", stock: "39 PCS", salesPrice: 21000, purchasePrice: 18000, unit: "PCS", hsn: "", category: "Electronics" },
 ];
 
 interface AddItemsModalProps {
@@ -23,19 +23,30 @@ export default function AddItemsModal({ onClose, onAddToBill }: AddItemsModalPro
   const [selections, setSelections] = useState<Record<number, number>>({});
   const [showBarcodeModal, setShowBarcodeModal] = useState(false);
   const [barcodeInput, setBarcodeInput] = useState("");
+  const [allItems, setAllItems] = useState<Item[]>(SAMPLE_ITEMS);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const searchRef = useRef<HTMLInputElement>(null);
   const barcodeRef = useRef<HTMLInputElement>(null);
 
-  const storedItems = getItems();
-  const allItems = storedItems.length > 0 ? storedItems : SAMPLE_ITEMS;
+  // ── Load items from backend ────────────────────────────────────────────────
+  useEffect(() => {
+    apiGetItems()
+      .then((items) => {
+        if (items.length > 0) setAllItems(items);
+      })
+      .catch(() => {
+        // Keep SAMPLE_ITEMS as fallback on network error
+      })
+      .finally(() => setLoading(false));
+  }, []);
 
   // Derive categories from items
   const categories: string[] = Array.from(
-    new Set(allItems.map((i) => i.category || "").filter(Boolean))
+    new Set(allItems.map((i: Item) => i.category || "").filter(Boolean))
   );
 
-  const filtered = allItems.filter((item) => {
+  const filtered = allItems.filter((item: Item) => {
     const matchesSearch =
       !search ||
       item.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -56,7 +67,7 @@ export default function AddItemsModal({ onClose, onAddToBill }: AddItemsModalPro
     const billItems: BillItem[] = [];
     Object.entries(selections).forEach(([id, qty]) => {
       if (qty <= 0) return;
-      const item = allItems.find((i) => i.id === Number(id));
+      const item = allItems.find((i: Item) => i.id === Number(id));
       if (!item) return;
       billItems.push({
         rowId: `row-${Date.now()}-${id}`,
@@ -83,7 +94,7 @@ export default function AddItemsModal({ onClose, onAddToBill }: AddItemsModalPro
     const val = barcodeInput.trim();
     if (!val) return;
     const match = allItems.find(
-      (i) => i.itemCode.toLowerCase() === val.toLowerCase()
+      (i: Item) => i.itemCode.toLowerCase() === val.toLowerCase()
     );
     if (match) {
       setQty(match.id, (selections[match.id] || 0) + 1);
@@ -174,66 +185,72 @@ export default function AddItemsModal({ onClose, onAddToBill }: AddItemsModalPro
 
           {/* Table */}
           <div className="aim-table-wrap">
-            <table className="aim-table">
-              <thead>
-                <tr>
-                  <th className="aim-th">Item Name</th>
-                  <th className="aim-th aim-th--center">Item Code</th>
-                  <th className="aim-th aim-th--center">Stock</th>
-                  <th className="aim-th aim-th--right">Sales Price</th>
-                  <th className="aim-th aim-th--right">Purchase Price</th>
-                  <th className="aim-th aim-th--center">Quantity</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.length === 0 ? (
+            {loading ? (
+              <div className="aim-empty" style={{ padding: "2rem", textAlign: "center" }}>
+                Loading items...
+              </div>
+            ) : (
+              <table className="aim-table">
+                <thead>
                   <tr>
-                    <td colSpan={6} className="aim-empty">
-                      No items found
-                    </td>
+                    <th className="aim-th">Item Name</th>
+                    <th className="aim-th aim-th--center">Item Code</th>
+                    <th className="aim-th aim-th--center">Stock</th>
+                    <th className="aim-th aim-th--right">Sales Price</th>
+                    <th className="aim-th aim-th--right">Purchase Price</th>
+                    <th className="aim-th aim-th--center">Quantity</th>
                   </tr>
-                ) : (
-                  filtered.map((item) => {
-                    const qty = selections[item.id] || 0;
-                    const isSelected = qty > 0;
-                    return (
-                      <tr key={item.id} className={`aim-tr ${isSelected ? "aim-tr--selected" : ""}`}>
-                        <td className="aim-td">{item.name}</td>
-                        <td className="aim-td aim-td--center">{item.itemCode || "-"}</td>
-                        <td className="aim-td aim-td--center">{item.stock || "-"}</td>
-                        <td className="aim-td aim-td--right">
-                          ₹{item.salesPrice.toLocaleString("en-IN")}
-                        </td>
-                        <td className="aim-td aim-td--right">
-                          {item.purchasePrice > 0
-                            ? `₹${item.purchasePrice.toLocaleString("en-IN")}`
-                            : "-"}
-                        </td>
-                        <td className="aim-td aim-td--center">
-                          {!isSelected ? (
-                            <button className="aim-add-btn" onClick={() => setQty(item.id, 1)}>
-                              + Add
-                            </button>
-                          ) : (
-                            <div className="aim-qty-row">
-                              <button className="aim-qty-btn" onClick={() => setQty(item.id, qty - 1)}>−</button>
-                              <input
-                                className="aim-qty-input"
-                                type="number"
-                                value={qty}
-                                onChange={(e) => setQty(item.id, Number(e.target.value))}
-                              />
-                              <button className="aim-qty-btn" onClick={() => setQty(item.id, qty + 1)}>+</button>
-                              <span className="aim-qty-unit">{item.unit}</span>
-                            </div>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {filtered.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="aim-empty">
+                        No items found
+                      </td>
+                    </tr>
+                  ) : (
+                    filtered.map((item: Item) => {
+                      const qty = selections[item.id] || 0;
+                      const isSelected = qty > 0;
+                      return (
+                        <tr key={item.id} className={`aim-tr ${isSelected ? "aim-tr--selected" : ""}`}>
+                          <td className="aim-td">{item.name}</td>
+                          <td className="aim-td aim-td--center">{item.itemCode || "-"}</td>
+                          <td className="aim-td aim-td--center">{item.stock || "-"}</td>
+                          <td className="aim-td aim-td--right">
+                            ₹{item.salesPrice.toLocaleString("en-IN")}
+                          </td>
+                          <td className="aim-td aim-td--right">
+                            {item.purchasePrice > 0
+                              ? `₹${item.purchasePrice.toLocaleString("en-IN")}`
+                              : "-"}
+                          </td>
+                          <td className="aim-td aim-td--center">
+                            {!isSelected ? (
+                              <button className="aim-add-btn" onClick={() => setQty(item.id, 1)}>
+                                + Add
+                              </button>
+                            ) : (
+                              <div className="aim-qty-row">
+                                <button className="aim-qty-btn" onClick={() => setQty(item.id, qty - 1)}>−</button>
+                                <input
+                                  className="aim-qty-input"
+                                  type="number"
+                                  value={qty}
+                                  onChange={(e) => setQty(item.id, Number(e.target.value))}
+                                />
+                                <button className="aim-qty-btn" onClick={() => setQty(item.id, qty + 1)}>+</button>
+                                <span className="aim-qty-unit">{item.unit}</span>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            )}
           </div>
 
           {/* Footer */}
