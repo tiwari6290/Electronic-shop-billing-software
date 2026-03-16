@@ -369,3 +369,81 @@
   color: #98a2b3 !important;
   font-style: italic;
 }
+/* ══════════════════════════════════════════ BILL VIEW ══ */
+.bv-page          { min-height:100vh; background:#f5f6fa; font-family:'Segoe UI',system-ui,sans-serif; }
+
+/* topbar */
+.bv-topbar        { display:flex; align-items:center; justify-content:space-between; padding:12px 20px; background:#fff; border-bottom:1.5px solid #eaecf0; position:sticky; top:0; z-index:100; }
+.bv-title-wrap    { display:flex; align-items:center; gap:10px; }
+.bv-back-btn      { background:none; border:none; cursor:pointer; color:#344054; display:flex; align-items:center; padding:4px 6px; border-radius:6px; }
+.bv-back-btn:hover{ background:#f2f4f7; }
+.bv-back-btn svg  { width:22px; height:22px; }
+.bv-page-title    { font-size:15px; font-weight:700; color:#1a2332; }
+.bv-topbar-actions{ display:flex; align-items:center; gap:8px; position:relative; }
+.bv-action-btn    { display:flex; align-items:center; gap:6px; padding:7px 14px; border:1.5px solid #e0e4ef; border-radius:8px; background:#fff; font-size:13px; color:#344054; cursor:pointer; font-weight:500; transition:background .12s; }
+.bv-action-btn:hover{ background:#f5f6fa; }
+.bv-action-btn svg  { width:16px; height:16px; }
+.bv-icon-btn      { width:34px; height:34px; padding:0; justify-content:center; }
+.bv-dots-btn      { width:34px; height:34px; padding:0; justify-content:center; }
+.bv-dots-btn.active{ background:#f5f6fa; }
+.bv-ctx           { position:absolute; top:calc(100% + 6px); right:0; min-width:170px; }
+
+/* body / paper */
+.bv-body          { max-width:860px; margin:24px auto; padding:0 20px 48px; }
+.bv-paper         { background:#fff; border-radius:12px; border:1.5px solid #eaecf0; overflow:hidden; box-shadow:0 2px 12px rgba(0,0,0,.06); }
+
+/* header */
+.bv-header        { padding:20px 24px; border-bottom:1.5px solid #eaecf0; display:flex; align-items:flex-start; justify-content:space-between; gap:20px; }
+.bv-company-block { display:flex; align-items:flex-start; gap:14px; }
+.bv-logo          { width:52px; height:52px; background:#1a2332; border-radius:8px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.bv-logo span     { color:#fff; font-size:9px; font-weight:800; letter-spacing:1px; text-align:center; }
+.bv-company-name  { font-size:16px; font-weight:800; color:#1a2332; margin-bottom:3px; }
+.bv-company-details{ font-size:11px; color:#667085; line-height:1.7; }
+.bv-header-right  { text-align:right; }
+.bv-doc-type      { font-size:13px; font-weight:700; color:#667085; letter-spacing:1px; text-transform:uppercase; margin-bottom:12px; }
+.bv-meta-row      { display:flex; gap:32px; justify-content:flex-end; }
+
+.bv-meta-label    { font-size:10px; color:#98a2b3; font-weight:600; margin-bottom:2px; }
+.bv-meta-value    { font-size:14px; font-weight:700; color:#1a2332; }
+
+/* bill to */
+.bv-bill-to-row   { padding:12px 24px; border-bottom:1.5px solid #eaecf0; background:#f8f9fc; }
+.bv-section-label { font-size:10px; font-weight:700; color:#98a2b3; letter-spacing:.7px; text-transform:uppercase; margin-bottom:4px; }
+.bv-party-name    { font-size:14px; font-weight:700; color:#1a2332; }
+.bv-party-detail  { font-size:12px; color:#667085; margin-top:2px; }
+
+/* items table */
+.bv-items-table   { width:100%; border-collapse:collapse; }
+.bv-items-table th{ background:#f8f9fc; padding:9px 16px; text-align:left; font-size:11px; font-weight:700; color:#667085; border-bottom:1.5px solid #eaecf0; }
+.bv-items-table td{ padding:11px 16px; border-bottom:1px solid #f2f4f7; font-size:13px; color:#344054; }
+.bv-items-table tr:last-child td{ border-bottom:none; }
+
+/* totals */
+.bv-totals-row    { display:grid; grid-template-columns:1fr 80px 100px 100px; background:#f8f9fc; border-top:1.5px solid #eaecf0; }
+.bv-totals-label  { padding:10px 16px; font-size:12px; font-weight:700; color:#667085; text-align:right; }
+.bv-totals-qty    { padding:10px 8px; font-size:13px; font-weight:700; color:#1a2332; text-align:center; }
+.bv-totals-tax    { padding:10px 8px; font-size:13px; font-weight:700; color:#1a2332; text-align:center; }
+.bv-totals-amt    { padding:10px 16px; font-size:13px; font-weight:700; color:#1a2332; text-align:right; }
+.bv-received-row  { display:flex; justify-content:flex-end; background:#f8f9fc; border-bottom:1.5px solid #eaecf0; }
+.bv-received-label{ padding:6px 16px; font-size:12px; font-weight:600; color:#667085; }
+.bv-received-amt  { padding:6px 16px; font-size:13px; font-weight:700; color:#1a2332; min-width:100px; text-align:right; }
+
+/* tax table */
+.bv-tax-table     { width:100%; border-collapse:collapse; border-bottom:1.5px solid #eaecf0; }
+.bv-tax-table th  { background:#f8f9fc; padding:7px 16px; font-size:10px; font-weight:700; color:#667085; text-align:left; border-bottom:1px solid #eaecf0; }
+.bv-tax-sub-head th{ background:#f8f9fc; padding:3px 10px; font-size:10px; color:#98a2b3; font-weight:400; border-bottom:1.5px solid #eaecf0; }
+.bv-tax-table td  { padding:8px 16px; font-size:12px; color:#344054; }
+
+/* words */
+.bv-words-row     { padding:14px 24px; border-bottom:1.5px solid #eaecf0; }
+.bv-words-label   { font-size:11px; font-weight:700; color:#667085; margin-bottom:3px; }
+.bv-words-value   { font-size:13px; color:#1a2332; font-weight:500; }
+
+/* footer */
+.bv-footer-row    { display:grid; grid-template-columns:1fr 1fr; border-top:0; }
+.bv-tc-block      { padding:14px 24px; border-right:1px solid #f2f4f7; }
+.bv-tc-title      { font-size:11px; font-weight:700; color:#344054; margin-bottom:6px; }
+.bv-tc-text       { font-size:11px; color:#98a2b3; line-height:1.7; }
+.bv-sig-block     { padding:14px 24px; display:flex; flex-direction:column; align-items:flex-end; justify-content:space-between; }
+.bv-sig-label     { font-size:11px; color:#667085; }
+.bv-sig-box       { width:120px; height:48px; border:1.5px dashed #e0e4ef; border-radius:6px; margin-top:8px; }
