@@ -30,6 +30,8 @@ export interface SaleInvoice {
   paymentMode?: string | null;
   applyTcs: boolean;
   autoRoundOff: boolean;
+  signatureUrl?: string | null;
+  showEmptySignatureBox?: boolean;
   status: "OPEN" | "PARTIAL" | "PAID" | "CANCELLED";
   createdAt: string;
   updatedAt: string;
@@ -129,6 +131,8 @@ export interface FeSalesInvoice {
   amountReceived: number;
   paymentMethod: string;
   showColumns: { pricePerItem: boolean; quantity: boolean };
+  signatureUrl: string;
+  showEmptySignatureBox: boolean;
   status: "Paid" | "Unpaid" | "Partially Paid" | "Cancelled";
   createdAt: string;
 }
@@ -204,6 +208,8 @@ export function fromSaleInvoice(inv: SaleInvoice): FeSalesInvoice {
     amountReceived: Number(inv.receivedAmount ?? 0),
     paymentMethod: inv.paymentMode ?? "Cash",
     showColumns: { pricePerItem: true, quantity: true },
+    signatureUrl: inv.signatureUrl ?? "",
+    showEmptySignatureBox: inv.showEmptySignatureBox ?? false,
     status: statusMap[inv.status] ?? "Unpaid",
     createdAt: inv.createdAt?.split("T")[0] ?? "",
   };
@@ -245,6 +251,8 @@ export interface CreateInvoicePayload {
   totalAmount?:            number;
   outstandingAmount?:      number;
   additionalChargesTotal?: number;
+  signatureUrl?:           string | null;
+  showEmptySignatureBox?:  boolean;
 }
 
 export function toCreatePayload(form: FeSalesInvoice): CreateInvoicePayload {
@@ -278,6 +286,8 @@ export function toCreatePayload(form: FeSalesInvoice): CreateInvoicePayload {
       name:   c.label,
       amount: Number(c.amount) || 0,
     })),
+    signatureUrl:          form.signatureUrl          || undefined,
+    showEmptySignatureBox: form.showEmptySignatureBox ?? false,
   };
 }
 

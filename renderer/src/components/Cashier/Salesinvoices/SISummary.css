@@ -88,3 +88,162 @@
 .si-signatory { margin-top: 16px; text-align: right; }
 .si-signatory-text { font-size: 12px; color: #6b7280; margin-bottom: 8px; }
 .si-signatory-box { height: 56px; border: 1px solid #e5e7eb; border-radius: 6px; }
+/* ── Signature Section ───────────────────────────────────────────────────── */
+.si-sig-add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 8px 14px;
+  border: 1.5px dashed #a5b4fc;
+  border-radius: 7px;
+  background: #f5f3ff;
+  color: #4f46e5;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s, border-color 0.15s;
+}
+.si-sig-add-btn:hover {
+  background: #ede9fe;
+  border-color: #7c3aed;
+}
+
+/* Preview wrap when image is uploaded */
+.si-sig-preview-wrap {
+  position: relative;
+  display: inline-block;
+  margin-top: 10px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 7px;
+  padding: 6px;
+  background: #fafafa;
+}
+.si-sig-preview-img {
+  display: block;
+  max-height: 60px;
+  max-width: 160px;
+  object-fit: contain;
+}
+
+/* Empty box preview (Show Empty Signature Box chosen) */
+.si-sig-empty-box-preview {
+  position: relative;
+  margin-top: 10px;
+  height: 60px;
+  width: 160px;
+  border: 1.5px dashed #d1d5db;
+  border-radius: 6px;
+  background: #fff;
+}
+
+/* Remove (×) button on previews */
+.si-sig-remove-btn {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  border: 1.5px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #6b7280;
+  padding: 0;
+  line-height: 1;
+}
+.si-sig-remove-btn:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  color: #ef4444;
+}
+
+/* ── Signature Picker Modal ──────────────────────────────────────────────── */
+.si-sig-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.50);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.si-sig-modal {
+  background: #fff;
+  border-radius: 14px;
+  width: 460px;
+  max-width: 95vw;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.20);
+  font-family: Segoe UI, sans-serif;
+  overflow: hidden;
+}
+.si-sig-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 22px;
+  border-bottom: 1px solid #f3f4f6;
+}
+.si-sig-modal-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #111827;
+}
+.si-sig-modal-close {
+  background: none;
+  border: 1px solid #e5e7eb;
+  border-radius: 7px;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #374151;
+}
+.si-sig-modal-close:hover {
+  background: #f3f4f6;
+}
+.si-sig-modal-body {
+  display: flex;
+  gap: 16px;
+  padding: 24px 22px;
+}
+.si-sig-option-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 24px 16px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 10px;
+  background: #fafafa;
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color 0.15s, background 0.15s;
+}
+.si-sig-option-card:hover {
+  border-color: #7c3aed;
+  background: #f5f3ff;
+}
+.si-sig-option-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
+  border-radius: 10px;
+  background: #ede9fe;
+}
+.si-sig-option-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+  text-align: center;
+  line-height: 1.4;
+}

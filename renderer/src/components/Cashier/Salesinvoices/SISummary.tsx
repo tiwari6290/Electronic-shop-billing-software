@@ -78,6 +78,10 @@ interface Props {
   onRoundOffChange: (mode: "none" | "+Add" | "-Reduce", amt: number) => void;
   onAmountReceivedChange: (v: number) => void;
   onPaymentMethodChange: (v: string) => void;
+  // ── Signature ───────────────────────────────────────────
+  signatureUrl: string;
+  showEmptySignatureBox: boolean;
+  onSignatureChange: (url: string, showEmpty: boolean) => void;
 }
 
 export default function SISummary(p: Props) {
@@ -86,9 +90,11 @@ export default function SISummary(p: Props) {
   const [showDiscTypeDrop, setShowDiscTypeDrop] = useState(false);
   const [showRoundDrop,    setShowRoundDrop]    = useState(false);
   const [showAddTcsModal,  setShowAddTcsModal]  = useState(false);
+  const [showSigModal,     setShowSigModal]     = useState(false);
   const [allTcsRates, setAllTcsRates] = useState<{ label: string; rate: number }[]>(getDefaultTcsRates);
-  const tcsRef = useRef<HTMLDivElement>(null);
-  const payRef = useRef<HTMLDivElement>(null);
+  const tcsRef  = useRef<HTMLDivElement>(null);
+  const payRef  = useRef<HTMLDivElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     function h(e: MouseEvent) {
@@ -463,9 +469,120 @@ export default function SISummary(p: Props) {
 
       {/* ── Authorized Signatory ───────────────────────────── */}
       <div className="si-signatory">
-        <div className="si-signatory-text">Authorized signatory for <strong>Your Business</strong></div>
-        <div className="si-signatory-box" />
+        <div className="si-signatory-text">
+          Authorized signatory for <strong>Your Business</strong>
+        </div>
+
+        {/* Hidden file input for image upload */}
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          style={{ display: "none" }}
+          onChange={e => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = ev => {
+              p.onSignatureChange(ev.target?.result as string, false);
+            };
+            reader.readAsDataURL(file);
+            // reset so same file can be re-selected
+            e.target.value = "";
+          }}
+        />
+
+        {/* Signature display area */}
+        {p.signatureUrl ? (
+          <div className="si-sig-preview-wrap">
+            <img src={p.signatureUrl} alt="Signature" className="si-sig-preview-img" />
+            <button
+              className="si-sig-remove-btn"
+              onClick={() => p.onSignatureChange("", false)}
+              title="Remove signature"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 14, height: 14 }}>
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </div>
+        ) : p.showEmptySignatureBox ? (
+          <div className="si-sig-empty-box-preview">
+            <button
+              className="si-sig-remove-btn"
+              onClick={() => p.onSignatureChange("", false)}
+              title="Remove"
+              style={{ top: 4, right: 4 }}
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 14, height: 14 }}>
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </div>
+        ) : (
+          <button className="si-sig-add-btn" onClick={() => setShowSigModal(true)}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 15, height: 15 }}>
+              <path d="M12 5v14M5 12h14"/>
+            </svg>
+            Add Signature
+          </button>
+        )}
       </div>
+
+      {/* ── Signature Picker Modal ──────────────────────────── */}
+      {showSigModal && (
+        <div className="si-sig-modal-overlay" onClick={() => setShowSigModal(false)}>
+          <div className="si-sig-modal" onClick={e => e.stopPropagation()}>
+
+            {/* Header */}
+            <div className="si-sig-modal-header">
+              <span className="si-sig-modal-title">Signature</span>
+              <button className="si-sig-modal-close" onClick={() => setShowSigModal(false)}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 16, height: 16 }}>
+                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </div>
+
+            {/* Options */}
+            <div className="si-sig-modal-body">
+
+              {/* Option 1: Upload from Desktop */}
+              <button
+                className="si-sig-option-card"
+                onClick={() => { setShowSigModal(false); fileRef.current?.click(); }}
+              >
+                <div className="si-sig-option-icon">
+                  {/* Upload / image icon */}
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="1.5" style={{ width: 48, height: 48 }}>
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                    <circle cx="8.5" cy="8.5" r="1.5"/>
+                    <polyline points="21 15 16 10 5 21"/>
+                    <polyline points="12 8 15 5 18 8"/>
+                    <line x1="15" y1="5" x2="15" y2="13"/>
+                  </svg>
+                </div>
+                <span className="si-sig-option-label">Upload Signature from Desktop</span>
+              </button>
+
+              {/* Option 2: Show empty box */}
+              <button
+                className="si-sig-option-card"
+                onClick={() => { p.onSignatureChange("", true); setShowSigModal(false); }}
+              >
+                <div className="si-sig-option-icon">
+                  {/* Empty box / frame icon */}
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="1.5" style={{ width: 48, height: 48 }}>
+                    <rect x="3" y="5" width="18" height="14" rx="2"/>
+                  </svg>
+                </div>
+                <span className="si-sig-option-label">Show Empty Signature Box on Invoice</span>
+              </button>
+
+            </div>
+          </div>
+        </div>
+      )}
 
       {showAddTcsModal && (
         <AddTcsRateModal
