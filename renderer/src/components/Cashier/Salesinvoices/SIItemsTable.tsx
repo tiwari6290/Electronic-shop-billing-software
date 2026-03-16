@@ -80,16 +80,45 @@ export default function SIItemsTable({ items, showColumns, onChange, onAddItem }
                   </td>
                 )}
                 <td className="si-td">
+                  {/* discountPct and discountAmt are mutually exclusive in state.
+                      Formula: lineDisc = lineTotal*(pct/100) + amt
+                      So we zero out the other field to avoid double-deduction. */}
                   <div className="si-disc-wrap">
                     <div className="si-disc-row">
                       <span className="si-disc-pct-label">%</span>
-                      <input type="number" className="si-disc-input" value={item.discountPct}
-                        onChange={e => update(item.rowId, { discountPct: Number(e.target.value) })}/>
+                      <input
+                        type="number"
+                        className="si-disc-input"
+                        value={item.discountPct || ""}
+                        placeholder="0"
+                        onChange={e => {
+                          const pct = Math.min(100, Math.max(0, Number(e.target.value) || 0));
+                          // Zero out discountAmt so it doesn't double-count
+                          update(item.rowId, { discountPct: pct, discountAmt: 0 });
+                        }}
+                      />
                     </div>
                     <div className="si-disc-row">
-                      <span className="si-disc-rs-label">₹</span>
-                      <input type="number" className="si-disc-input" value={item.discountAmt}
-                        onChange={e => update(item.rowId, { discountAmt: Number(e.target.value) })}/>
+                      <span className="si-disc-rs-label">&#8377;</span>
+                      <input
+                        type="number"
+                        className="si-disc-input"
+                        placeholder="0"
+                        value={
+                          // If % is active: show computed ₹ as read-only display
+                          item.discountPct > 0
+                            ? Math.round(item.qty * item.price * item.discountPct / 100 * 100) / 100
+                            : (item.discountAmt || "")
+                        }
+                        readOnly={item.discountPct > 0}
+                        style={item.discountPct > 0 ? { background: "#f3f4f6", color: "#6b7280" } : {}}
+                        onChange={e => {
+                          const amt = Math.max(0, Number(e.target.value) || 0);
+                          const lineTotal = item.qty * item.price;
+                          // Zero out discountPct so it doesn't double-count
+                          update(item.rowId, { discountAmt: amt, discountPct: 0 });
+                        }}
+                      />
                     </div>
                   </div>
                 </td>

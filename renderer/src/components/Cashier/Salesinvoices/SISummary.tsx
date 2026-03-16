@@ -244,7 +244,7 @@ export default function SISummary(p: Props) {
               )}
             </div>
             <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-              {/* % input — clears ₹ when used */}
+              {/* % input — auto-computes ₹ value */}
               <span className="si-rs-sm">%</span>
               <input
                 type="number"
@@ -256,11 +256,13 @@ export default function SISummary(p: Props) {
                 onChange={e => {
                   const v = Math.min(100, Math.max(0, Number(e.target.value)));
                   p.onDiscountPctChange(v);
-                  if (v > 0) p.onDiscountAmtChange(0); // clear flat amt
+                  // Auto-compute ₹ from %
+                  const computedAmt = taxableBase > 0 ? Math.round(taxableBase * v / 100 * 100) / 100 : 0;
+                  p.onDiscountAmtChange(computedAmt);
                 }}
               />
               <span className="si-disc-sep">/</span>
-              {/* ₹ input — clears % when used */}
+              {/* ₹ input — auto-computes % value */}
               <span className="si-rs-sm">₹</span>
               <input
                 type="number"
@@ -271,7 +273,9 @@ export default function SISummary(p: Props) {
                 onChange={e => {
                   const v = Math.max(0, Number(e.target.value));
                   p.onDiscountAmtChange(v);
-                  if (v > 0) p.onDiscountPctChange(0); // clear pct
+                  // Auto-compute % from ₹
+                  const computedPct = taxableBase > 0 ? Math.round(v / taxableBase * 10000) / 100 : 0;
+                  p.onDiscountPctChange(Math.min(100, computedPct));
                 }}
               />
               <button className="si-disc-rm" onClick={() => p.onToggleDiscount(false)}>✕</button>
