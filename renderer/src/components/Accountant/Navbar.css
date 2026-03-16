@@ -1,0 +1,413 @@
+.cb-navbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 28px;
+  background: #ffffff;
+  border-bottom: 1px solid #e9ecef;
+  font-family: 'Segoe UI', sans-serif;
+}
+
+.cb-navbar__title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1e2640;
+}
+
+.cb-navbar__actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cb-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 16px;
+  border-radius: 8px;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  transition: all 0.15s ease;
+  font-family: 'Segoe UI', sans-serif;
+}
+
+.cb-btn--outline {
+  background: #ffffff;
+  border: 1.5px solid #dee2e6;
+  color: #495057;
+}
+
+.cb-btn--outline:hover {
+  background: #f8f9fa;
+  border-color: #adb5bd;
+}
+
+.cb-btn--primary {
+  background: #4169e1;
+  color: #ffffff;
+  border: 1.5px solid transparent;
+}
+
+.cb-btn--primary:hover {
+  background: #2347d1;
+}
+
+/* ── Modal Overlay ── */
+.cb-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: cb-fadeIn 0.15s ease;
+}
+
+@keyframes cb-fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.cb-modal {
+  background: #ffffff;
+  border-radius: 14px;
+  width: 100%;
+  max-width: 460px;
+  padding: 28px;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.18);
+  animation: cb-slideUp 0.2s ease;
+  font-family: 'Segoe UI', sans-serif;
+}
+
+@keyframes cb-slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+.cb-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 22px;
+}
+
+.cb-modal__title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #1e2640;
+}
+
+.cb-modal__close {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: none;
+  background: #f1f3f5;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6c757d;
+  transition: background 0.15s;
+}
+
+.cb-modal__close:hover {
+  background: #e9ecef;
+  color: #212529;
+}
+
+.cb-form-group {
+  margin-bottom: 18px;
+}
+
+.cb-form-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #495057;
+  margin-bottom: 7px;
+}
+
+.cb-form-select,
+.cb-form-input,
+.cb-form-textarea {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1.5px solid #dee2e6;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #212529;
+  background: #fff;
+  font-family: 'Segoe UI', sans-serif;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  box-sizing: border-box;
+}
+
+.cb-form-select:focus,
+.cb-form-input:focus,
+.cb-form-textarea:focus {
+  outline: none;
+  border-color: #4169e1;
+  box-shadow: 0 0 0 3px rgba(65, 105, 225, 0.12);
+}
+
+.cb-form-textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.cb-amount-wrapper {
+  display: flex;
+  align-items: center;
+  border: 1.5px solid #dee2e6;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.cb-amount-wrapper:focus-within {
+  border-color: #4169e1;
+  box-shadow: 0 0 0 3px rgba(65, 105, 225, 0.12);
+}
+
+.cb-amount-prefix {
+  padding: 10px 12px;
+  background: #f8f9fa;
+  border-right: 1.5px solid #dee2e6;
+  font-size: 14px;
+  color: #6c757d;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.cb-amount-input {
+  flex: 1;
+  border: none;
+  padding: 10px 14px;
+  font-size: 14px;
+  color: #212529;
+  font-family: 'Segoe UI', sans-serif;
+  background: transparent;
+}
+
+.cb-amount-input:focus {
+  outline: none;
+}
+
+.cb-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.cb-balance-info {
+  font-size: 14px;
+  color: #212529;
+  margin-top: 8px;
+  font-weight: 500;
+}
+
+.cb-new-balance {
+  font-size: 13px;
+  color: #6c757d;
+  margin-top: 6px;
+}
+
+.cb-new-balance span {
+  font-weight: 700;
+  color: #4169e1;
+}
+
+.cb-toggle-group {
+  display: flex;
+  gap: 10px;
+}
+
+.cb-toggle-btn {
+  flex: 1;
+  padding: 9px 0;
+  border-radius: 8px;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1.5px solid #dee2e6;
+  background: #f8f9fa;
+  color: #6c757d;
+  transition: all 0.15s ease;
+  font-family: 'Segoe UI', sans-serif;
+}
+
+.cb-toggle-btn.add.active {
+  background: #4169e1;
+  border-color: #4169e1;
+  color: #fff;
+}
+
+.cb-toggle-btn.reduce.active {
+  background: #ef4444;
+  border-color: #ef4444;
+  color: #fff;
+}
+
+.cb-toggle-btn:hover:not(.active) {
+  background: #e9ecef;
+}
+
+.cb-modal__footer {
+  display: flex;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.cb-modal__footer .cb-btn {
+  flex: 1;
+  justify-content: center;
+}
+
+.cb-btn--cancel {
+  background: #f8f9fa;
+  border: 1.5px solid #dee2e6;
+  color: #495057;
+}
+
+.cb-btn--cancel:hover {
+  background: #e9ecef;
+}
+
+.cb-btn--save {
+  background: #4169e1;
+  border: 1.5px solid transparent;
+  color: #fff;
+}
+
+.cb-btn--save:hover {
+  background: #2347d1;
+}
+
+.cb-link-btn {
+  background: none;
+  border: none;
+  color: #4169e1;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  margin-bottom: 4px;
+  font-family: 'Segoe UI', sans-serif;
+}
+/* ── Add to your existing Navbar.css ── */
+
+/* Toggle row (Add Bank Details) */
+.cb-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 0;
+  margin-bottom: 2px;
+}
+
+/* iOS-style toggle switch */
+.cb-switch {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 22px;
+  flex-shrink: 0;
+}
+
+.cb-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.cb-switch__slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background-color: #d1d5db;
+  border-radius: 999px;
+  transition: background-color 0.2s ease;
+}
+
+.cb-switch__slider::before {
+  content: "";
+  position: absolute;
+  height: 16px;
+  width: 16px;
+  left: 3px;
+  bottom: 3px;
+  background: white;
+  border-radius: 50%;
+  transition: transform 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+}
+
+.cb-switch input:checked + .cb-switch__slider {
+  background-color: #4169e1;
+}
+
+.cb-switch input:checked + .cb-switch__slider::before {
+  transform: translateX(18px);
+}
+
+/* Bank details section */
+.cb-bank-details-section {
+  border-top: 1px solid #f0f0f0;
+  padding-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Date input with icon wrapper */
+.cb-date-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.cb-date-icon {
+  position: absolute;
+  left: 10px;
+  color: #888;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.cb-date-input {
+  padding-left: 32px !important;
+}
+
+/* Wide modal variant — compact */
+.cb-modal--wide {
+  max-width: 480px;
+  padding: 16px !important;
+}
+
+/* Tighten form groups inside wide modal */
+.cb-modal--wide .cb-form-group {
+  margin-bottom: 8px;
+}
+
+.cb-modal--wide .cb-form-row {
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.cb-modal--wide .cb-form-label {
+  font-size: 12px;
+  margin-bottom: 3px;
+}
+
+.cb-modal--wide .cb-form-input,
+.cb-modal--wide .cb-form-select,
+.cb-modal--wide .cb-amount-input {
+  padding: 6px 10px;
+  font-size: 13px;
+}

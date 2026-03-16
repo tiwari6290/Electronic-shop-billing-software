@@ -10,6 +10,7 @@ import {
   Receipt,
   Tags,
   Layers,
+  Search,
 } from "lucide-react";
 import "./CreateItem.css";
 
@@ -25,9 +26,14 @@ const CreateItem = () => {
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [showAddCategory, setShowAddCategory] = useState(false);
   const [categories, setCategories] = useState<string[]>(["FRIDGE", "TV"]);
-  const [selectedCategory, setSelectedCategory] =
-    useState("Select Category");
+  const [selectedCategory, setSelectedCategory] = useState("Select Category");
   const [newCategory, setNewCategory] = useState("");
+
+  /* FORM STATES */
+  const [itemName, setItemName] = useState("");
+  const [salesPrice, setSalesPrice] = useState("");
+  const [openingStock, setOpeningStock] = useState("");
+  const [serviceCode, setServiceCode] = useState("");
 
   const handleAddCategory = () => {
     if (!newCategory.trim()) return;
@@ -37,6 +43,46 @@ const CreateItem = () => {
     setNewCategory("");
     setShowAddCategory(false);
     setCategoryOpen(false);
+  };
+
+  const handleSave = () => {
+    if (!itemName.trim()) {
+      alert("Item name is required!");
+      return;
+    }
+
+    const newItem = {
+      id: Date.now().toString(),
+      itemName: itemName,
+      itemCode: serviceCode || "",
+      stockQty: type === "product" && openingStock ? `${openingStock} PCS` : "-",
+      sellingPrice: salesPrice ? parseFloat(salesPrice) : null,
+      purchasePrice: null,
+      category: selectedCategory === "Select Category" ? "" : selectedCategory,
+      gstTaxRate: "None",
+      hsnCode: "",
+      secondaryUnit: "-",
+      lowStockQty: "-",
+      lowStockWarning: "Disabled" as const,
+      itemDescription: "",
+      stockDetails: [],
+      partyWiseReport: [],
+      godownStock: [],
+      partyWisePrices: [],
+    };
+
+    const existing = JSON.parse(localStorage.getItem("inventory_items") || "[]");
+    localStorage.setItem("inventory_items", JSON.stringify([...existing, newItem]));
+
+    alert(`"${itemName}" saved successfully!`);
+
+    // Reset form
+    setItemName("");
+    setSalesPrice("");
+    setOpeningStock("");
+    setServiceCode("");
+    setSelectedCategory("Select Category");
+    setActiveSection("basic");
   };
 
   return (
@@ -138,7 +184,9 @@ const CreateItem = () => {
                     className="ci-category-input"
                     onClick={() => setCategoryOpen(!categoryOpen)}
                   >
-                    <span className="ci-category-icon">🔍</span>
+                    <span className="ci-category-icon">
+                      <Search size={16} />
+                    </span>
                     <span className="ci-category-placeholder">
                       {selectedCategory}
                     </span>
@@ -177,9 +225,7 @@ const CreateItem = () => {
               <div className="ci-row">
                 <div>
                   <label>
-                    {type === "product"
-                      ? "Item Name *"
-                      : "Service Name *"}
+                    {type === "product" ? "Item Name *" : "Service Name *"}
                   </label>
                   <input
                     placeholder={
@@ -187,6 +233,8 @@ const CreateItem = () => {
                         ? "ex: Maggie 20gm"
                         : "ex: Mobile service"
                     }
+                    value={itemName}
+                    onChange={(e) => setItemName(e.target.value)}
                   />
                 </div>
 
@@ -207,7 +255,11 @@ const CreateItem = () => {
                   <label>Sales Price</label>
                   <div className="ci-price">
                     <span>₹</span>
-                    <input placeholder="ex: ₹200" />
+                    <input
+                      placeholder="ex: ₹200"
+                      value={salesPrice}
+                      onChange={(e) => setSalesPrice(e.target.value)}
+                    />
                     <select>
                       <option>With Tax</option>
                       <option>Without Tax</option>
@@ -237,12 +289,20 @@ const CreateItem = () => {
                 {type === "product" ? (
                   <div>
                     <label>Opening Stock</label>
-                    <input placeholder="ex: 150 PCS" />
+                    <input
+                      placeholder="ex: 150 PCS"
+                      value={openingStock}
+                      onChange={(e) => setOpeningStock(e.target.value)}
+                    />
                   </div>
                 ) : (
                   <div>
                     <label>Service Code</label>
-                    <input placeholder="Enter Service Code" />
+                    <input
+                      placeholder="Enter Service Code"
+                      value={serviceCode}
+                      onChange={(e) => setServiceCode(e.target.value)}
+                    />
                   </div>
                 )}
               </div>
@@ -316,8 +376,8 @@ const CreateItem = () => {
             <div className="ci-empty">
               <img src={partyWiseImg} />
               <p>
-                To enable Party Wise Prices and set custom prices for
-                parties, please save the item first
+                To enable Party Wise Prices and set custom prices for parties,
+                please save the item first
               </p>
             </div>
           )}
@@ -330,7 +390,7 @@ const CreateItem = () => {
       {/* FOOTER */}
       <footer className="ci-footer">
         <button className="ci-cancel">Cancel</button>
-        <button className="ci-save">Save</button>
+        <button className="ci-save" onClick={handleSave}>Save</button>
       </footer>
 
       {/* ADD CATEGORY MODAL */}
@@ -339,9 +399,7 @@ const CreateItem = () => {
           <div className="ci-modal">
             <div className="ci-modal-header">
               <h3>Create New Category</h3>
-              <button onClick={() => setShowAddCategory(false)}>
-                ×
-              </button>
+              <button onClick={() => setShowAddCategory(false)}>×</button>
             </div>
 
             <div className="ci-modal-body">
@@ -349,16 +407,12 @@ const CreateItem = () => {
               <input
                 placeholder="Ex: Snacks"
                 value={newCategory}
-                onChange={(e) =>
-                  setNewCategory(e.target.value)
-                }
+                onChange={(e) => setNewCategory(e.target.value)}
               />
             </div>
 
             <div className="ci-modal-footer">
-              <button onClick={() => setShowAddCategory(false)}>
-                Cancel
-              </button>
+              <button onClick={() => setShowAddCategory(false)}>Cancel</button>
               <button className="ci-save" onClick={handleAddCategory}>
                 Add
               </button>

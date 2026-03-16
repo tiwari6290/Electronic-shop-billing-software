@@ -1,0 +1,286 @@
+/* ─── Party Wrap (unselected) ─────────────────────────────────────────────── */
+.si-party-wrap { padding: 16px; }
+.si-plabel { font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 10px; }
+.si-pdash-wrap { position: relative; }
+
+.si-pdashed {
+  border: 1.5px dashed #93c5fd; border-radius: 8px; padding: 28px 20px;
+  text-align: center; color: #3b82f6; font-size: 14px; font-weight: 500;
+  cursor: pointer; transition: background .12s;
+}
+.si-pdashed:hover { background: #eff6ff; }
+
+/* ─── Party Dropdown (Image 2) ────────────────────────────────────────────── */
+/* Renders below the dashed box (unselected) or below "Change Party" button (selected) */
+.si-pdropdown {
+  position: absolute; top: calc(100% + 4px); left: 0; z-index: 400;
+  background: #fff; border-radius: 10px;
+  box-shadow: 0 8px 32px rgba(0,0,0,.18);
+  min-width: 340px; width: 100%;
+  border: 1px solid #e5e7eb; overflow: hidden;
+}
+
+/* Search row — bordered box with chevron (Image 2) */
+.si-pdrop-search-wrap {
+  display: flex; align-items: center;
+  border: 1.5px solid #6366f1; border-radius: 7px; margin: 12px 12px 0;
+  padding: 8px 12px;
+}
+.si-pdrop-search {
+  flex: 1; border: none; outline: none; font-size: 13.5px; color: #374151;
+  font-family: inherit; background: transparent;
+}
+.si-pdrop-chev { width: 14px; height: 14px; color: #6b7280; flex-shrink: 0; }
+
+/* Header row */
+.si-plist-hdr {
+  display: flex; justify-content: space-between;
+  padding: 8px 16px; font-size: 12px; font-weight: 600;
+  color: #6b7280; background: #f9fafb; border-bottom: 1px solid #f3f4f6;
+  margin-top: 10px;
+}
+
+/* Party list */
+.si-plist { max-height: 240px; overflow-y: auto; }
+
+.si-prow {
+  display: flex; justify-content: space-between; align-items: center;
+  width: 100%; padding: 12px 16px; border: none; background: none;
+  font-size: 13.5px; color: #111827; cursor: pointer; text-align: left;
+  border-bottom: 1px solid #f9fafb; font-family: inherit;
+}
+.si-prow:hover { background: #f5f3ff; }
+
+.si-pbal { color: #374151; font-size: 13px; display: flex; align-items: center; gap: 4px; }
+.si-bal-up   { color: #ef4444; font-size: 14px; font-weight: 700; }
+.si-bal-down { color: #16a34a; font-size: 14px; font-weight: 700; }
+
+/* Create Party dashed button */
+.si-create-party {
+  display: block; width: 100%; padding: 12px 16px;
+  border: none; border-top: 1.5px dashed #93c5fd; background: none;
+  color: #3b82f6; font-size: 13.5px; font-weight: 500;
+  cursor: pointer; text-align: center; font-family: inherit;
+}
+.si-create-party:hover { background: #eff6ff; }
+
+/* ─── Selected State (Image 1) ────────────────────────────────────────────── */
+.si-party-selected {
+  display: grid; grid-template-columns: 1fr 1fr;
+  border-bottom: 1px solid #e5e7eb;
+}
+.si-pcol {
+  padding: 14px 16px; border-right: 1px solid #e5e7eb;
+}
+.si-pcol--last { border-right: none; }
+
+.si-pcard-hdr {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 10px; font-size: 13px; font-weight: 600; color: #374151;
+}
+
+/* "Change Party" / "Change Shipping Address" outlined buttons (Image 1) */
+.si-pcard-btn {
+  background: #fff; border: 1px solid #d1d5db; border-radius: 6px;
+  padding: 5px 12px; font-size: 12.5px; color: #374151; cursor: pointer;
+  font-family: inherit; white-space: nowrap;
+}
+.si-pcard-btn:hover { background: #f3f4f6; }
+
+/* Change Party button wrapper — dropdown sits below it */
+.si-change-btn-wrap { position: relative; }
+.si-change-btn-wrap .si-pdropdown {
+  top: calc(100% + 6px);  left: auto; min-width: 320px;
+}
+
+
+.si-pname   { font-size: 14px; font-weight: 700; color: #111827; margin-bottom: 4px; }
+.si-pdetail { font-size: 12.5px; color: #6b7280; margin-bottom: 2px; line-height: 1.4; }
+
+/* ─── Shipping Address List Modal (Image 3) ───────────────────────────────── */
+.si-ship-list-modal {
+  background: #fff; border-radius: 10px; width: 580px; max-width: 94vw;
+  font-family: inherit; box-shadow: 0 20px 60px rgba(0,0,0,.22);
+  display: flex; flex-direction: column; max-height: 90vh; overflow: hidden;
+}
+
+.si-ship-list-hdr {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 16px 22px; border-bottom: 1px solid #f3f4f6;
+}
+.si-ship-list-title { font-size: 16px; font-weight: 700; color: #111827; }
+.si-ship-close-btn  { background: none; border: none; cursor: pointer; color: #9ca3af; font-size: 18px; }
+
+.si-ship-col-labels {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 8px 22px; background: #f9fafb; border-bottom: 1px solid #e5e7eb;
+  font-size: 12px; font-weight: 600; color: #6b7280;
+}
+.si-ship-col-right-labels { display: flex; gap: 36px; }
+
+.si-ship-list-body { overflow-y: auto; flex: 1; }
+.si-ship-empty { padding: 28px; text-align: center; color: #9ca3af; font-size: 13px; }
+
+.si-ship-addr-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 22px; border-bottom: 1px solid #f3f4f6;
+}
+.si-ship-addr-row:hover { background: #fafafa; }
+.si-ship-addr-row--sel  { background: #f5f3ff; }
+
+.si-ship-addr-info { flex: 1; padding-right: 12px; }
+.si-ship-addr-name { font-size: 14px; font-weight: 700; color: #111827; margin-bottom: 3px; }
+.si-ship-addr-line { font-size: 12.5px; color: #6b7280; line-height: 1.5; }
+
+.si-ship-addr-actions { display: flex; align-items: center; gap: 24px; }
+.si-ship-edit-btn {
+  background: none; border: none; cursor: pointer; color: #9ca3af; padding: 4px;
+  border-radius: 5px; display: flex; align-items: center;
+}
+.si-ship-edit-btn:hover { background: #f3f4f6; color: #374151; }
+.si-ship-radio-btn { background: none; border: none; cursor: pointer; padding: 2px; display: flex; align-items: center; }
+
+.si-ship-add-link {
+  padding: 12px 22px; border-top: 1px solid #f3f4f6;
+}
+.si-ship-add-link button {
+  background: none; border: none; color: #6366f1; font-size: 13.5px;
+  font-weight: 500; cursor: pointer; font-family: inherit;
+}
+.si-ship-add-link button:hover { text-decoration: underline; }
+
+.si-ship-list-ftr {
+  display: flex; justify-content: flex-end; gap: 12px;
+  padding: 14px 22px; border-top: 1px solid #f3f4f6;
+}
+
+/* ─── Add / Edit Shipping Address Form (Image 4 & 5) ─────────────────────── */
+.si-ship-form-modal {
+  background: #fff; border-radius: 10px; width: 580px; max-width: 94vw;
+  font-family: inherit; box-shadow: 0 20px 60px rgba(0,0,0,.22);
+}
+
+.si-ship-form-hdr {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 16px 22px; border-bottom: 1px solid #f3f4f6;
+  font-size: 16px; font-weight: 700; color: #111827;
+}
+.si-ship-form-close { background: none; border: none; cursor: pointer; color: #9ca3af; font-size: 18px; }
+
+.si-ship-form-body { padding: 20px 22px; display: flex; flex-direction: column; gap: 16px; }
+
+.si-ship-field { display: flex; flex-direction: column; gap: 5px; }
+
+/* Indigo labels (Image 4 & 5) */
+.si-ship-label { font-size: 12.5px; font-weight: 600; color: #6366f1; }
+.si-req { color: #ef4444; }
+.si-ship-errmsg { font-size: 11.5px; color: #ef4444; margin-top: 2px; }
+
+.si-ship-input {
+  width: 100%; padding: 10px 14px; border: 1.5px solid #e5e7eb; border-radius: 7px;
+  font-size: 14px; color: #111827; outline: none; font-family: inherit;
+  box-sizing: border-box;
+}
+.si-ship-input:focus { border-color: #6366f1; }
+.si-ship-input--err { border-color: #ef4444; }
+
+.si-ship-ta {
+  width: 100%; padding: 10px 14px; border: 1.5px solid #e5e7eb; border-radius: 7px;
+  font-size: 14px; color: #111827; outline: none; resize: vertical; font-family: inherit;
+  box-sizing: border-box; min-height: 80px;
+}
+.si-ship-ta:focus { border-color: #6366f1; }
+.si-ship-ta--err { border-color: #ef4444; }
+
+/* State + Pincode 2-col row */
+.si-ship-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+/* State selector with search icon + chevron (Image 4 & 5) */
+.si-ship-sel-wrap {
+  position: relative; display: flex; align-items: center;
+  border: 1.5px solid #e5e7eb; border-radius: 7px; overflow: hidden;
+}
+.si-ship-sel-wrap:focus-within { border-color: #6366f1; }
+.si-ship-sel-icon {
+  position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+  width: 14px; height: 14px; color: #9ca3af; pointer-events: none;
+}
+.si-ship-chev {
+  position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+  width: 14px; height: 14px; color: #9ca3af; pointer-events: none;
+}
+.si-ship-select {
+  width: 100%; padding: 10px 32px 10px 32px;
+  border: none; outline: none; font-size: 14px; color: #374151;
+  background: transparent; font-family: inherit; appearance: none;
+  cursor: pointer;
+}
+
+.si-ship-form-ftr {
+  display: flex; justify-content: flex-end; gap: 12px;
+  padding: 14px 22px; border-top: 1px solid #f3f4f6;
+}
+
+/* ─── Create Party Modal ──────────────────────────────────────────────────── */
+.si-overlay {
+  position: fixed; inset: 0; background: rgba(17,24,39,.5);
+  z-index: 500; display: flex; align-items: center; justify-content: center;
+}
+.si-cmodal {
+  background: #fff; border-radius: 10px; width: 580px; max-width: 96vw;
+  max-height: 90vh; overflow-y: auto; font-family: inherit;
+  box-shadow: 0 20px 60px rgba(0,0,0,.22);
+}
+.si-cmodal-hdr {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 18px 22px; border-bottom: 1px solid #f3f4f6;
+  font-size: 16px; font-weight: 700; color: #111827;
+}
+.si-cmodal-hdr button { background: none; border: none; cursor: pointer; color: #9ca3af; font-size: 18px; }
+.si-cmodal-body { padding: 20px 22px; }
+.si-crow2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px; }
+.si-crow2 label { display: block; font-size: 12px; color: #6b7280; font-weight: 500; margin-bottom: 4px; }
+.si-inp {
+  width: 100%; padding: 8px 10px; border: 1.5px solid #e5e7eb; border-radius: 6px;
+  font-size: 13.5px; outline: none; box-sizing: border-box; font-family: inherit;
+}
+.si-inp:focus { border-color: #6366f1; }
+.si-inp--err { border-color: #ef4444 !important; }
+.si-inp--full { width: 100%; }
+.si-errmsg { font-size: 11.5px; color: #ef4444; margin-top: 3px; display: block; }
+.si-caddr-section, .si-cgstin-section { margin-bottom: 16px; }
+.si-caddr-hdr {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 10px; font-size: 13px; font-weight: 600; color: #374151;
+}
+.si-alabel {
+  font-size: 11px; font-weight: 700; color: #9ca3af;
+  letter-spacing: .04em; text-transform: uppercase; display: block; margin-bottom: 4px;
+}
+.si-ta {
+  width: 100%; min-height: 70px; padding: 8px 10px;
+  border: 1.5px solid #e5e7eb; border-radius: 6px; font-size: 13px;
+  outline: none; resize: vertical; box-sizing: border-box; font-family: inherit;
+}
+.si-ta:focus { border-color: #6366f1; }
+.si-same-chk { display: flex; align-items: center; gap: 6px; font-size: 12.5px; color: #6b7280; margin-top: 8px; cursor: pointer; }
+.si-chint { font-size: 12px; color: #6b7280; padding: 10px; background: #fffbeb; border-radius: 6px; border: 1px solid #fde68a; }
+.si-link { color: #6366f1; text-decoration: underline; cursor: pointer; }
+.si-cmodal-ftr {
+  display: flex; justify-content: flex-end; gap: 10px;
+  padding: 14px 22px; border-top: 1px solid #f3f4f6;
+}
+
+/* ─── Shared buttons ──────────────────────────────────────────────────────── */
+.si-btn-cancel {
+  padding: 9px 22px; border: 1.5px solid #e5e7eb; border-radius: 7px;
+  background: #fff; font-size: 14px; color: #374151; cursor: pointer; font-family: inherit;
+}
+.si-btn-cancel:hover { background: #f9fafb; }
+.si-btn-primary {
+  padding: 9px 26px; border: none; border-radius: 7px;
+  background: #6366f1; color: #fff; font-size: 14px; font-weight: 600;
+  cursor: pointer; font-family: inherit;
+}
+.si-btn-primary:hover { background: #4f46e5; }
+.si-btn-primary:disabled { background: #a5b4fc; cursor: not-allowed; }

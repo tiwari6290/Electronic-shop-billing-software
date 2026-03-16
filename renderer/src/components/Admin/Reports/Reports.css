@@ -1,0 +1,241 @@
+/* ── Reports Page ─────────────────────────────────────────────────────────── */
+
+.reports-page {
+  min-height: 100vh;
+  background: #ffffff;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #111827;
+}
+
+/* ── Header ──────────────────────────────────────────────────────────────── */
+
+.reports-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 24px 14px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.reports-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0;
+}
+
+.reports-ca-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 16px;
+  background: #4f46e5;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 500;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.reports-ca-btn:hover {
+  background: #4338ca;
+}
+
+/* ── Filter Bar ──────────────────────────────────────────────────────────── */
+
+.reports-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 24px;
+  border-bottom: 1px solid #e5e7eb;
+  flex-wrap: wrap;
+}
+
+.reports-filter-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #6b7280;
+  margin-right: 4px;
+}
+
+.reports-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 400;
+  color: #374151;
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.reports-filter-chip:hover {
+  border-color: #4f46e5;
+  color: #4f46e5;
+}
+
+.reports-filter-chip--active {
+  background: #ffffff;
+  border-color: #4f46e5;
+  color: #4f46e5;
+  font-weight: 500;
+}
+
+.reports-filter-chip__close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #4f46e5;
+}
+
+/* ── Grids ───────────────────────────────────────────────────────────────── */
+
+.reports-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+
+
+.reports-grid--bottom {
+  min-height: 200px;
+}
+
+/* ── Section Panel ───────────────────────────────────────────────────────── */
+
+.section-panel {
+  border-right: 1px solid #e5e7eb;
+}
+
+.section-panel:last-child {
+  border-right: none;
+}
+
+.section-panel__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+  border-top: 1px solid #e5e7eb;
+}
+
+.section-panel__icon {
+  color: #4f46e5;
+  display: flex;
+  align-items: center;
+}
+
+.section-panel__icon--sparkle {
+  color: #4f46e5;
+}
+
+.section-panel__title {
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.section-panel__body {
+  padding: 4px 0 8px;
+}
+
+.section-panel__empty {
+  display: block;
+  padding: 14px 20px;
+  font-size: 13px;
+  color: #9ca3af;
+}
+
+/* ── Report Row ──────────────────────────────────────────────────────────── */
+
+.report-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 20px;
+  cursor: pointer;
+  transition: background 0.1s;
+  border-radius: 0;
+}
+
+.report-row:hover,
+.report-row--hovered {
+  background: #f3f4f6;
+}
+
+.report-row__name {
+  font-size: 13.5px;
+  color: #1f2937;
+  flex: 1;
+  line-height: 1.4;
+}
+
+.report-row__star {
+  background: none;
+  border: none;
+  padding: 2px 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.15s, transform 0.15s;
+  flex-shrink: 0;
+  margin-left: 8px;
+}
+
+.report-row__star--visible {
+  opacity: 1;
+}
+
+.report-row__star--active {
+  opacity: 1;
+}
+
+.report-row__star:hover svg {
+  transform: scale(1.2);
+}
+
+/* ── See More / See Less Toggle ──────────────────────────────────────────── */
+
+.section-panel__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 20px;
+  background: none;
+  border: none;
+  color: #4f46e5;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  margin-top: 4px;
+}
+
+.section-panel__toggle:hover {
+  text-decoration: underline;
+}
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .reports-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .section-panel {
+    border-right: none;
+    border-bottom: 1px solid #e5e7eb;
+  }
+}

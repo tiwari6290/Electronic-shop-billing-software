@@ -1,0 +1,142 @@
+.ageing-container {
+  padding: 24px;
+}
+
+.ageing-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.ageing-header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.back-btn {
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+.fav-btn {
+  border: 1px solid #e5e7eb;
+  padding: 6px 12px;
+  border-radius: 6px;
+  background: white;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.ageing-header-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.download-wrapper {
+  position: relative;
+}
+
+.action-btn {
+  border: 1px solid #e5e7eb;
+  background: white;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.download-dropdown {
+  position: absolute;
+  top: 110%;
+  right: 0;
+  width: 200px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  z-index: 50;
+}
+
+.download-item {
+  padding: 14px 16px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #374151;
+}
+
+.download-item:hover {
+  background: #f3f4f6;
+}
+
+.ageing-search input {
+  padding: 10px 14px;
+  width: 300px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.ageing-table-wrapper {
+  background: white;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+  overflow: hidden;
+}
+
+.ageing-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.ageing-table th,
+.ageing-table td {
+  padding: 14px;
+  text-align: left;
+  border-bottom: 1px solid #f3f4f6;
+  font-size: 14px;
+}
+
+.not-due {
+  background: #fef9c3;
+  text-align: center;
+}
+
+.overdue {
+  background: #fee2e2;
+  text-align: center;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 60px;
+  color: #9ca3af;
+}
+
+.fav-active {
+  background: #fef3c7;
+  border-color: #f59e0b;
+  color: #b45309;
+}
+
+/* Print Optimization */
+@media print {
+  .ageing-header,
+  .ageing-search {
+    display: none;
+  }
+
+  .ageing-container {
+    padding: 0;
+  }
+
+  .ageing-table-wrapper {
+    border: none;
+  }
+}

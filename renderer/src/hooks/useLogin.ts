@@ -1,10 +1,13 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { validateLoginForm } from "../utils/validators";
 import { loginApi } from "../services/authService";
 
 export type UserRole = "Admin" | "Cashier" | "Accountant";
 
 export const useLogin = () => {
+  const navigate = useNavigate();
+  
   const [selectedRole, setSelectedRole] = useState<UserRole>("Cashier");
   const [selectedStore, setSelectedStore] = useState("01");
   const [email, setEmail] = useState("");
@@ -32,6 +35,7 @@ export const useLogin = () => {
     try {
       setLoading(true);
 
+
       // ✅ REAL BACKEND CALL
       const response = await loginApi({
         role: selectedRole,
@@ -44,6 +48,7 @@ export const useLogin = () => {
       localStorage.setItem("token", response.token);
       localStorage.setItem("role", response.role);
       localStorage.setItem("branch", selectedStore);
+
 
       // ✅ Redirect (same as before)
       window.location.href = "/create-party";
@@ -71,3 +76,5 @@ export const useLogin = () => {
     handleLogin,
   };
 };
+
+

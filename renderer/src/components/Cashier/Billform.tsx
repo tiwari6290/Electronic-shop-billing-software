@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Trash2, X, Search, Calendar } from 'lucide-react';
 import AddItemsToBill from './AddItemsToBill/AddItemsToBill';
-import PurchaseOrder from './PurchaseOrder/PurchaseOrder';
+/* import PurchaseOrder from './PurchaseOrder/PurchaseOrder'; */
 import { useNavigate } from "react-router-dom";
 
 
 interface BillFormProps {
   mode?: "sale" | "purchase" | "debit" | "credit" | "purchaseReturn"| "deliveryChallan" | "purchaseOrder";
+  isAutomated?: boolean;
 }
 
 interface Item {
@@ -70,7 +71,7 @@ const searchIcon: React.CSSProperties = {
   color: "#9ca3af",
 };
 
-const BillForm: React.FC<BillFormProps> = ({ mode = "sale" }) => {
+const BillForm: React.FC<BillFormProps> = ({ mode = "sale", isAutomated = false }) => {
   const isFromPurchase = mode === "purchase";
   const isDebitNote = mode === "debit";
   const isPurchaseReturn = mode === "purchaseReturn";
@@ -821,7 +822,7 @@ const BillForm: React.FC<BillFormProps> = ({ mode = "sale" }) => {
                   {/* Signature */}
                   <div style={{ marginTop: '24px', paddingTop: '16px', borderTop: '1px solid #e5e7eb' }}>
                     <p style={{ fontSize: '12px', color: '#6b7280', marginBottom: '8px' }}>
-                      Authorized signatory for <strong>Santosh cycle van reparing shop</strong>
+                      Authorized signatory for <strong>mondal electronic </strong>
                     </p>
                     
                     {!signature ? (
@@ -876,8 +877,10 @@ const BillForm: React.FC<BillFormProps> = ({ mode = "sale" }) => {
               </div>
             </div>
 
-            {/* Right Sidebar - Invoice Details */}
+            {/* Right Sidebar - Invoice Details — hidden when isAutomated */}
+            {!isAutomated && (
             <div style={{ width: '320px' }}>
+
               <div style={{ backgroundColor: '#ffffff', borderRadius: '8px', padding: '20px' }}>
                 {/* ================= PURCHASE REFERENCE FIELDS ================= */}
                 {isFromPurchase && (
@@ -1594,6 +1597,11 @@ const BillForm: React.FC<BillFormProps> = ({ mode = "sale" }) => {
                 </p>
               </div>
             </div>
+            )}
+            {/* End Right Sidebar */}
+
+
+
           </div>
         </div>
       </div>
@@ -1643,8 +1651,8 @@ const BillForm: React.FC<BillFormProps> = ({ mode = "sale" }) => {
 
             <div style={{ padding: '16px', borderTop: '1px solid #e5e7eb' }}>
               <button onClick={() => {
-    setShowPartyModal(false); // close modal
-    navigate("/create-party"); // navigate to page
+    setShowPartyModal(false);
+    navigate("/create-party");
   }}style={{ color: '#6366f1', fontSize: '14px', fontWeight: '500', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
                 + Create Party
               </button>
@@ -1678,9 +1686,9 @@ const BillForm: React.FC<BillFormProps> = ({ mode = "sale" }) => {
               <select style={{ padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '14px' }}>
                 <option>Select Category</option>
               </select>
-              <button  onClick={() => {
+              <button onClick={() => {
     setShowPartyModal(false); 
-    navigate("/create-item "); 
+    navigate("/create-item ");
   }} style={{ padding: '8px 16px', backgroundColor: '#6366f1', color: '#ffffff', fontSize: '14px', fontWeight: '500', borderRadius: '6px', border: 'none', cursor: 'pointer' }}>
                 Create New Item
               </button>

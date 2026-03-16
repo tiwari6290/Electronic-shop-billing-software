@@ -237,3 +237,41 @@
   color: #aaa;
   text-align: center;
 }
+/* ===== PaymentOut.css ===== */
+
+/* Wrapper to position back button relative to Navbar */
+.navbar-wrapper {
+  position: relative;
+}
+
+/* Back arrow button — sits on top-left of the Navbar */
+.back-btn {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  color: #444;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease;
+}
+
+.back-btn:hover {
+  background: rgba(0, 0, 0, 0.06);
+  color: #111;
+}
+
+/* Remove spinner arrows — Chrome, Safari, Edge, Opera */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
