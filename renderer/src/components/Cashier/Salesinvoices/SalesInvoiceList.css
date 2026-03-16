@@ -352,10 +352,23 @@
   font-family: 'DM Sans', sans-serif; font-size: 13.5px; outline: none; margin-bottom: 12px;
 }
 .sil-bulk-email-input:focus { border-color: #4f46e5; }
-.sil-bulk-ca-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-size: 13.5px; color: #374151; }
+
 .sil-bulk-footer {
   display: flex; align-items: center; justify-content: space-between;
   padding: 14px 24px; border-top: 1px solid #f3f4f6; font-size: 13px; color: #374151; font-weight: 500;
+}
+
+.sil-bulk-ca-row {
+  display: inline-flex;   /* change from flex → inline-flex */
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+  font-size: 13.5px;
+  color: #374151;
+  white-space: nowrap;
+}
+.sil-bulk-ca-row label {
+  margin: 0;
 }
 
 /* Confirm modal */

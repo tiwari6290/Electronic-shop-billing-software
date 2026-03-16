@@ -610,14 +610,14 @@ export default function InvoiceViewModal({ invoice: initialInvoice, template, bu
               </div>
             </div>
             <div className="ivm-actionbar-right">
-              <button className="ivm-eway-btn">
+              {/* <button className="ivm-eway-btn">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 3v5h-7V8z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
                 Generate E-way Bill
               </button>
               <button className="ivm-einvoice-btn">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                 Generate e-Invoice
-              </button>
+              </button> */}
               {/* ← NOW opens the Record Payment Modal */}
               <button className="ivm-record-btn" onClick={e => { e.stopPropagation(); setShowRecordPayment(true); }}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
@@ -698,19 +698,70 @@ export default function InvoiceViewModal({ invoice: initialInvoice, template, bu
                       })}
                     </tbody>
                   </table>
-                  <div className="ivm-totals-row">
+                  {/* SUBTOTAL full-width row */}
+                  <table className="ivm-items-table" style={{ marginBottom: 0 }}>
+                    <tbody>
+                      <tr style={{ borderTop: "1px solid #e5e7eb", borderBottom: "1px solid #e5e7eb" }}>
+                        <td style={{ fontWeight: 700, fontSize: "12px", padding: "8px 10px" }}>SUBTOTAL</td>
+                        <td className="center" style={{ fontWeight: 700, fontSize: "12px" }}>{invoice.billItems.reduce((s,i)=>s+i.qty,0)}</td>
+                        {showRate && <td />}
+                        {showHSN && <td />}
+                        <td />
+                        <td className="right" style={{ fontWeight: 700, fontSize: "12px" }}>₹ {subtotal.toLocaleString("en-IN")}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+
+                  {/* Terms left + Totals breakdown right */}
+                  <div className="ivm-totals-row" style={{ alignItems: "flex-start", marginTop: 0 }}>
                     <div style={{ flex: 1 }}>
-                      <div className="ivm-bank-box" style={{ border: bw }}>
+                      {/* Bank Details - kept but hidden via comment for future use */}
+                      {/* <div className="ivm-bank-box" style={{ border: bw }}>
                         <div style={{ fontWeight: 700, marginBottom: 4, fontSize: "12px" }}>Bank Details</div>
                         <div>{bankInfo}</div>
                         {ifsc && <div>IFSC: {ifsc}</div>}
-                      </div>
+                      </div> */}
+                      {misc.showTerms && (
+                        <div className="ivm-terms-box" style={{ marginTop: 0, background: "transparent", padding: "10px 0" }}>
+                          <div style={{ fontWeight: 700, marginBottom: 4, fontSize: "12px" }}>TERMS AND CONDITIONS</div>
+                          <div style={{ color: "#374151", fontSize: "12px" }}>{invoice.termsConditions || defaultTerms}</div>
+                        </div>
+                      )}
                     </div>
-                    <table className="ivm-totals-table">
+                    <table className="ivm-totals-table" style={{ minWidth: 280 }}>
                       <tbody>
-                        <tr><td>TOTAL</td><td>{invoice.billItems.reduce((s,i)=>s+i.qty,0)}</td><td className="right">₹{totalTax.toFixed(2)}</td><td className="right">₹{grandTotal.toLocaleString("en-IN")}</td></tr>
-                        <tr><td colSpan={2}>RECEIVED AMOUNT</td><td colSpan={2} className="right">₹{invoice.amountReceived.toLocaleString("en-IN")}</td></tr>
-                        <tr><td colSpan={2}>BALANCE AMOUNT</td><td colSpan={2} className="right" style={{ color: balance>0 ? "#dc2626" : "#16a34a", fontWeight:700 }}>₹{balance.toLocaleString("en-IN")}</td></tr>
+                        {invoice.additionalCharges.map((c, i) => c.amount !== 0 && (
+                          <tr key={i}>
+                            <td style={{ borderBottom: "none" }}>{c.label || "Additional Charge"}</td>
+                            <td className="right" style={{ borderBottom: "none" }}>₹ {c.amount.toLocaleString("en-IN")}</td>
+                          </tr>
+                        ))}
+                        {discVal > 0 && (
+                          <tr>
+                            <td style={{ borderBottom: "none" }}>Discount</td>
+                            <td className="right" style={{ borderBottom: "none" }}>- ₹ {discVal.toLocaleString("en-IN")}</td>
+                          </tr>
+                        )}
+                        {invoice.applyTCS && tcsValue > 0 && (
+                          <tr>
+                            <td style={{ borderBottom: "none" }}>{invoice.tcsLabel || "TCS"} ({invoice.tcsRate}%)</td>
+                            <td className="right" style={{ borderBottom: "none" }}>₹ {tcsValue.toLocaleString("en-IN")}</td>
+                          </tr>
+                        )}
+                        {invoice.roundOffAmt !== 0 && (
+                          <tr>
+                            <td style={{ borderBottom: "none" }}>Round Off</td>
+                            <td className="right" style={{ borderBottom: "none" }}>₹ {invoice.roundOffAmt.toLocaleString("en-IN")}</td>
+                          </tr>
+                        )}
+                        <tr style={{ fontWeight: 700, borderTop: "1px solid #e5e7eb" }}>
+                          <td style={{ fontWeight: 700 }}>Total Amount</td>
+                          <td className="right" style={{ fontWeight: 700 }}>₹ {grandTotal.toLocaleString("en-IN")}</td>
+                        </tr>
+                        <tr>
+                          <td style={{ borderBottom: "none" }}>Received Amount</td>
+                          <td className="right" style={{ borderBottom: "none" }}>₹ {invoice.amountReceived.toLocaleString("en-IN")}</td>
+                        </tr>
                       </tbody>
                     </table>
                   </div>
@@ -723,8 +774,16 @@ export default function InvoiceViewModal({ invoice: initialInvoice, template, bu
                       </table>
                     </div>
                   )}
-                  {misc.amountWords && <div className="ivm-words-row"><strong>Total Amount (in words)</strong><br/>{numToWords(grandTotal)}</div>}
-                  {misc.showTerms && <div className="ivm-terms-box"><div style={{ fontWeight:700, marginBottom:4, fontSize:"12px" }}>Terms and Conditions</div><div style={{ color:"#6b7280" }}>{invoice.termsConditions || defaultTerms}</div></div>}
+                  {misc.amountWords && (
+                    <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                      <div style={{ textAlign: "right", fontSize: "12px", color: "#374151", padding: "6px 0" }}>
+                        <div><strong>Total Amount (in words)</strong></div>
+                        <div>{numToWords(grandTotal)}</div>
+                      </div>
+                    </div>
+                  )}
+                  {/* Terms and Conditions moved into totals row (left side) - keeping this comment for reference */}
+                  {/* {misc.showTerms && <div className="ivm-terms-box"><div style={{ fontWeight:700, marginBottom:4, fontSize:"12px" }}>Terms and Conditions</div><div style={{ color:"#6b7280" }}>{invoice.termsConditions || defaultTerms}</div></div>} */}
                   {misc.showNotes && invoice.notes && <div className="ivm-notes-box"><strong>Notes:</strong> {invoice.notes}</div>}
                   <div className="ivm-signature-row">
                     {misc.receiverSig && <div className="ivm-sig-box"><div className="ivm-sig-line"/><div className="ivm-sig-label">Receiver's Signature</div></div>}
