@@ -425,18 +425,22 @@ export default function CreateSalesInvoice({
       payload.totalAmount            = computedTotal;
       payload.receivedAmount         = Number(form.amountReceived) || 0;
       payload.outstandingAmount      = computedOutstanding;
+      payload.signatureUrl           = (form as any).signatureUrl           ?? null;
+      payload.showEmptySignatureBox  = (form as any).showEmptySignatureBox  ?? false;
 
       if (editId) {
         await updateInvoice(editId, {
-          dueDate:         payload.dueDate,
-          ewayBillNo:      payload.ewayBillNo,
-          challanNo:       payload.challanNo,
-          financedBy:      payload.financedBy,
-          salesman:        payload.salesman,
-          emailId:         payload.emailId,
-          warrantyPeriod:  payload.warrantyPeriod,
-          notes:           payload.notes,
-          termsConditions: payload.termsConditions,
+          dueDate:              payload.dueDate,
+          ewayBillNo:           payload.ewayBillNo,
+          challanNo:            payload.challanNo,
+          financedBy:           payload.financedBy,
+          salesman:             payload.salesman,
+          emailId:              payload.emailId,
+          warrantyPeriod:       payload.warrantyPeriod,
+          notes:                payload.notes,
+          termsConditions:      payload.termsConditions,
+          signatureUrl:         payload.signatureUrl,
+          showEmptySignatureBox: payload.showEmptySignatureBox,
         } as any);
       } else {
         await createInvoice(payload);
@@ -667,6 +671,13 @@ export default function CreateSalesInvoice({
 
               onAmountReceivedChange={v => set("amountReceived", v)}
               onPaymentMethodChange={v => set("paymentMethod",   v)}
+
+              signatureUrl={(form as any).signatureUrl ?? ""}
+              showEmptySignatureBox={(form as any).showEmptySignatureBox ?? false}
+              onSignatureChange={(url, showEmpty) => {
+                set("signatureUrl", url);
+                set("showEmptySignatureBox", showEmpty);
+              }}
             />
           </div>
 
