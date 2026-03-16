@@ -2400,7 +2400,7 @@ interface CPIProps {
   editData?: Invoice;
   seqNo: number;
   onBack: () => void;
-  onSaved: (inv: Invoice, isEdit: boolean) => void;
+  onSaved: (inv: Invoice, isEdit: boolean, goToList?: boolean) => void;
   onCreateItem: () => void;
   allParties: Party[];
   setAllParties: React.Dispatch<React.SetStateAction<Party[]>>;
@@ -2465,7 +2465,7 @@ function CreatePurchaseInvoicePage({
           setInvNo(1);
         });
     }
-  }, [settings.prefix]);
+  }, [isNew, isDup]);
 
   const initInvDate = isEdit ? new Date(editData!.date) : new Date();
   const [invDateObj, setInvDateObj] = useState<Date>(initInvDate);
@@ -2846,10 +2846,10 @@ function CreatePurchaseInvoicePage({
       };
       if (createNew && !isEdit) {
 
-  // 🔹 update purchase invoice list immediately
-  onSaved(inv, false);
+  onSaved(inv,false,false)
+  
 
-  // 🔹 clear full form
+  // clear form
   setSelectedParty(null);
   setPartyState("empty");
   setPartySearch("");
@@ -2873,8 +2873,9 @@ function CreatePurchaseInvoicePage({
   setShipPin("");
   setShipCity("");
   setShipSaved(false);
+  setInvDateObj(new Date());
 
-  // 🔹 generate next invoice number
+  // load next invoice number
   try {
     const res = await api.get("/purchase-invoices/next-invoice-number");
     setInvNo(res.data.invoiceNumber);
@@ -2884,6 +2885,14 @@ function CreatePurchaseInvoicePage({
 
   showT("Invoice saved. Ready for next.");
 }
+else {
+
+  // 🔴 THIS IS THE IMPORTANT FIX
+  // normal SAVE should redirect to list
+  onSaved(inv, isEdit,true);
+
+}
+
     } catch (err: any) {
       const msg =
         err?.response?.data?.message ||
@@ -4910,11 +4919,27 @@ export default function PurchaseModule() {
       });
   }, []);
 
-  const handleSaved = (_inv: Invoice, _isEdit: boolean) => {
-    setEditTarget(null);
+ const handleSaved = (
+  inv: Invoice,
+  isEdit: boolean,
+  goToList: boolean = true
+) => {
+
+  setInvoices(prev => {
+    if (isEdit) {
+      return prev.map(i => i.id === inv.id ? inv : i);
+    }
+    return [inv, ...prev];
+  });
+
+  setEditTarget(null);
+
+  if (goToList) {
     setPage("list");
-    loadInvoices();
-  };
+  }
+
+  setTimeout(loadInvoices, 500);
+};
   const handleEdit = (inv: Invoice) => {
     setEditTarget(inv);
     setPage("edit");
