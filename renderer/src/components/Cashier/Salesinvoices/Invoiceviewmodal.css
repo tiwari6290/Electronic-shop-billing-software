@@ -165,8 +165,7 @@
   .ivm-sidebar { display: none; }
   .ivm-actionbar { flex-wrap: wrap; }
 }
-/* ── Full-screen override: starts after the side navigation ── */
-/* The side nav is typically 220px wide. The overlay starts at left: var(--nav-width, 220px) */
+
 .ivm-overlay {
   left: var(--nav-width, 220px) !important;
 }
