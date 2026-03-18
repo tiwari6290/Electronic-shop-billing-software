@@ -3,6 +3,7 @@
   position: fixed; inset: 0; background: rgba(0,0,0,.55);
   z-index: 2000; display: flex; align-items: stretch; justify-content: flex-end;
   animation: ivmFadeIn .15s ease;
+  left: var(--nav-width, 220px) !important;
 }
 @keyframes ivmFadeIn { from { opacity: 0 } to { opacity: 1 } }
 
@@ -101,51 +102,211 @@
   padding: 2px 10px; border: 1px solid #d1d5db; border-radius: 4px;
   font-size: 11px; color: #374151; text-transform: none; letter-spacing: 0;
 }
+
+/* ── Invoice Paper — matches Image 2 exactly ── */
 .ivm-invoice-paper {
-  background: #fff; border-radius: 8px;
+  background: #fff;
+  border-radius: 0;
   box-shadow: 0 2px 16px rgba(0,0,0,.10);
-  padding: 28px 32px;
-  min-height: 900px;
+  padding: 0;
+  font-family: Arial, sans-serif;
+  font-size: 11px;
+  color: #1a1a1a;
+  max-width: 860px;
+  width: 100%;
+  margin: 0 auto;
 }
 
-/* ── Invoice internals ── */
-.ivm-inv-header { display: flex; align-items: flex-start; gap: 16px; margin-bottom: 8px; }
-.ivm-inv-logo { width: 60px; height: 60px; object-fit: contain; border-radius: 6px; border: 1px solid #e5e7eb; }
-.ivm-inv-company { font-size: 16px; font-weight: 800; margin-bottom: 3px; }
-.ivm-inv-meta { font-size: 11.5px; color: #374151; margin-bottom: 2px; }
-.ivm-inv-meta-box { text-align: right; min-width: 160px; }
-.ivm-inv-meta-row { display: flex; justify-content: flex-end; gap: 12px; font-size: 12px; color: #374151; margin-bottom: 3px; }
-.ivm-inv-meta-row span { color: #6b7280; }
-.ivm-inv-meta-row strong { font-weight: 700; color: #111827; }
+/* ── Invoice paper inner tables — tight borders ── */
+.ivm-invoice-paper table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.ivm-invoice-paper th,
+.ivm-invoice-paper td {
+  padding: 6px 8px;
+  font-size: 11px;
+}
 
-.ivm-party-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 10px 0; }
-.ivm-party-box { padding: 10px 12px; border-radius: 6px; }
-.ivm-party-label { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
-.ivm-party-name { font-size: 14px; font-weight: 700; color: #111827; margin-bottom: 3px; }
-.ivm-party-detail { font-size: 12px; color: #374151; margin-bottom: 2px; }
+/* ── TAX INVOICE top strip ── */
+.ivm-inv-topstrip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 14px;
+}
+.ivm-inv-topstrip-title {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+.ivm-inv-topstrip-tag {
+  font-size: 9.5px;
+  border: 1px solid #555;
+  padding: 2px 8px;
+  border-radius: 2px;
+  color: #374151;
+  letter-spacing: 0.03em;
+}
 
-.ivm-items-table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 12.5px; }
-.ivm-items-table th { padding: 8px 10px; text-align: left; font-size: 11.5px; font-weight: 700; }
-.ivm-items-table td { padding: 7px 10px; border-bottom: 1px solid #f3f4f6; }
-.ivm-items-table td.center, .ivm-items-table th.center { text-align: center; }
-.ivm-items-table td.right, .ivm-items-table th.right { text-align: right; }
+/* ── Company header block ── */
+.ivm-inv-company-name {
+  font-size: 15px;
+  font-weight: 800;
+  color: #111827;
+  margin-bottom: 3px;
+}
+.ivm-inv-company-meta {
+  font-size: 10.5px;
+  color: #374151;
+  margin-bottom: 1px;
+  line-height: 1.5;
+}
 
-.ivm-totals-row { display: flex; align-items: flex-start; gap: 16px; margin: 8px 0; }
-.ivm-bank-box { padding: 10px 12px; font-size: 12px; color: #374151; border-radius: 6px; }
-.ivm-totals-table { min-width: 340px; border-collapse: collapse; font-size: 12.5px; }
-.ivm-totals-table td { padding: 6px 10px; border-bottom: 1px solid #f3f4f6; }
-.ivm-totals-table td:last-child { text-align: right; }
+/* ── Meta grid cells ── */
+.ivm-inv-meta-label {
+  font-size: 9px;
+  color: #6b7280;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+  letter-spacing: 0.03em;
+}
+.ivm-inv-meta-value {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #111827;
+}
+.ivm-inv-meta-sub {
+  font-size: 9.5px;
+  color: #6b7280;
+}
 
-.ivm-hsn-summary { margin: 12px 0; }
-.ivm-words-row { font-size: 12px; color: #374151; padding: 8px 0; border-top: 1px solid #f3f4f6; }
-.ivm-terms-box { font-size: 12px; color: #374151; margin-top: 12px; padding: 10px 12px; background: #f9fafb; border-radius: 6px; }
-.ivm-notes-box { font-size: 12px; color: #374151; margin-top: 8px; font-style: italic; }
+/* ── Bill To section ── */
+.ivm-inv-section-label {
+  font-size: 9.5px;
+  font-weight: 700;
+  color: #6b7280;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  margin-bottom: 5px;
+}
+.ivm-inv-party-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 3px;
+}
+.ivm-inv-party-detail {
+  font-size: 10.5px;
+  color: #374151;
+  margin-bottom: 2px;
+  line-height: 1.5;
+}
 
-.ivm-signature-row { display: flex; align-items: flex-end; margin-top: 24px; }
-.ivm-sig-box { text-align: center; min-width: 160px; }
-.ivm-sig-line { height: 1px; background: #374151; width: 140px; margin: 0 auto 6px; }
-.ivm-sig-label { font-size: 11.5px; color: #6b7280; }
-.ivm-computer-gen { font-size: 11px; color: #9ca3af; text-align: center; margin-top: 16px; }
+/* ── Items table ── */
+.ivm-inv-items-th {
+  background: #f0f0f0;
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+  padding: 6px 8px;
+  white-space: nowrap;
+}
+.ivm-inv-items-td {
+  font-size: 11px;
+  padding: 6px 8px;
+  vertical-align: top;
+}
+.ivm-inv-item-name {
+  font-weight: 600;
+  font-size: 11px;
+}
+.ivm-inv-item-desc {
+  font-size: 9.5px;
+  color: #6b7280;
+  margin-top: 1px;
+}
+
+/* ── Tax cell (CGST/SGST inline) ── */
+.ivm-inv-tax-cell {
+  font-size: 9.5px;
+  line-height: 1.6;
+  text-align: center;
+}
+
+/* ── Totals section ── */
+.ivm-inv-total-row {
+  background: #f0f0f0;
+  font-weight: 700;
+  font-size: 11px;
+}
+.ivm-inv-prev-bal-row td {
+  font-size: 10.5px;
+  font-weight: 600;
+}
+.ivm-inv-curr-bal-row {
+  background: #f9f9f9;
+}
+.ivm-inv-curr-bal-row td {
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* ── HSN Summary table ── */
+.ivm-inv-hsn-table th {
+  background: #f0f0f0;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-align: center;
+  padding: 5px 8px;
+}
+.ivm-inv-hsn-table td {
+  font-size: 10.5px;
+  padding: 5px 8px;
+}
+.ivm-inv-hsn-total-row {
+  background: #f0f0f0;
+}
+.ivm-inv-hsn-total-row td {
+  font-weight: 700;
+}
+
+/* ── Amount in words ── */
+.ivm-inv-words {
+  padding: 7px 14px;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+/* ── Notes / Bank / Terms 3-col ── */
+.ivm-inv-footer-col-label {
+  font-size: 9.5px;
+  font-weight: 700;
+  color: #374151;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 5px;
+}
+.ivm-inv-footer-col-content {
+  font-size: 10.5px;
+  color: #374151;
+  line-height: 1.7;
+  white-space: pre-line;
+}
+
+/* ── Signature row ── */
+.ivm-inv-sig-line {
+  height: 1px;
+  background: #374151;
+  width: 130px;
+  margin-bottom: 4px;
+}
+.ivm-inv-sig-label {
+  font-size: 10px;
+  color: #374151;
+  line-height: 1.5;
+}
 
 /* ── Payment History Sidebar ── */
 .ivm-sidebar {
@@ -164,13 +325,5 @@
 @media (max-width: 768px) {
   .ivm-sidebar { display: none; }
   .ivm-actionbar { flex-wrap: wrap; }
-}
-/* ── Full-screen override: starts after the side navigation ── */
-/* The side nav is typically 220px wide. The overlay starts at left: var(--nav-width, 220px) */
-.ivm-overlay {
-  left: var(--nav-width, 220px) !important;
-}
-.ivm-shell {
-  max-width: 100% !important;
-  width: 100% !important;
+  .ivm-invoice-paper { font-size: 10px; }
 }

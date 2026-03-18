@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import "./PaymentIn.css";
 import {
@@ -11,11 +11,10 @@ import {
   type PendingInvoice,
 } from "../../../api/paymentInApi";
 import { getParties }    from "../../../api/salesInvoiceApi";
-import { getPartyBankAccounts } from "../../../api/salesInvoiceApi";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Party { id: number; name: string; partyName: string; balance?: number; }
-interface BankAccount { id: number; accountHolder: string; accountNumber: string; bankName: string; ifscCode: string; branchName?: string; }
+interface BankAccount { id: number; accountHolder: string; accountNumber?: string; bankName?: string; ifscCode?: string; branchName?: string; type: string; balance: number; }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function fmtDate(iso: string) {
@@ -227,45 +226,167 @@ function PartyDropdown({ value, partyId, onChange, disabled, openRef }: { value:
   );
 }
 
-// ─── Account Dropdown (bank accounts for selected party) ─────────────────────
-function AccountDropdown({ partyId, value, onChange }: { partyId: number | null; value: string; onChange: (v: string) => void }) {
+// ─── Account Dropdown (business accounts — cash / bank / UPI) ────────────────
+// ─── Add Business Account Modal ──────────────────────────────────────────────
+function AddBusinessAccountModal({ onClose, onSave }: { onClose: () => void; onSave: (acc: BankAccount) => void }) {
+  const [form, setForm] = useState({ accountHolder: "", type: "BANK", bankName: "", accountNumber: "", ifscCode: "", upiId: "" });
+  const [err, setErr] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
+
+  async function submit() {
+    const e: Record<string, string> = {};
+    if (!form.accountHolder) e.accountHolder = "Required";
+    if (form.type === "BANK" && !form.bankName) e.bankName = "Required";
+    if (form.type === "BANK" && !form.accountNumber) e.accountNumber = "Required";
+    if (form.type === "UPI" && !form.upiId) e.upiId = "Required";
+    if (Object.keys(e).length) { setErr(e); return; }
+    setSaving(true);
+    try {
+      const res = await fetch("/api/accounts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          accountHolder: form.accountHolder,
+          type: form.type,
+          bankName: form.bankName || undefined,
+          accountNumber: form.accountNumber || undefined,
+          ifscCode: form.ifscCode || undefined,
+          upiId: form.upiId || undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message ?? "Failed to save");
+      onSave({ ...data, balance: 0 });
+    } catch (err: any) { setErr({ accountHolder: err.message }); }
+    finally { setSaving(false); }
+  }
+
+  function ch(name: string) { return (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => { setForm(f => ({ ...f, [name]: e.target.value })); setErr(er => ({ ...er, [name]: "" })); }; }
+
+  return (
+    <div className="pi-overlay" onClick={onClose}>
+      <div className="pi-modal" style={{ width: 480 }} onClick={e => e.stopPropagation()}>
+        <div className="pi-modal-hdr"><span>Add Business Account</span><button onClick={onClose}>✕</button></div>
+        <div className="pi-modal-body">
+          <div className="pi-form-field">
+            <label className="pi-form-label">Account Name *</label>
+            <input className={`pi-input${err.accountHolder ? " pi-input--err" : ""}`} placeholder="e.g. Main Cash, HDFC Current" value={form.accountHolder} onChange={ch("accountHolder")} />
+            {err.accountHolder && <span className="pi-err-txt">{err.accountHolder}</span>}
+          </div>
+          <div className="pi-form-field">
+            <label className="pi-form-label">Account Type *</label>
+            <select className="pi-select" value={form.type} onChange={ch("type")}>
+              <option value="CASH">Cash</option>
+              <option value="BANK">Bank</option>
+              <option value="UPI">UPI</option>
+            </select>
+          </div>
+          {form.type === "BANK" && <>
+            <div className="pi-form-field">
+              <label className="pi-form-label">Bank Name *</label>
+              <input className={`pi-input${err.bankName ? " pi-input--err" : ""}`} placeholder="e.g. HDFC Bank" value={form.bankName} onChange={ch("bankName")} />
+              {err.bankName && <span className="pi-err-txt">{err.bankName}</span>}
+            </div>
+            <div className="pi-form-field">
+              <label className="pi-form-label">Account Number *</label>
+              <input className={`pi-input${err.accountNumber ? " pi-input--err" : ""}`} placeholder="Enter account number" value={form.accountNumber} onChange={ch("accountNumber")} />
+              {err.accountNumber && <span className="pi-err-txt">{err.accountNumber}</span>}
+            </div>
+            <div className="pi-form-field">
+              <label className="pi-form-label">IFSC Code</label>
+              <input className="pi-input" placeholder="e.g. HDFC0001234" value={form.ifscCode} onChange={ch("ifscCode")} />
+            </div>
+          </>}
+          {form.type === "UPI" && (
+            <div className="pi-form-field">
+              <label className="pi-form-label">UPI ID *</label>
+              <input className={`pi-input${err.upiId ? " pi-input--err" : ""}`} placeholder="e.g. business@upi" value={form.upiId} onChange={ch("upiId")} />
+              {err.upiId && <span className="pi-err-txt">{err.upiId}</span>}
+            </div>
+          )}
+        </div>
+        <div className="pi-modal-footer">
+          <button className="pi-btn-cancel" onClick={onClose} disabled={saving}>Cancel</button>
+          <button className="pi-btn-primary" onClick={submit} disabled={saving}>{saving ? "Saving…" : "Save Account"}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Account Dropdown (business accounts — cash / bank / UPI) ────────────────
+function AccountDropdown({ value, accountId, onChange }: { value: string; accountId: number | null; onChange: (label: string, id: number | null) => void }) {
   const [open, setOpen] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [accounts, setAccounts] = useState<BankAccount[]>([]);
   const ref = useRef<HTMLDivElement>(null);
 
-  const loadAccounts = useCallback(async () => {
-    if (!partyId) return;
-    try {
-    const list = await getPartyBankAccounts(partyId);
-setAccounts(list.map(a => ({ ...a, branchName: a.branchName ?? undefined })));
-    } catch { /* ignore */ }
-  }, [partyId]);
+  function loadAccounts() {
+    fetch("/api/payments-in/accounts")
+      .then(r => r.json())
+      .then(d => setAccounts(d.accounts ?? []))
+      .catch(() => {});
+  }
 
-  useEffect(() => { loadAccounts(); }, [loadAccounts]);
+  useEffect(() => { loadAccounts(); }, []);
+
   useEffect(() => {
     function h(e: MouseEvent) { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); }
     document.addEventListener("mousedown", h); return () => document.removeEventListener("mousedown", h);
   }, []);
+
+  function label(a: BankAccount) {
+    const suffix = a.bankName ? ` · ${a.bankName}` : a.type === "CASH" ? " · Cash" : a.type === "UPI" ? " · UPI" : "";
+    return `${a.accountHolder}${suffix}`;
+  }
 
   return (
     <>
       <div className="pi-select-wrap" ref={ref}>
         <div className={`pi-select-trigger${open ? " pi-select-trigger--open" : ""}`} onClick={() => setOpen(!open)}>
           <span className={value ? "" : "pi-select-placeholder"}>{value || "Select account"}</span>
-          <div className={`pi-select-icons${open ? " pi-select-icons--open" : ""}`}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9"/></svg></div>
+          <div className={`pi-select-icons${open ? " pi-select-icons--open" : ""}`}>
+            {value && (
+              <button className="pi-clear-btn" onMouseDown={e => { e.stopPropagation(); onChange("", null); setOpen(false); }}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              </button>
+            )}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
         </div>
         {open && (
           <div className="pi-account-dropdown">
+            {accounts.length === 0 && (
+              <div style={{ padding: "10px 14px", color: "#9ca3af", fontSize: 13 }}>No accounts yet</div>
+            )}
             {accounts.map(a => (
-              <div key={a.id} className={`pi-account-item${value === a.accountHolder ? " pi-account-item--selected" : ""}`} onMouseDown={e => { e.preventDefault(); onChange(a.accountHolder); setOpen(false); }}>{a.accountHolder} · {a.bankName}</div>
+              <div
+                key={a.id}
+                className={`pi-account-item${accountId === a.id ? " pi-account-item--selected" : ""}`}
+                onMouseDown={e => { e.preventDefault(); onChange(label(a), a.id); setOpen(false); }}
+              >
+                <span>{label(a)}</span>
+                <span style={{ fontSize: 11, color: "#6b7280", marginLeft: 6 }}>₹{Number(a.balance).toLocaleString("en-IN")}</span>
+              </div>
             ))}
-            <div className="pi-account-add" onMouseDown={e => { e.preventDefault(); setShowAddModal(true); setOpen(false); }}>+ Add New Account</div>
+            <div
+              className="pi-account-add"
+              onMouseDown={e => { e.preventDefault(); setShowAddModal(true); setOpen(false); }}
+            >
+              + Add New Account
+            </div>
           </div>
         )}
       </div>
-      {showAddModal && partyId && (
-        <AddBankAccountModal partyId={partyId} onClose={() => setShowAddModal(false)} onSave={acc => { setAccounts(prev => [...prev, acc]); onChange(acc.accountHolder); setShowAddModal(false); }} />
+      {showAddModal && (
+        <AddBusinessAccountModal
+          onClose={() => setShowAddModal(false)}
+          onSave={acc => {
+            setAccounts(prev => [...prev, acc]);
+            onChange(label(acc), acc.id);
+            setShowAddModal(false);
+          }}
+        />
       )}
     </>
   );
@@ -305,6 +426,7 @@ export default function PaymentIn() {
   const [date,               setDate]                = useState(todayIso());
   const [paymentMode,        setPaymentMode]         = useState("Cash");
   const [paymentReceivedIn,  setPaymentReceivedIn]   = useState("");
+  const [paymentReceivedInId, setPaymentReceivedInId] = useState<number | null>(null);
   const [paymentNumber,      setPaymentNumber]       = useState("");
   const [notes,              setNotes]               = useState("");
   const [showSettings,       setShowSettings]        = useState(false);
@@ -336,6 +458,10 @@ export default function PaymentIn() {
       setPaymentMode(rec.mode);
       setPaymentNumber(rec.paymentNo);
       setNotes(rec.notes ?? "");
+      if (rec.accountId) {
+        setPaymentReceivedInId(rec.accountId);
+        setPaymentReceivedIn(rec.accountName ?? "");
+      }
       // Restore settled rows
       const restoredRows: PRow[] = rec.allocations.map(a => ({
         invoiceId:       a.invoiceId,
@@ -400,7 +526,13 @@ export default function PaymentIn() {
   function toggleRow(invoiceId: number, checked: boolean) {
     setRows(prev => {
       const updated = prev.map(r => r.invoiceId === invoiceId ? { ...r, checked } : r);
-      const total = parseFloat(amountReceived) || 0;
+      const newChecked = updated.filter(r => r.checked);
+      const autoTotal  = newChecked.reduce((s, r) => s + Math.max(0, r.originalPending - r.tds - r.discount), 0);
+      const currentAmt = parseFloat(amountReceived) || 0;
+      const prevAutoTotal = prev.filter(r => r.checked).reduce((s, r) => s + Math.max(0, r.originalPending - r.tds - r.discount), 0);
+      const shouldAutoFill = currentAmt === 0 || currentAmt === prevAutoTotal;
+      if (shouldAutoFill) setAmountReceived(autoTotal > 0 ? String(autoTotal) : "0");
+      const total = shouldAutoFill ? autoTotal : currentAmt;
       let remaining = total;
       return updated.map(row => {
         if (!row.checked) return { ...row, amountReceived: 0 };
@@ -415,7 +547,14 @@ export default function PaymentIn() {
   function toggleAll(checked: boolean) {
     setRows(prev => {
       const updated = prev.map(r => ({ ...r, checked }));
-      const total = parseFloat(amountReceived) || 0;
+      const autoTotal = checked
+        ? updated.reduce((s, r) => s + Math.max(0, r.originalPending - r.tds - r.discount), 0)
+        : 0;
+      const currentAmt = parseFloat(amountReceived) || 0;
+      const prevAutoTotal = prev.filter(r => r.checked).reduce((s, r) => s + Math.max(0, r.originalPending - r.tds - r.discount), 0);
+      const shouldAutoFill = currentAmt === 0 || currentAmt === prevAutoTotal;
+      if (shouldAutoFill) setAmountReceived(autoTotal > 0 ? String(autoTotal) : "0");
+      const total = shouldAutoFill ? autoTotal : currentAmt;
       let remaining = total;
       return updated.map(row => {
         if (!row.checked) return { ...row, amountReceived: 0 };
@@ -456,6 +595,7 @@ export default function PaymentIn() {
         mode:        paymentMode,
         amount:      parseFloat(amountReceived),
         notes:       notes || undefined,
+        accountId:   paymentReceivedInId ?? undefined,
         allocations,
       };
 
@@ -537,14 +677,14 @@ export default function PaymentIn() {
               </div>
               <div className="pi-form-field">
                 <label className="pi-form-label">Payment Mode</label>
-                <select className="pi-select" value={paymentMode} onChange={e => { setPaymentMode(e.target.value); setPaymentReceivedIn(""); }}>
+                <select className="pi-select" value={paymentMode} onChange={e => { setPaymentMode(e.target.value); setPaymentReceivedIn(""); setPaymentReceivedInId(null); }}>
                   {PAYMENT_MODES.map(m => <option key={m}>{m}</option>)}
                 </select>
               </div>
               {paymentMode !== "Cash" && (
                 <div className="pi-form-field">
                   <label className="pi-form-label">Payment Received In</label>
-                  <AccountDropdown partyId={partyId} value={paymentReceivedIn} onChange={setPaymentReceivedIn} />
+                  <AccountDropdown value={paymentReceivedIn} accountId={paymentReceivedInId} onChange={(label, id) => { setPaymentReceivedIn(label); setPaymentReceivedInId(id); }} />
                 </div>
               )}
             </div>

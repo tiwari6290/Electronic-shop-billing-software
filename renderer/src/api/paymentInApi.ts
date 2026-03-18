@@ -24,6 +24,8 @@ export interface PaymentInRecord {
   mode:               string;
   amount:             number;
   notes:              string;
+  accountId:          number | null;
+  accountName:        string | null;
   totalAmountSettled: number;
   allocations:        AllocationRow[];
 }
@@ -34,6 +36,7 @@ export interface CreatePaymentInPayload {
   mode:        string;
   amount:      number;
   notes?:      string;
+  accountId?:  number;
   allocations: { invoiceId: number; amount: number }[];
 }
 
@@ -43,7 +46,7 @@ export interface GetPaymentsInParams {
   search?:   string;
   dateFrom?: string;
   dateTo?:   string;
-  partyId?:  number;   // ← filter by party
+  partyId?:  number;
 }
 
 // ── Generic fetch helper ──────────────────────────────────────────────────────
@@ -102,7 +105,7 @@ export async function deletePaymentIn(id: number) {
   );
 }
 
-// ── Pending invoices for a party (reused from salesInvoiceApi) ────────────────
+// ── Pending invoices for a party ──────────────────────────────────────────────
 export interface PendingInvoice {
   id:          number;
   invoiceNo:   string;
@@ -113,27 +116,23 @@ export interface PendingInvoice {
 }
 
 export async function getPendingInvoicesForParty(partyId: number): Promise<PendingInvoice[]> {
-  // Backend returns { success: true, data: Invoice[] }
-  // We use raw fetch (not apiFetch) to handle the { success, data } wrapper ourselves
-  const res = await fetch(
-    `/api/invoices?partyId=${partyId}&status=OPEN,PARTIAL&limit=200`
-  );
+  const res  = await fetch(`/api/invoices?partyId=${partyId}&status=OPEN,PARTIAL&limit=200`);
   const body = await res.json().catch(() => ({}));
 
-  // Unwrap: backend returns { success, data: [...] }
+  // Backend returns { success, data: [...] }
   const list: any[] = body.data ?? body.invoices ?? (Array.isArray(body) ? body : []);
 
   return list.map((inv: any) => ({
     id:          inv.id,
     invoiceNo:   inv.invoiceNo ?? String(inv.id),
-    invoiceDate: inv.invoiceDate ?? "",
-    dueDate:     inv.dueDate    ?? "",
+    invoiceDate: inv.invoiceDate ? String(inv.invoiceDate).split("T")[0] : "",
+    dueDate:     inv.dueDate    ? String(inv.dueDate).split("T")[0]     : "",
     totalAmount: Number(inv.totalAmount ?? inv.total ?? 0),
     outstanding: Number(inv.outstandingAmount ?? inv.outstanding ?? 0),
   }));
 }
 
-// ── Party helpers for PaymentInList filter ───────────────────────────────────
+// ── Party helpers for PaymentInList filter ────────────────────────────────────
 export interface PartyBasic {
   id:        number;
   partyName: string;
@@ -141,18 +140,29 @@ export interface PartyBasic {
 }
 
 export async function getPartiesBasic(): Promise<PartyBasic[]> {
-  const res = await fetch("/api/parties?limit=500");
-  const body = await res.json().catch(() => ({}));
-  const list: any[] = body.parties ?? body.data ?? (Array.isArray(body) ? body : []);
-  return list.map((p: any) => ({
-    id:        p.id,
-    partyName: p.partyName ?? p.name ?? "",
-    balance:   p.balance != null ? Number(p.balance) : undefined,
-  }));
+  try {
+    const res  = await fetch("/api/parties");
+    const body = await res.json().catch(() => ({}));
+    // Backend returns { success: true, data: [...] }
+    const list: any[] = body.data ?? body.parties ?? (Array.isArray(body) ? body : []);
+    return list.map((p: any) => ({
+      id:        Number(p.id),
+      partyName: p.partyName ?? p.name ?? "",
+      balance:   p.balance != null ? Number(p.balance) : undefined,
+    }));
+  } catch {
+    return [];
+  }
 }
 
+// FIX: correct backend URL is /api/party-ledger/party/:id/balance
+// (was incorrectly /api/party-ledger/:id/balance — caused 404 silently)
 export async function getPartyLedgerBalance(partyId: number): Promise<number> {
-  const res = await fetch(`/api/party-ledger/${partyId}/balance`);
-  const body = await res.json().catch(() => ({}));
-  return Number(body.balance ?? body.data?.balance ?? 0);
+  try {
+    const res  = await fetch(`/api/party-ledger/party/${partyId}/balance`);
+    const body = await res.json().catch(() => ({}));
+    return Number(body.balance ?? body.data?.balance ?? 0);
+  } catch {
+    return 0;
+  }
 }
