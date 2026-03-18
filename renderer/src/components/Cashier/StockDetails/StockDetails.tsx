@@ -53,6 +53,13 @@ const StockDetails = ({
   const [showHSNDrawer, setShowHSNDrawer] = useState(false);
   const [godowns, setGodowns] = useState<any[]>([]);
 
+  // Default asOfDate to today if not set
+  const todayStr = new Date().toISOString().split("T")[0];
+
+  useEffect(() => {
+    if (!asOfDate) setAsOfDate(todayStr);
+  }, []);
+
   useEffect(() => {
     const fetchGodowns = async () => {
       try {
@@ -126,7 +133,7 @@ const StockDetails = ({
                 className="input"
                 placeholder="ex: ITM12549"
                 value={itemCode}
-  onChange={(e) => setItemCode(e.target.value)}
+                onChange={(e) => setItemCode(e.target.value)}
                 style={{ borderTopRightRadius: 0, borderBottomRightRadius: 0 }}
               />
               <button className="sd-barcode-btn">Generate Barcode</button>
@@ -136,7 +143,7 @@ const StockDetails = ({
           <div>
             <label>HSN code</label>
             <input className="input" placeholder="ex: 4010" value={hsnCode}
-  onChange={(e) => setHsnCode(e.target.value)} />
+              onChange={(e) => setHsnCode(e.target.value)} />
             <button className="sd-link" onClick={() => setShowHSNDrawer(true)}>
               Find HSN Code
             </button>
@@ -221,7 +228,7 @@ const StockDetails = ({
               <input
                 type="date"
                 className="input"
-                value={asOfDate}
+                value={asOfDate || todayStr}
                 onChange={(e) => setAsOfDate(e.target.value)}
               />
             </div>
@@ -230,12 +237,12 @@ const StockDetails = ({
           {/* LOW STOCK */}
           {!showLowStock ? (
             <button
-  className="sd-add-link"
-  onClick={() => {
-    setShowLowStock(true);
-    setLowStockAlert(true);
-  }}
->
+              className="sd-add-link"
+              onClick={() => {
+                setShowLowStock(true);
+                setLowStockAlert(true);
+              }}
+            >
               + Enable Low stock quantity warning
             </button>
           ) : (
@@ -246,18 +253,18 @@ const StockDetails = ({
                   className="input"
                   placeholder="Enter Low Stock Quantity"
                   value={lowStockQty}
-  onChange={(e) => setLowStockQty(e.target.value)}
+                  onChange={(e) => setLowStockQty(e.target.value)}
                   style={{ borderTopRightRadius: 0, borderBottomRightRadius: 0 }}
                 />
                 <span className="sd-unit-suffix">PCS</span>
               </div>
               <button
-  className="sd-remove-link"
-  onClick={() => {
-    setShowLowStock(false);
-    setLowStockAlert(false);
-  }}
->
+                className="sd-remove-link"
+                onClick={() => {
+                  setShowLowStock(false);
+                  setLowStockAlert(false);
+                }}
+              >
                 ✕ Remove Low stock quantity warning
               </button>
             </div>
@@ -268,12 +275,12 @@ const StockDetails = ({
         <div style={{ marginBottom: "20px" }}>
           <label>Description</label>
           <textarea
-  className="sd-textarea"
-  placeholder="Enter Description"
-  rows={4}
-  value={description}
-  onChange={(e) => setDescription(e.target.value)}
-/>
+            className="sd-textarea"
+            placeholder="Enter Description"
+            rows={4}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+          />
         </div>
 
         {/* FILE UPLOAD */}

@@ -1947,7 +1947,6 @@ export default function QuotationEstimate() {
   const [showSettings, setShowSettings] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [viewQuotation, setViewQuotation] = useState<StoredQuotation | null>(null);
-  const navigate = useNavigate();
   const [settings, setSettings] = useState<QuickSettings>({
     prefixEnabled: true,
     prefix: "",

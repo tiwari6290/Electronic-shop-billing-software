@@ -135,6 +135,7 @@ export default function PaymentInList() {
   const navigate = useNavigate();
   const [payments,      setPayments]      = useState<PaymentInRecord[]>([]);
   const [loading,       setLoading]       = useState(true);
+  const [loadError,     setLoadError]     = useState<string | null>(null);
   const [dateFilter,    setDateFilter]    = useState<DateOption>("Last 365 Days");
   const [customStart,   setCustomStart]   = useState("");
   const [customEnd,     setCustomEnd]     = useState("");
@@ -156,6 +157,7 @@ export default function PaymentInList() {
 
   const load = useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const dateRange = dateFilter !== "Custom Date Range" ? getDateRange(dateFilter) : null;
       const result = await getPaymentsIn({
@@ -165,9 +167,14 @@ export default function PaymentInList() {
         dateTo:   dateFilter === "Custom Date Range" ? customEnd   : dateRange?.end.toISOString().split("T")[0],
         partyId:  partyFilter ?? undefined,
       });
-      setPayments(result.payments);
-    } catch { /* ignore */ }
-    finally { setLoading(false); }
+      // Backend returns { payments: [...], total, page, pages }
+      setPayments(result.payments ?? []);
+    } catch (err: any) {
+      setLoadError(err?.message ?? "Failed to load payments");
+      setPayments([]);
+    } finally {
+      setLoading(false);
+    }
   }, [dateFilter, customStart, customEnd, search, partyFilter]);
 
   useEffect(() => { load(); }, [load]);
@@ -228,6 +235,14 @@ export default function PaymentInList() {
           Payment Received
         </button>
       </div>
+
+      {/* Error banner — shown when the API call fails */}
+      {loadError && (
+        <div style={{ margin: "0 0 12px", padding: "10px 16px", background: "#fef2f2", border: "1px solid #fca5a5", borderRadius: 8, color: "#dc2626", fontSize: 13, display: "flex", alignItems: "center", gap: 10 }}>
+          <span>⚠ {loadError}</span>
+          <button onClick={load} style={{ marginLeft: "auto", fontSize: 12, padding: "3px 10px", border: "1px solid #fca5a5", borderRadius: 6, background: "#fff", color: "#dc2626", cursor: "pointer" }}>Retry</button>
+        </div>
+      )}
 
       <div className="pil-toolbar">
         <div className="pil-toolbar-left">
