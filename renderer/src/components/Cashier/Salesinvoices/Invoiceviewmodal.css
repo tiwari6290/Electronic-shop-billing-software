@@ -395,7 +395,189 @@
   font-weight: 700; padding: 10px 0; border-top: 1px solid #e5e7eb;
 }
 
+@media (max-width: 768px) {/* â”€â”€ Overlay â”€â”€ */
+.ivm-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.55);
+  z-index: 2000; display: flex; align-items: stretch; justify-content: flex-end;
+  animation: ivmFadeIn .15s ease;
+  left: var(--nav-width, 220px) !important;
+}
+@keyframes ivmFadeIn { from { opacity: 0 } to { opacity: 1 } }
+
+.ivm-shell {
+  background: #f1f3f5; display: flex; flex-direction: column;
+  width: 100%; max-width: 100%; height: 100vh;
+  animation: ivmSlideUp .18s ease;
+  overflow: hidden;
+  min-height: 0;
+}
+@keyframes ivmSlideUp { from { transform: translateY(20px); opacity: 0 } to { transform: translateY(0); opacity: 1 } }
+
+/* â”€â”€ Top Bar â”€â”€ */
+.ivm-topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 20px; background: #fff; border-bottom: 1px solid #e5e7eb;
+  flex-shrink: 0;
+}
+.ivm-topbar-left { display: flex; align-items: center; gap: 10px; }
+.ivm-back-btn {
+  width: 32px; height: 32px; border: none; background: none;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  color: #374151; border-radius: 6px;
+}
+.ivm-back-btn svg { width: 20px; height: 20px; }
+.ivm-back-btn:hover { background: #f3f4f6; }
+.ivm-title { font-size: 16px; font-weight: 700; color: #111827; }
+.ivm-status-badge { padding: 3px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+.ivm-topbar-right { display: flex; align-items: center; gap: 8px; }
+.ivm-top-btn {
+  display: flex; align-items: center; gap: 6px; padding: 7px 14px;
+  border: 1px solid #e5e7eb; border-radius: 7px; background: #fff;
+  font-size: 13px; color: #374151; cursor: pointer; font-family: inherit;
+}
+.ivm-top-btn svg { width: 16px; height: 16px; }
+.ivm-top-btn:hover { background: #f9fafb; }
+.ivm-top-btn--dots { padding: 7px 10px; }
+.ivm-close-btn {
+  width: 32px; height: 32px; border: none; background: none;
+  cursor: pointer; color: #6b7280; font-size: 18px; border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+}
+.ivm-close-btn:hover { background: #fee2e2; color: #dc2626; }
+
+/* â”€â”€ Action Bar â”€â”€ */
+.ivm-actionbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 20px; background: #fff; border-bottom: 1px solid #e5e7eb;
+  flex-shrink: 0; gap: 12px; flex-wrap: wrap;
+}
+.ivm-actionbar-left { display: flex; align-items: center; gap: 8px; }
+.ivm-actionbar-right { display: flex; align-items: center; gap: 8px; }
+.ivm-action-group {
+  display: flex; align-items: stretch;
+  border: 1px solid #e5e7eb; border-radius: 7px; overflow: hidden;
+}
+.ivm-action-btn {
+  display: flex; align-items: center; gap: 6px; padding: 7px 14px;
+  background: #fff; border: none; font-size: 13px; color: #374151;
+  cursor: pointer; font-family: inherit;
+}
+.ivm-action-btn svg { width: 15px; height: 15px; }
+.ivm-action-btn:hover { background: #f9fafb; }
+.ivm-action-split {
+  padding: 0 8px; background: #f9fafb; border: none; border-left: 1px solid #e5e7eb;
+  cursor: pointer; display: flex; align-items: center; color: #6b7280;
+}
+.ivm-action-split svg { width: 12px; height: 12px; }
+.ivm-eway-btn, .ivm-einvoice-btn {
+  display: flex; align-items: center; gap: 6px; padding: 8px 16px;
+  border: 1.5px solid #6366f1; border-radius: 7px; background: #fff;
+  font-size: 13px; color: #6366f1; font-weight: 500; cursor: pointer; font-family: inherit;
+}
+.ivm-eway-btn svg, .ivm-einvoice-btn svg { width: 15px; height: 15px; }
+.ivm-eway-btn:hover, .ivm-einvoice-btn:hover { background: #f5f3ff; }
+.ivm-record-btn {
+  display: flex; align-items: center; gap: 6px; padding: 8px 18px;
+  border: none; border-radius: 7px; background: #6366f1;
+  font-size: 13.5px; color: #fff; font-weight: 600; cursor: pointer; font-family: inherit;
+}
+.ivm-record-btn svg { width: 15px; height: 15px; }
+.ivm-record-btn:hover { background: #4f46e5; }
+
+/* â”€â”€ Main Body â”€â”€ */
+.ivm-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  gap: 0;
+}
+
+/* â”€â”€ Preview Area â”€â”€ */
+.ivm-preview-area {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  overflow-y: scroll;
+  overflow-x: hidden;
+  padding: 20px 24px 60px;
+  display: block;
+  scrollbar-width: auto;
+  scrollbar-color: #9ca3af #e5e7eb;
+}
+.ivm-preview-area::-webkit-scrollbar { width: 10px; }
+.ivm-preview-area::-webkit-scrollbar-track { background: #e5e7eb; }
+.ivm-preview-area::-webkit-scrollbar-thumb { background: #9ca3af; border-radius: 5px; border: 2px solid #e5e7eb; }
+.ivm-preview-area::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+
+.ivm-preview-area > .ivm-preview-label { margin-bottom: 12px; }
+.ivm-preview-label {
+  font-size: 12px; font-weight: 700; color: #6b7280;
+  letter-spacing: .04em; text-transform: uppercase;
+  display: flex; align-items: center; gap: 10px;
+}
+.ivm-original-tag {
+  padding: 2px 10px; border: 1px solid #d1d5db; border-radius: 4px;
+  font-size: 11px; color: #374151; text-transform: none; letter-spacing: 0;
+}
+
+/* â”€â”€ Invoice Paper â”€â”€ */
+.ivm-invoice-paper {
+  background: #fff;
+  border-radius: 0;
+  box-shadow: 0 2px 16px rgba(0,0,0,.10);
+  padding: 0;
+  font-family: Arial, sans-serif;
+  font-size: 11px;
+  color: #1a1a1a;
+  width: 100%;
+  max-width: 100%;
+  margin: 0;
+  display: block;
+  box-sizing: border-box;
+}
+.ivm-invoice-paper table { width: 100%; border-collapse: collapse; }
+.ivm-invoice-paper th, .ivm-invoice-paper td { padding: 5px 8px; font-size: 11px; }
+
+.ivm-invoice-paper .inv-total-row td { background: #e8e8e8 !important; font-weight: 700; }
+.ivm-invoice-paper .inv-hsn-total-row td { background: #e8e8e8 !important; font-weight: 700; }
+
+/* â”€â”€ Payment History Sidebar â”€â”€ */
+.ivm-sidebar {
+  width: 280px; flex-shrink: 0; background: #fff;
+  border-left: 1px solid #e5e7eb; padding: 20px 18px;
+  display: flex; flex-direction: column;
+  overflow-y: scroll;
+  min-height: 0;
+  scrollbar-width: auto;
+  scrollbar-color: #9ca3af #e5e7eb;
+}
+.ivm-sidebar::-webkit-scrollbar { width: 10px; }
+.ivm-sidebar::-webkit-scrollbar-track { background: #e5e7eb; }
+.ivm-sidebar::-webkit-scrollbar-thumb { background: #9ca3af; border-radius: 5px; border: 2px solid #e5e7eb; }
+.ivm-sidebar::-webkit-scrollbar-thumb:hover { background: #6b7280; }
+.ivm-sidebar-title { font-size: 15px; font-weight: 700; color: #111827; margin-bottom: 16px; }
+.ivm-ph-row {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 8px; font-size: 13px; color: #374151;
+}
+.ivm-ph-entry { background: #f9fafb; border-radius: 8px; padding: 10px 12px; margin: 12px 0; }
+.ivm-ph-entry-top { display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; color: #111827; }
+.ivm-ph-entry-date { font-size: 12px; color: #6b7280; margin-top: 4px; }
+.ivm-ph-total-row {
+  display: flex; justify-content: space-between; font-size: 13px;
+  color: #374151; padding: 10px 0; border-top: 1px solid #f3f4f6;
+}
+.ivm-ph-balance-row {
+  display: flex; justify-content: space-between; font-size: 14px;
+  font-weight: 700; padding: 10px 0; border-top: 1px solid #e5e7eb;
+}
+
 @media (max-width: 768px) {
+  .ivm-sidebar { display: none; }
+  .ivm-actionbar { flex-wrap: wrap; }
+  .ivm-invoice-paper { font-size: 10px; }
+}
   .ivm-sidebar { display: none; }
   .ivm-actionbar { flex-wrap: wrap; }
   .ivm-invoice-paper { font-size: 10px; }
