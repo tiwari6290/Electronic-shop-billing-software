@@ -1,8 +1,81 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   AdditionalCharge, InvoiceItem, PAYMENT_METHODS, TAX_OPTIONS,
 } from "./Creditnotetypes";
 import "./Createcreditnote.css";
+
+// ─── TCS Rate Data ─────────────────────────────────────────────────────────────
+interface TcsRate {
+  label: string;
+  rate: number;
+  section?: string;
+}
+
+const DEFAULT_TCS_RATES: TcsRate[] = [
+  { label: "Scrap",                                                        rate: 1.0 },
+  { label: "Other",                                                        rate: 1.0 },
+  { label: "Liquor of alcoholic nature, made for consumption by humans",   rate: 1.0 },
+  { label: "Minerals like lignite, coal and iron ore",                     rate: 1.0 },
+  { label: "Purchase of Motor vehicle exceeding Rs.10 lakh",              rate: 2.0 },
+  { label: "Parking lot, Toll Plaza and Mining and Quarrying",            rate: 2.5 },
+  { label: "Timber wood under a forest leased",                           rate: 2.5 },
+  { label: "Timber wood by any other mode than forest leased",            rate: 2.5 },
+  { label: "Forest produce other than Tendu leaves and timber",           rate: 5.0 },
+  { label: "Tendu leaves",                                                 rate: 5.0 },
+  { label: "0.1% - 206C(IH) turnover > 1Cr",                             rate: 0.1 },
+  { label: "1.0% - 206C(IH) turnover > 1Cr (Without PAN)",               rate: 1.0 },
+];
+
+// ─── Add TCS Rate Modal ───────────────────────────────────────────────────────
+function AddTcsRateModal({ onClose, onSave }: {
+  onClose: () => void;
+  onSave: (r: TcsRate) => void;
+}) {
+  const [taxName, setTaxName] = useState("");
+  const [sectionName, setSectionName] = useState("");
+  const [rate, setRate] = useState(0);
+  const valid = taxName.trim().length > 0;
+
+  return (
+    <div className="cn-overlay cn-overlay--top2" onClick={onClose}>
+      <div className="cn-modal cn-tcs-modal" onClick={e => e.stopPropagation()}>
+        <div className="cn-modal-hdr">
+          <span className="cn-modal-title">Add Tcs Rate</span>
+          <button className="cn-modal-close" onClick={onClose}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+        <div className="cn-tcs-modal-body">
+          <div className="cn-field">
+            <label>Tax name</label>
+            <input className="cn-input cn-input--full" value={taxName}
+              onChange={e => setTaxName(e.target.value)} placeholder="Enter Tax Name" />
+          </div>
+          <div className="cn-field">
+            <label>Enter Section Name</label>
+            <input className="cn-input cn-input--full" value={sectionName}
+              onChange={e => setSectionName(e.target.value)} placeholder="Enter Section Name" />
+          </div>
+          <div className="cn-field">
+            <label>Enter Rate (in %)</label>
+            <input className="cn-input cn-input--full" type="number" value={rate}
+              onChange={e => setRate(Number(e.target.value))} />
+          </div>
+        </div>
+        <div className="cn-modal-footer">
+          <button className="cn-btn-cancel" onClick={onClose}>Close</button>
+          <button
+            className={`cn-btn-primary${!valid ? " cn-btn-primary--disabled" : ""}`}
+            disabled={!valid}
+            onClick={() => { onSave({ label: taxName.trim(), rate, section: sectionName.trim() || undefined }); onClose(); }}
+          >Save</button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // ─── Summary Panel ────────────────────────────────────────────────────────────
 interface SummaryProps {
@@ -32,8 +105,36 @@ export function CNSummary({
   onChargesChange, onDiscountChange, onToggleDiscount,
   onRoundOffChange, onAmountPaidChange, onPaymentMethodChange, onMarkFullyPaid,
 }: SummaryProps) {
-  const [discTypeOpen, setDiscTypeOpen] = useState(false);
 
+  const [discTypeOpen, setDiscTypeOpen] = useState(false);
+  const [roundOffSign, setRoundOffSign] = useState<"add" | "reduce">("add");
+  const [roundOffDropOpen, setRoundOffDropOpen] = useState(false);
+  const [manualTotal, setManualTotal] = useState("");
+
+  // TCS state
+  const [applyTcs, setApplyTcs] = useState(false);
+  const [tcsRates, setTcsRates] = useState<TcsRate[]>(DEFAULT_TCS_RATES);
+  const [selectedTcs, setSelectedTcs] = useState<TcsRate | null>(null);
+  const [tcsBase, setTcsBase] = useState<"total" | "taxable">("total");
+  const [tcsOpen, setTcsOpen] = useState(false);
+  const [showAddTcs, setShowAddTcs] = useState(false);
+
+  const discTypeRef = useRef<HTMLDivElement>(null);
+  const roundOffRef = useRef<HTMLDivElement>(null);
+  const tcsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const h = (e: MouseEvent) => {
+      if (discTypeRef.current && !discTypeRef.current.contains(e.target as Node)) setDiscTypeOpen(false);
+      if (roundOffRef.current && !roundOffRef.current.contains(e.target as Node)) setRoundOffDropOpen(false);
+      if (tcsRef.current && !tcsRef.current.contains(e.target as Node)) setTcsOpen(false);
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, []);
+
+  // ── calculations ──
+  const hasItems = items.length > 0;
   const chargesTotal = additionalCharges.reduce((s, c) => s + c.amount * (1 + c.taxRate / 100), 0);
   const itemsTotal = items.reduce((s, i) => {
     const base = i.qty * i.price - (i.qty * i.price * i.discountPct / 100) - i.discountAmt;
@@ -42,41 +143,55 @@ export function CNSummary({
   const taxableAmount = itemsTotal + chargesTotal;
   const discountValue = taxableAmount * discountPct / 100 + discountAmt;
   const afterDisc = taxableAmount - discountValue;
-  const ro = autoRoundOff ? Math.round(afterDisc) - afterDisc : roundOffAmt;
-  const totalAmount = afterDisc + ro;
+  const tcsBaseAmt = tcsBase === "total" ? afterDisc : taxableAmount;
+  const tcsAmount = applyTcs && selectedTcs ? tcsBaseAmt * selectedTcs.rate / 100 : 0;
+  const preRound = afterDisc + tcsAmount;
+  const autoRo = autoRoundOff ? Math.round(preRound) - preRound : 0;
+  const manualRo = roundOffSign === "reduce" ? -Math.abs(roundOffAmt) : Math.abs(roundOffAmt);
+  const ro = autoRoundOff ? autoRo : manualRo;
+  const totalAmount = preRound + ro;
   const balanceAmount = totalAmount - amountPaid;
 
-  const addCharge = () => {
-    const nc: AdditionalCharge = { id: `charge-${Date.now()}`, label: "", amount: 0, taxLabel: "No Tax Applicable", taxRate: 0 };
-    onChargesChange([...additionalCharges, nc]);
-  };
-
+  // ── charge helpers ──
+  const addCharge = () => onChargesChange([...additionalCharges, {
+    id: `charge-${Date.now()}`, label: "", amount: 0, taxLabel: "No Tax Applicable", taxRate: 0,
+  }]);
   const updateCharge = (id: string, field: string, value: any) =>
     onChargesChange(additionalCharges.map(c => c.id === id ? { ...c, [field]: value } : c));
-
   const removeCharge = (id: string) => onChargesChange(additionalCharges.filter(c => c.id !== id));
+
+  const XIcon = () => (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="12" cy="12" r="10"/>
+      <line x1="15" y1="9" x2="9" y2="15"/>
+      <line x1="9" y1="9" x2="15" y2="15"/>
+    </svg>
+  );
+
+  const recentTcsRates = DEFAULT_TCS_RATES.slice(0, 2);
 
   return (
     <div className="cn-summary">
-      {/* Additional Charges */}
+
+      {/* ── Additional Charges ── */}
       {additionalCharges.map(charge => (
-        <div key={charge.id} className="cn-charge-row">
+        <div key={charge.id} className="cn-charge-block">
           <input
             className="cn-charge-label-input"
             value={charge.label}
             onChange={e => updateCharge(charge.id, "label", e.target.value)}
             placeholder="Enter charge (ex. Transport Charge)"
           />
-          <div className="cn-charge-amt-wrap">
-            <span className="cn-charge-rs">₹</span>
-            <input
-              className="cn-charge-amt-input"
-              type="number"
-              value={charge.amount}
-              onChange={e => updateCharge(charge.id, "amount", Number(e.target.value))}
-            />
-          </div>
-          <div className="cn-charge-tax-wrap">
+          <div className="cn-charge-inline">
+            <div className="cn-charge-amt-wrap">
+              <span className="cn-charge-rs">₹</span>
+              <input
+                className="cn-charge-amt-input"
+                type="number"
+                value={charge.amount}
+                onChange={e => updateCharge(charge.id, "amount", Number(e.target.value))}
+              />
+            </div>
             <select
               className="cn-charge-tax-sel"
               value={charge.taxLabel}
@@ -87,66 +202,80 @@ export function CNSummary({
               }}
             >
               <option value="No Tax Applicable">No Tax Applicable</option>
-              {TAX_OPTIONS.filter(t => t.label !== "None").map(t => <option key={t.label}>{t.label}</option>)}
+              {TAX_OPTIONS.filter(t => t.label !== "None").map(t => (
+                <option key={t.label}>{t.label}</option>
+              ))}
             </select>
+            <button className="cn-charge-remove" onClick={() => removeCharge(charge.id)}>
+              <XIcon />
+            </button>
           </div>
-          <button className="cn-charge-remove" onClick={() => removeCharge(charge.id)}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
-          </button>
         </div>
       ))}
-      {additionalCharges.length > 0 && (
-        <button className="cn-link-btn cn-link-btn--sm" onClick={addCharge}>+ Add Another Charge</button>
-      )}
-      {additionalCharges.length === 0 && (
-        <button className="cn-summary-link-btn" onClick={addCharge}>+ Add Additional Charges</button>
+
+      {additionalCharges.length > 0 ? (
+        <div style={{ padding: "4px 0 4px" }}>
+          <button className="cn-link-btn cn-link-btn--sm" onClick={addCharge}>+ Add Another Charge</button>
+        </div>
+      ) : (
+        <div className="cn-summary-row cn-summary-row--link">
+          <button className="cn-summary-link-btn" onClick={addCharge}>+ Add Additional Charges</button>
+          <span className="cn-summary-neg">₹ 0</span>
+        </div>
       )}
 
+      {/* ── Taxable Amount ── */}
       <div className="cn-summary-row">
         <span>Taxable Amount</span>
         <span>₹ {taxableAmount.toFixed(0)}</span>
       </div>
 
-      {/* Discount */}
+      {/* ── Discount ── */}
       {showDiscount ? (
         <div className="cn-discount-row">
-          <div className="cn-discount-type-wrap" style={{position:"relative"}}>
-            <button
-              className="cn-discount-type-sel"
-              onClick={() => setDiscTypeOpen(o => !o)}
-            >
+          <div ref={discTypeRef} className="cn-discount-type-wrap" style={{ position: "relative" }}>
+            <button className="cn-discount-type-sel" onClick={() => setDiscTypeOpen(o => !o)}>
               {discountType === "after-tax" ? "Discount After Tax" : "Discount Before Tax"}
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
             </button>
             {discTypeOpen && (
               <div className="cn-discount-type-drop">
-                <button onClick={() => { onDiscountChange(discountPct, discountAmt, "before-tax"); setDiscTypeOpen(false); }}>Discount Before Tax</button>
-                <button className={discountType==="after-tax"?"cn-disc-opt--active":""} onClick={() => { onDiscountChange(discountPct, discountAmt, "after-tax"); setDiscTypeOpen(false); }}>Discount After Tax</button>
+                {(["before-tax", "after-tax"] as const).map(t => (
+                  <button key={t}
+                    className={discountType === t ? "cn-disc-opt--active" : ""}
+                    onClick={() => { onDiscountChange(discountPct, discountAmt, t); setDiscTypeOpen(false); }}>
+                    {t === "after-tax" ? "Discount After Tax" : "Discount Before Tax"}
+                  </button>
+                ))}
               </div>
             )}
           </div>
           <div className="cn-discount-inputs">
             <div className="cn-discount-pct-wrap">
               <span>%</span>
-              <input
-                className="cn-discount-input"
-                type="number" min={0} max={100}
+              <input className="cn-discount-input" type="number" min={0} max={100}
                 value={discountPct}
-                onChange={e => onDiscountChange(Number(e.target.value), discountAmt, discountType)}
-              />
+                onChange={e => {
+                  const pct = Number(e.target.value);
+                  const amt = taxableAmount > 0 ? parseFloat((taxableAmount * pct / 100).toFixed(2)) : 0;
+                  onDiscountChange(pct, amt, discountType);
+                }} />
             </div>
             <span className="cn-discount-slash">/</span>
             <div className="cn-discount-amt-wrap">
               <span>₹</span>
-              <input
-                className="cn-discount-input"
-                type="number" min={0}
+              <input className="cn-discount-input" type="number" min={0}
                 value={discountAmt}
-                onChange={e => onDiscountChange(discountPct, Number(e.target.value), discountType)}
-              />
+                onChange={e => {
+                  const amt = Number(e.target.value);
+                  const pct = taxableAmount > 0 ? parseFloat(((amt / taxableAmount) * 100).toFixed(2)) : 0;
+                  onDiscountChange(pct, amt, discountType);
+                }} />
             </div>
             <button className="cn-charge-remove" onClick={() => onToggleDiscount(false)}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+              <XIcon />
             </button>
           </div>
         </div>
@@ -157,87 +286,148 @@ export function CNSummary({
         </div>
       )}
 
-      {/* Apply TCS */}
-      <div className="cn-tcs-row">
-        <label className="cn-checkbox-label">
-          <input type="checkbox" />
-          <span>Apply TCS</span>
-        </label>
+      {/* ── Apply TCS ── */}
+      <div className="cn-tcs-section">
+        <div className="cn-tcs-row">
+          <label className="cn-checkbox-label">
+            <input type="checkbox" className="cn-checkbox" checked={applyTcs}
+              onChange={e => { setApplyTcs(e.target.checked); if (!e.target.checked) { setSelectedTcs(null); setTcsOpen(false); } }} />
+            <span>Apply TCS</span>
+          </label>
+
+          {applyTcs && (
+            <div className="cn-tcs-controls">
+              <div className="cn-tcs-amt-badge">₹ {tcsAmount.toFixed(2)}</div>
+              <div ref={tcsRef} className="cn-tcs-rate-wrap">
+                <button className="cn-tcs-rate-btn" onClick={() => setTcsOpen(o => !o)}>
+                  <span>{selectedTcs ? `${selectedTcs.rate.toFixed(1)} %` : "Select Tcs Rate"}</span>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                    <polyline points="6 9 12 15 18 9"/>
+                  </svg>
+                </button>
+                {tcsOpen && (
+                  <div className="cn-tcs-dropdown">
+                    <div className="cn-tcs-section-hdr">Recently Used</div>
+                    {recentTcsRates.map((r, i) => (
+                      <button key={`r-${i}`}
+                        className={`cn-tcs-option${selectedTcs?.label === r.label ? " cn-tcs-option--active" : ""}`}
+                        onClick={() => { setSelectedTcs(r); setTcsOpen(false); }}>
+                        <span className="cn-tcs-opt-label">{r.label}</span>
+                        <span className="cn-tcs-opt-rate">{r.rate.toFixed(1)}%</span>
+                      </button>
+                    ))}
+                    <div className="cn-tcs-divider" />
+                    {tcsRates.map((r, i) => (
+                      <button key={`a-${i}`}
+                        className={`cn-tcs-option${selectedTcs?.label === r.label ? " cn-tcs-option--active" : ""}`}
+                        onClick={() => { setSelectedTcs(r); setTcsOpen(false); }}>
+                        <span className="cn-tcs-opt-label">{r.label}</span>
+                        <span className="cn-tcs-opt-rate">{r.rate.toFixed(1)}%</span>
+                      </button>
+                    ))}
+                    <div className="cn-tcs-divider" />
+                    <button className="cn-tcs-add-btn" onClick={() => { setTcsOpen(false); setShowAddTcs(true); }}>
+                      + Add Tcs Rate
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {applyTcs && selectedTcs && (
+          <div className="cn-tcs-base-row">
+            <label className="cn-radio-label">
+              <input type="radio" name="cn-tcs-base" className="cn-radio"
+                checked={tcsBase === "total"} onChange={() => setTcsBase("total")} />
+              <span>Total<br />Amount</span>
+            </label>
+            <label className="cn-radio-label">
+              <input type="radio" name="cn-tcs-base" className="cn-radio"
+                checked={tcsBase === "taxable"} onChange={() => setTcsBase("taxable")} />
+              <span>Taxable<br />Amount</span>
+            </label>
+          </div>
+        )}
       </div>
 
-      {/* Round Off */}
+      {/* ── Auto Round Off ── */}
       <div className="cn-roundoff-row">
         <label className="cn-checkbox-label">
-          <input
-            type="checkbox"
-            checked={autoRoundOff}
-            onChange={e => onRoundOffChange(e.target.checked, roundOffAmt)}
-          />
+          <input type="checkbox" className="cn-checkbox" checked={autoRoundOff}
+            onChange={e => onRoundOffChange(e.target.checked, roundOffAmt)} />
           <span>Auto Round Off</span>
         </label>
         <div className="cn-roundoff-right">
-          <button className="cn-roundoff-type-btn">+ Add</button>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+          <div ref={roundOffRef} className="cn-roundoff-sign-wrap">
+            <button className="cn-roundoff-type-btn" onClick={() => setRoundOffDropOpen(o => !o)}>
+              {roundOffSign === "add" ? "+ Add" : "- Reduce"}
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
+            </button>
+            {roundOffDropOpen && (
+              <div className="cn-roundoff-dropdown">
+                <button className="cn-roundoff-opt" onClick={() => { setRoundOffSign("add"); setRoundOffDropOpen(false); }}>+ Add</button>
+                <button className="cn-roundoff-opt" onClick={() => { setRoundOffSign("reduce"); setRoundOffDropOpen(false); }}>- Reduce</button>
+              </div>
+            )}
+          </div>
           <span className="cn-roundoff-rs">₹</span>
           <input
             className="cn-roundoff-input"
             type="number"
-            value={autoRoundOff ? ro.toFixed(2) : roundOffAmt}
+            value={autoRoundOff ? Math.abs(autoRo).toFixed(2) : roundOffAmt}
             onChange={e => onRoundOffChange(autoRoundOff, Number(e.target.value))}
             readOnly={autoRoundOff}
           />
         </div>
       </div>
 
-      {/* Total */}
+      {/* ── Total Amount ── */}
       <div className="cn-summary-total-row">
         <span className="cn-total-label">Total Amount</span>
-        <input
-          className="cn-total-input"
-          placeholder="Enter Payment amount"
-          value={totalAmount > 0 ? totalAmount.toFixed(2) : ""}
-          readOnly
-        />
+        {hasItems ? (
+          <span className="cn-total-computed">₹ {totalAmount.toFixed(2)}</span>
+        ) : (
+          <input
+            className="cn-total-input cn-total-input--editable"
+            type="number"
+            min={0}
+            placeholder="Enter Payment amount"
+            value={manualTotal}
+            onChange={e => { setManualTotal(e.target.value); onAmountPaidChange(Number(e.target.value)); }}
+          />
+        )}
       </div>
 
       <div className="cn-summary-divider" />
 
-      {/* Mark Fully Paid */}
+      {/* ── Mark as fully paid ── */}
       <div className="cn-fully-paid-row">
-        <span />
         <label className="cn-checkbox-label">
           <span>Mark as fully paid</span>
-          <input
-            type="checkbox"
-            checked={markFullyPaid}
+          <input type="checkbox" className="cn-checkbox" checked={markFullyPaid}
             onChange={e => {
               onMarkFullyPaid(e.target.checked);
-              if (e.target.checked) onAmountPaidChange(totalAmount);
+              if (e.target.checked) onAmountPaidChange(hasItems ? totalAmount : Number(manualTotal));
               else onAmountPaidChange(0);
-            }}
-          />
+            }} />
         </label>
       </div>
 
-      {/* Amount Paid */}
+      {/* ── Amount Received ── */}
       <div className="cn-amount-paid-row">
         <span>Amount Received</span>
         <div className="cn-amount-paid-inputs">
           <div className="cn-paid-rs-wrap">
             <span>₹</span>
-            <input
-              className="cn-paid-input"
-              type="number"
-              value={amountPaid}
-              onChange={e => onAmountPaidChange(Number(e.target.value))}
-              min={0}
-            />
+            <input className="cn-paid-input" type="number" value={amountPaid} min={0}
+              onChange={e => onAmountPaidChange(Number(e.target.value))} />
           </div>
-          <select
-            className="cn-payment-method-sel"
-            value={paymentMethod}
-            onChange={e => onPaymentMethodChange(e.target.value)}
-          >
+          <select className="cn-payment-method-sel" value={paymentMethod}
+            onChange={e => onPaymentMethodChange(e.target.value)}>
             {PAYMENT_METHODS.map(m => <option key={m}>{m}</option>)}
           </select>
         </div>
@@ -245,7 +435,7 @@ export function CNSummary({
 
       <div className="cn-summary-divider" />
 
-      {/* Balance */}
+      {/* ── Balance Amount ── */}
       <div className="cn-balance-row">
         <span className="cn-balance-label">Balance Amount</span>
         <span className={`cn-balance-value${balanceAmount === 0 ? " cn-balance-value--zero" : ""}`}>
@@ -253,13 +443,20 @@ export function CNSummary({
         </span>
       </div>
 
-      {/* Signatory */}
+      {/* ── Authorized Signatory ── */}
       <div className="cn-signatory">
         <div className="cn-signatory-text">
           Authorized signatory for <strong>scratchweb.solutions</strong>
         </div>
         <div className="cn-signatory-box" />
       </div>
+
+      {showAddTcs && (
+        <AddTcsRateModal
+          onClose={() => setShowAddTcs(false)}
+          onSave={r => { setTcsRates(prev => [...prev, r]); setSelectedTcs(r); }}
+        />
+      )}
     </div>
   );
 }
@@ -299,17 +496,11 @@ export function CNFooter({ notes, termsConditions, onNotesChange, onTermsChange 
             </button>
           </div>
           <div className="cn-notes-input-wrap">
-            <textarea
-              className="cn-notes-input"
-              value={notes}
-              onChange={e => onNotesChange(e.target.value)}
-              placeholder="Enter your notes"
-              rows={2}
-            />
+            <textarea className="cn-notes-input" value={notes} onChange={e => onNotesChange(e.target.value)}
+              placeholder="Enter your notes" rows={2} />
           </div>
         </div>
       )}
-
       {!showTerms ? (
         <button className="cn-link-btn" onClick={handleShowTerms}>+ Add Terms and Conditions</button>
       ) : (
@@ -324,12 +515,8 @@ export function CNFooter({ notes, termsConditions, onNotesChange, onTermsChange 
             </button>
           </div>
           <div className="cn-terms-box">
-            <textarea
-              className="cn-terms-input"
-              value={termsConditions}
-              onChange={e => onTermsChange(e.target.value)}
-              rows={4}
-            />
+            <textarea className="cn-terms-input" value={termsConditions}
+              onChange={e => onTermsChange(e.target.value)} rows={4} />
           </div>
         </div>
       )}
@@ -365,7 +552,9 @@ export function CNQuickSettings({ nextNo, currentPrefix, onClose, onSave }: Sett
         <div className="cn-modal-hdr">
           <span>Quick Credit Note Settings</span>
           <button className="cn-modal-close" onClick={onClose}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
           </button>
         </div>
         <div className="cn-modal-body">

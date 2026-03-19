@@ -1,85 +1,253 @@
 import { useState, useEffect } from "react";
+
 import {
-  SalesInvoice, BillItem, AdditionalCharge,
-  getNextInvoiceNo, saveSalesInvoice, getSalesInvoiceById,
-  makeBlankInvoice, todayStr,
+  SalesInvoice,
+  makeBlankInvoice,
 } from "./SalesInvoiceTypes";
+
+import {
+  createInvoice,
+  updateInvoice,
+  getInvoiceById,
+  toCreatePayload,
+  getInvoiceSettings,
+  saveInvoiceSettings,
+  buildInvoiceNo,
+  type InvoiceSettings,
+} from "../../../api/salesInvoiceApi";
+
+import { mapBackendInvoice } from "../../../utils/invoiceMapper";
+
 import SIPartySelector from "./SIPartySelector";
-import SIMetaFields from "./SIMetaFields";
-import SIItemsTable from "./SIItemsTable";
+import SIMetaFields    from "./SIMetaFields";
+import SIItemsTable    from "./SIItemsTable";
 import SIAddItemsModal from "./SIAddItemsModal";
-import SISummary from "./SISummary";
-import SIFooter from "./SIFooter";
+import SISummary       from "./SISummary";
+import SIFooter        from "./SIFooter";
 import "./CreateSalesInvoice.css";
 
-// Quick Invoice Settings Modal (from screenshots 14-15)
-function QuickSettingsModal({ onClose }: { onClose: () => void }) {
-  const [prefixOn, setPrefixOn] = useState(false);
-  const [prefix, setPrefix] = useState("");
-  const [seqNo, setSeqNo] = useState(getNextInvoiceNo());
+
+/*────────────────────────────────────────────
+ QUICK SETTINGS MODAL
+ - Loads current settings from backend on open
+ - Saves to backend on Save
+ - After save, parent receives the updated invoiceNo preview
+────────────────────────────────────────────*/
+
+interface QuickSettingsModalProps {
+  onClose: () => void;
+  onSaved: (newInvoiceNo: string) => void;
+}
+
+function QuickSettingsModal({ onClose, onSaved }: QuickSettingsModalProps) {
+  const [loading, setLoading] = useState(true);
+  const [saving,  setSaving]  = useState(false);
+  const [error,   setError]   = useState<string | null>(null);
+
+  // Settings state — mirrors InvoiceSettings shape
+  const [enablePrefix,      setEnablePrefix]      = useState(false);
+  const [prefix,            setPrefix]            = useState("");
+  const [seqNo,             setSeqNo]             = useState(1);
   const [showPurchasePrice, setShowPurchasePrice] = useState(true);
-  const [showItemImage, setShowItemImage] = useState(true);
-  const [priceHistory, setPriceHistory] = useState(true);
-  const [theme, setTheme] = useState("Advanced GST");
+  const [showItemImage,     setShowItemImage]     = useState(true);
+  const [priceHistory,      setPriceHistory]      = useState(true);
+  const [theme,             setTheme]             = useState("Advanced GST");
+
+  // Load from backend when modal opens
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    getInvoiceSettings()
+      .then(s => {
+        if (!active) return;
+        setEnablePrefix(s.enablePrefix);
+        setPrefix(s.prefix ?? "");
+        setSeqNo(s.sequenceNumber ?? 1);
+        setShowPurchasePrice(s.showPurchasePrice ?? true);
+        setShowItemImage(s.showItemImage ?? true);
+        setPriceHistory(s.enablePriceHistory ?? true);
+        setTheme(s.invoiceTheme ?? "Advanced GST");
+      })
+      .catch(() => {/* use defaults already set */})
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, []);
+
+  // Live preview of what the next invoice number will look like
+  const previewNo = (() => {
+    const seq = String(seqNo).padStart(5, "0");
+    if (enablePrefix && prefix.trim()) return `${prefix.trim()}${seq}`;
+    return `INV-${seq}`;
+  })();
+
+  async function handleSave() {
+    setSaving(true);
+    setError(null);
+    try {
+      const payload: Omit<InvoiceSettings, "id"> = {
+        enablePrefix,
+        prefix:            prefix.trim(),
+        sequenceNumber:    seqNo,
+        showPurchasePrice,
+        showItemImage,
+        enablePriceHistory: priceHistory,
+        invoiceTheme:      theme,
+      };
+      const saved = await saveInvoiceSettings(payload);
+      onSaved(buildInvoiceNo(saved));
+      onClose();
+    } catch (err: any) {
+      setError(err.message ?? "Failed to save settings");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   function Toggle({ on, set }: { on: boolean; set: (v: boolean) => void }) {
     return (
-      <button className={`csi-toggle${on?" csi-toggle--on":""}`} onClick={()=>set(!on)}>
-        <span className="csi-toggle-th"/>
+      <button
+        className={`csi-toggle${on ? " csi-toggle--on" : ""}`}
+        onClick={() => set(!on)}
+      >
+        <span className="csi-toggle-th" />
       </button>
     );
   }
+
   return (
     <div className="csi-overlay" onClick={onClose}>
-      <div className="csi-modal" onClick={e=>e.stopPropagation()}>
-        <div className="csi-modal-hdr"><span>Quick Invoice Settings</span><button onClick={onClose}>✕</button></div>
-        <div className="csi-settings-body">
-          {[
-            { label:"Invoice Prefix & Sequence Number", sub:"Add your custom prefix & sequence for Invoice Numbering", on:prefixOn, set:setPrefixOn, extra: prefixOn && (
-              <div className="csi-prefix-row">
-                <div><label>Prefix</label><input value={prefix} onChange={e=>setPrefix(e.target.value)} placeholder="Prefix" className="csi-si-inp"/></div>
-                <div><label>Sequence Number</label><input type="number" value={seqNo} onChange={e=>setSeqNo(Number(e.target.value))} className="csi-si-inp"/></div>
-              </div>
-            )},
-            { label:"Show Purchase Price while adding Items", sub:"Add purchase price while adding items", on:showPurchasePrice, set:setShowPurchasePrice },
-            { label:"Show Item Image on Invoice", sub:"This will apply to all vouchers except for Payment In and Payment Out", on:showItemImage, set:setShowItemImage },
-            { label:<><span>Price History</span> <span className="csi-badge-new">New</span></>, sub:"Show last 5 sales / purchase prices of the item for the selected party in invoice", on:priceHistory, set:setPriceHistory },
-          ].map((item: any, i) => (
-            <div key={i} className="csi-settings-section">
+      <div className="csi-modal" onClick={e => e.stopPropagation()}>
+
+        <div className="csi-modal-hdr">
+          <span>Quick Invoice Settings</span>
+          <button onClick={onClose}>✕</button>
+        </div>
+
+        {loading ? (
+          <div style={{ padding: "40px 24px", textAlign: "center", color: "#6b7280", fontSize: 14 }}>
+            Loading settings…
+          </div>
+        ) : (
+          <div className="csi-settings-body">
+
+            {/* ── Prefix & Sequence ── */}
+            <div className="csi-settings-section">
               <div className="csi-settings-row">
                 <div>
-                  <div className="csi-s-label">{item.label}</div>
-                  <div className="csi-s-sub">{item.sub}</div>
+                  <div className="csi-s-label">Invoice Prefix &amp; Sequence Number</div>
+                  <div className="csi-s-sub">Add your custom prefix &amp; sequence for Invoice Numbering</div>
                 </div>
-                <Toggle on={item.on} set={item.set}/>
+                <Toggle on={enablePrefix} set={setEnablePrefix} />
               </div>
-              {item.extra}
-              {prefixOn && i===0 && <div className="csi-inv-preview">Invoice Number: {seqNo}</div>}
+
+              {enablePrefix && (
+                <div className="csi-prefix-row">
+                  <div>
+                    <label>Prefix</label>
+                    <input
+                      value={prefix}
+                      onChange={e => setPrefix(e.target.value)}
+                      className="csi-si-inp"
+                      placeholder="e.g. INV- or SI-"
+                    />
+                  </div>
+                  <div>
+                    <label>Sequence Number</label>
+                    <input
+                      type="number"
+                      min={1}
+                      value={seqNo}
+                      onChange={e => setSeqNo(Math.max(1, Number(e.target.value)))}
+                      className="csi-si-inp"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Always show preview */}
+              <div className="csi-inv-preview">
+                Invoice Number Preview: <strong>{previewNo}</strong>
+              </div>
             </div>
-          ))}
-          <div className="csi-settings-section">
-            <div className="csi-s-label" style={{marginBottom:8}}>Choose Invoice Theme</div>
-            <select value={theme} onChange={e=>setTheme(e.target.value)} className="csi-theme-sel">
-              <option>Advanced GST</option><option>Simple GST</option><option>Basic</option><option>Professional</option>
-            </select>
+
+            {/* ── Show Purchase Price ── */}
+            <div className="csi-settings-section">
+              <div className="csi-settings-row">
+                <div>
+                  <div className="csi-s-label">Show Purchase Price while adding Items</div>
+                  <div className="csi-s-sub">Add purchase price while adding items</div>
+                </div>
+                <Toggle on={showPurchasePrice} set={setShowPurchasePrice} />
+              </div>
+            </div>
+
+            {/* ── Show Item Image ── */}
+            <div className="csi-settings-section">
+              <div className="csi-settings-row">
+                <div>
+                  <div className="csi-s-label">Show Item Image on Invoice</div>
+                  <div className="csi-s-sub">
+                    This will apply to all vouchers except Payment In and Payment Out
+                  </div>
+                </div>
+                <Toggle on={showItemImage} set={setShowItemImage} />
+              </div>
+            </div>
+
+            {/* ── Price History ── */}
+            <div className="csi-settings-section">
+              <div className="csi-settings-row">
+                <div>
+                  <div className="csi-s-label">
+                    Price History
+                    <span className="csi-badge-new">New</span>
+                  </div>
+                  <div className="csi-s-sub">Show last 5 sales / purchase prices</div>
+                </div>
+                <Toggle on={priceHistory} set={setPriceHistory} />
+              </div>
+            </div>
+
+            {/* ── Invoice Theme ── */}
+            <div className="csi-settings-section">
+              <div className="csi-s-label">Choose Invoice Theme</div>
+              <select
+                value={theme}
+                onChange={e => setTheme(e.target.value)}
+                className="csi-theme-sel"
+              >
+                <option>Advanced GST</option>
+                <option>Simple GST</option>
+                <option>Basic</option>
+                <option>Professional</option>
+              </select>
+            </div>
+
+            {/* Error */}
+            {error && (
+              <div style={{ color: "#dc2626", fontSize: 13, padding: "4px 0" }}>
+                ⚠ {error}
+              </div>
+            )}
           </div>
-          <div className="csi-customize-banner">
-            <div>
-              <div style={{fontWeight:600,marginBottom:6}}>Now <span style={{color:"#4f46e5"}}>customise Invoice</span> with ease</div>
-              <button className="csi-full-settings">Full Invoice Settings →</button>
-            </div>
-            <div className="csi-invoice-thumb">
-              <div style={{fontSize:11,fontWeight:700,color:"#6b7280",textAlign:"center"}}>INVOICE</div>
-            </div>
-          </div>
-        </div>
+        )}
+
         <div className="csi-modal-ftr">
-          <button className="csi-btn-cancel" onClick={onClose}>Cancel</button>
-          <button className="csi-btn-primary" onClick={onClose}>Save</button>
+          <button onClick={onClose} disabled={saving}>Cancel</button>
+          <button onClick={handleSave} disabled={saving || loading}>
+            {saving ? "Saving…" : "Save"}
+          </button>
         </div>
+
       </div>
     </div>
   );
 }
+
+
+/*────────────────────────────────────────────
+ MAIN COMPONENT
+────────────────────────────────────────────*/
 
 interface Props {
   editId?: string;
@@ -87,162 +255,327 @@ interface Props {
   onSaveAndNew?: () => void;
   /** Pre-fill form from a converted quotation */
   fromQuotation?: any | null;
+  /**
+   * When converting from a quotation, pass the source quotation's id here.
+   * The quotation's status will be set to "Closed" in localStorage only
+   * after the invoice is successfully saved to the backend.
+   */
+  fromQuotationId?: string | null;
   /** Pre-fill form from a converted delivery challan */
   fromChallan?: any | null;
 }
 
-export default function CreateSalesInvoice({ editId, onBack, onSaveAndNew, fromQuotation, fromChallan }: Props) {
+export default function CreateSalesInvoice({
+  editId,
+  onBack,
+  onSaveAndNew,
+  fromQuotation,
+  fromQuotationId,
+  fromChallan,
+}: Props) {
 
-  // ── Convert challan data → SalesInvoice shape ──────────────────────────────
-  function challanToInvoice(c: any): import("./SalesInvoiceTypes").SalesInvoice {
-    const blank = makeBlankInvoice(getNextInvoiceNo());
+  // ── Convert challan data → SalesInvoice shape ────────────────────────────
+  function challanToInvoice(c: any): SalesInvoice {
+    const blank = makeBlankInvoice("…");
     const billItems = (c.billItems || []).map((item: any) => ({
-      rowId: `row-${Date.now()}-${item.rowId || item.itemId}`,
-      itemId: item.itemId,
-      name: item.name,
-      description: item.description || "",
-      hsn: item.hsn || "",
-      qty: item.qty,
-      unit: item.unit || "PCS",
-      price: item.price,
-      discountPct: item.discountPct || 0,
-      discountAmt: item.discountAmt || 0,
-      taxLabel: item.taxLabel || "None",
-      taxRate: item.taxRate || 0,
-      amount: item.amount,
+      rowId:        `row-${Date.now()}-${item.rowId || item.itemId}`,
+      itemId:       item.itemId,
+      name:         item.name,
+      description:  item.description  || "",
+      hsn:          item.hsn          || "",
+      qty:          item.qty,
+      unit:         item.unit         || "PCS",
+      price:        item.price,
+      discountPct:  item.discountPct  || 0,
+      discountAmt:  item.discountAmt  || 0,
+      taxLabel:     item.taxLabel     || "None",
+      taxRate:      item.taxRate      || 0,
+      amount:       item.amount,
     }));
     return {
       ...blank,
-      party: c.party || null,
+      party:             c.party             || null,
       billItems,
       additionalCharges: c.additionalCharges || [],
-      discountType: c.discountType || blank.discountType,
-      discountPct: c.discountPct || 0,
-      discountAmt: c.discountAmt || 0,
-      roundOff: c.roundOff || "none",
-      roundOffAmt: c.roundOffAmt || 0,
-      notes: c.notes || "",
-      termsConditions: c.termsConditions || blank.termsConditions,
-      challanNo: c.challanNo || "",
+      discountType:      c.discountType      || blank.discountType,
+      discountPct:       c.discountPct       || 0,
+      discountAmt:       c.discountAmt       || 0,
+      roundOff:          c.roundOff          || "none",
+      roundOffAmt:       c.roundOffAmt       || 0,
+      notes:             c.notes             || "",
+      termsConditions:   c.termsConditions   || blank.termsConditions,
+      challanNo:         c.challanNo         || "",
     };
   }
 
-  // ── Convert quotation data → SalesInvoice shape ────────────────────────────
-  function quotationToInvoice(q: any): import("./SalesInvoiceTypes").SalesInvoice {
-    const blank = makeBlankInvoice(getNextInvoiceNo());
-    // Map bill items: quotation BillItem shape matches SalesInvoice BillItem shape
+  // ── Convert quotation data → SalesInvoice shape ──────────────────────────
+  function quotationToInvoice(q: any): SalesInvoice {
+    const blank = makeBlankInvoice("…");
     const billItems = (q.billItems || []).map((item: any) => ({
-      rowId: `row-${Date.now()}-${item.rowId || item.itemId}`,
-      itemId: item.itemId,
-      name: item.name,
-      description: item.description || "",
-      hsn: item.hsn || "",
-      qty: item.qty,
-      unit: item.unit || "PCS",
-      price: item.price,
-      discountPct: item.discountPct || 0,
-      discountAmt: item.discountAmt || 0,
-      taxLabel: item.taxLabel || "None",
-      taxRate: item.taxRate || 0,
-      amount: item.amount,
+      rowId:        `row-${Date.now()}-${item.rowId || item.itemId}`,
+      itemId:       item.itemId,
+      name:         item.name,
+      description:  item.description  || "",
+      hsn:          item.hsn          || "",
+      qty:          item.qty,
+      unit:         item.unit         || "PCS",
+      price:        item.price,
+      discountPct:  item.discountPct  || 0,
+      discountAmt:  item.discountAmt  || 0,
+      taxLabel:     item.taxLabel     || "None",
+      taxRate:      item.taxRate      || 0,
+      amount:       item.amount,
     }));
     return {
       ...blank,
-      party: q.party || null,
+      party:             q.party             || null,
       billItems,
       additionalCharges: q.additionalCharges || [],
-      discountType: q.discountType || blank.discountType,
-      discountPct: q.discountPct || 0,
-      discountAmt: q.discountAmt || 0,
-      roundOff: q.roundOff || "none",
-      roundOffAmt: q.roundOffAmt || 0,
-      notes: q.notes || "",
-      termsConditions: q.termsConditions || blank.termsConditions,
+      discountType:      q.discountType      || blank.discountType,
+      discountPct:       q.discountPct       || 0,
+      discountAmt:       q.discountAmt       || 0,
+      roundOff:          q.roundOff          || "none",
+      roundOffAmt:       q.roundOffAmt       || 0,
+      notes:             q.notes             || "",
+      termsConditions:   q.termsConditions   || blank.termsConditions,
     };
   }
 
-  const [form, setForm] = useState<import("./SalesInvoiceTypes").SalesInvoice>(() => {
-    if (editId) return getSalesInvoiceById(editId) ?? makeBlankInvoice(getNextInvoiceNo());
-    if (fromChallan) return challanToInvoice(fromChallan);
+  const [form, setForm] = useState<SalesInvoice>(() => {
+    if (fromChallan)   return challanToInvoice(fromChallan);
     if (fromQuotation) return quotationToInvoice(fromQuotation);
-    return makeBlankInvoice(getNextInvoiceNo());
+    return makeBlankInvoice("…");   // placeholder — real number loaded below
   });
+
   const [showAddItems, setShowAddItems] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showDiscount, setShowDiscount] = useState(false);
+  const [saving,       setSaving]       = useState(false);
+  const [saveError,    setSaveError]    = useState<string | null>(null);
 
+  /*────────────────────────────
+   ON MOUNT: load invoice number from backend settings.
+   Applies to new invoices AND converted docs (quotation/challan)
+   since we used "…" as a placeholder in both cases.
+  ────────────────────────────*/
   useEffect(() => {
-    if (editId) {
-      const ex = getSalesInvoiceById(editId);
-      if (ex) {
-        setForm(ex);
-        setShowDiscount(ex.discountPct > 0 || ex.discountAmt > 0);
+    if (editId) return; // editing existing — don't override
+    getInvoiceSettings()
+      .then(s => {
+        setForm(prev => ({ ...prev, invoiceNo: buildInvoiceNo(s) }));
+      })
+      .catch(() => {
+        setForm(prev => ({ ...prev, invoiceNo: "INV-00001" }));
+      });
+  }, []);
+
+  /*────────────────────────────
+   LOAD INVOICE FOR EDIT
+  ────────────────────────────*/
+  useEffect(() => {
+    if (!editId) return;
+    let active = true;
+
+    async function loadInvoice() {
+      try {
+        const res = await getInvoiceById(editId!);
+        if (active) setForm(mapBackendInvoice(res));
+      } catch (err) {
+        console.error("Failed to load invoice for edit:", err);
       }
     }
+
+    loadInvoice();
+    return () => { active = false; };
   }, [editId]);
 
   function set(field: string, value: any) {
     setForm(prev => ({ ...prev, [field]: value }));
   }
 
-  function handleSave() {
-    const status: SalesInvoice["status"] =
-      form.amountReceived >= calcTotal() && calcTotal() > 0 ? "Paid"
-      : form.amountReceived > 0 ? "Partially Paid" : "Unpaid";
-    const final = { ...form, status };
-    saveSalesInvoice(final);
-    onBack();
+  /*────────────────────────────
+   SAVE INVOICE TO BACKEND
+  ────────────────────────────*/
+  async function handleSave(): Promise<boolean> {
+    if (!form.party) {
+      setSaveError("Please select a party before saving.");
+      return false;
+    }
+    if (form.billItems.length === 0) {
+      setSaveError("Please add at least one item before saving.");
+      return false;
+    }
+
+    setSaving(true);
+    setSaveError(null);
+
+    try {
+      const payload = toCreatePayload(form as any);
+
+      // Inject server-side-matching computed totals so the DB row
+      // exactly matches what the user sees on screen.
+      payload.subTotal               = subtotal;
+      payload.taxAmount              = effectiveTax;
+      payload.discountAmount         = discValue;
+      payload.additionalChargesTotal = chargesTotal;
+      payload.tcsAmount              = tcsValue;
+      payload.tcsRate                = form.applyTCS ? form.tcsRate : 0;
+      payload.roundOff               = roundOffAmt;
+      payload.autoRoundOff           = form.roundOff !== "none";
+      payload.totalAmount            = computedTotal;
+      payload.receivedAmount         = Number(form.amountReceived) || 0;
+      payload.outstandingAmount      = computedOutstanding;
+      payload.signatureUrl           = (form as any).signatureUrl           ?? null;
+      payload.showEmptySignatureBox  = (form as any).showEmptySignatureBox  ?? false;
+
+      if (editId) {
+        await updateInvoice(editId, {
+          dueDate:              payload.dueDate,
+          ewayBillNo:           payload.ewayBillNo,
+          challanNo:            payload.challanNo,
+          financedBy:           payload.financedBy,
+          salesman:             payload.salesman,
+          emailId:              payload.emailId,
+          warrantyPeriod:       payload.warrantyPeriod,
+          notes:                payload.notes,
+          termsConditions:      payload.termsConditions,
+          signatureUrl:         payload.signatureUrl,
+          showEmptySignatureBox: payload.showEmptySignatureBox,
+        } as any);
+      } else {
+        await createInvoice(payload);
+      }
+
+      // ── Close the source quotation in localStorage now that the
+      //    invoice has been successfully saved to the backend. ────────────
+      if (fromQuotationId) {
+        try {
+          const quotations = JSON.parse(localStorage.getItem("quotations") || "[]");
+          const updated = quotations.map((q: any) =>
+            q.id === fromQuotationId ? { ...q, status: "Closed" } : q
+          );
+          localStorage.setItem("quotations", JSON.stringify(updated));
+        } catch {
+          // Non-critical — don't block navigation if localStorage fails
+        }
+      }
+
+      onBack();
+      return true;
+    } catch (error: any) {
+      setSaveError(error.message ?? "Failed to save invoice");
+      return false;
+    } finally {
+      setSaving(false);
+    }
   }
 
-  function handleSaveAndNew() {
-    handleSave();
-    const next = makeBlankInvoice(getNextInvoiceNo());
-    setForm(next);
+  async function handleSaveAndNew() {
+    const ok = await handleSave();
+    if (!ok) return;
+
+    // After saving, reload settings to get the next sequence number
+    const settings = await getInvoiceSettings().catch(() => null);
+    const nextNo   = settings ? buildInvoiceNo(settings) : "INV-00001";
+
+    setForm(makeBlankInvoice(nextNo));
     setShowDiscount(false);
     if (onSaveAndNew) onSaveAndNew();
   }
 
-  // Calculations for summary
-  const subtotal = form.billItems.reduce((s, i) => s + i.price * i.qty, 0);
-  const totalTax = form.billItems.reduce((s, i) => {
-    const base = i.qty * i.price - (i.qty * i.price * i.discountPct / 100) - i.discountAmt;
-    return s + base * i.taxRate / 100;
+  /*────────────────────────────
+   CALCULATIONS
+   All values mirror SISummary exactly so the payload sent to the
+   backend matches what the user sees on screen.
+  ────────────────────────────*/
+  const subtotal = form.billItems.reduce((s, i) => {
+    const lineTotal = (Number(i.qty) || 0) * (Number(i.price) || 0);
+    const lineDisc  = lineTotal * ((Number(i.discountPct) || 0) / 100)
+                    + (Number(i.discountAmt) || 0);
+    return s + Math.max(0, lineTotal - lineDisc);
   }, 0);
-  function calcTotal(): number {
-    const chargesTotal = form.additionalCharges.reduce((s, c) => s + c.amount, 0);
-    const taxable = subtotal + chargesTotal;
-    const discVal = taxable * form.discountPct / 100 || form.discountAmt;
-    const afterDisc = taxable - discVal;
-    const tcs = afterDisc * form.tcsRate / 100;
-    return afterDisc + tcs + form.roundOffAmt;
-  }
 
+  const totalTax = form.billItems.reduce((s, i) => {
+    const lineTotal = (Number(i.qty) || 0) * (Number(i.price) || 0);
+    const lineDisc  = lineTotal * ((Number(i.discountPct) || 0) / 100)
+                    + (Number(i.discountAmt) || 0);
+    const taxBase   = Math.max(0, lineTotal - lineDisc);
+    return s + taxBase * ((Number(i.taxRate) || 0) / 100);
+  }, 0);
+
+  const chargesTotal   = form.additionalCharges.reduce((s, c) => s + (Number(c.amount) || 0), 0);
+  const taxableBase    = subtotal + chargesTotal;
+  const discValue      = form.discountPct > 0
+    ? taxableBase * (form.discountPct / 100)
+    : (Number(form.discountAmt) || 0);
+  const afterDisc      = Math.max(0, taxableBase - discValue);
+  const taxScaleFactor = taxableBase > 0 ? afterDisc / taxableBase : 1;
+  const effectiveTax   = Math.round(totalTax * taxScaleFactor * 100) / 100;
+  const afterTax       = afterDisc + effectiveTax;
+  const tcsBaseAmt     = form.tcsBase === "Total Amount" ? afterTax : afterDisc;
+  const tcsValue       = form.applyTCS
+    ? Math.round(tcsBaseAmt * (form.tcsRate / 100) * 100) / 100
+    : 0;
+  const preRound       = Math.round((afterTax + tcsValue) * 100) / 100;
+  const roundOffAmt    = form.roundOff === "+Add"
+    ? Math.round((Math.ceil(preRound)  - preRound) * 100) / 100
+    : form.roundOff === "-Reduce"
+    ? Math.round((Math.floor(preRound) - preRound) * 100) / 100
+    : (Number(form.roundOffAmt) || 0);
+  const computedTotal       = Math.round((preRound + roundOffAmt) * 100) / 100;
+  const computedOutstanding = Math.max(
+    0,
+    Math.round((computedTotal - (Number(form.amountReceived) || 0)) * 100) / 100
+  );
+
+  /*────────────────────────────
+   UI
+  ────────────────────────────*/
   return (
     <div className="csi-page">
-      {/* ── Top Nav ──────────────────────────────────────────────── */}
+
       <div className="csi-topbar">
         <button className="csi-back-btn" onClick={onBack}>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6"/></svg>
-          Create Sales Invoice
+          ← {editId ? "Edit Sales Invoice" : "Create Sales Invoice"}
         </button>
+
         <div className="csi-topbar-right">
-          <button className="csi-keyboard-btn" title="Keyboard Shortcuts">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h8"/></svg>
-          </button>
-          <button className="csi-settings-btn" onClick={()=>setShowSettings(true)}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          {saveError && (
+            <span style={{ color: "#dc2626", fontSize: 13, marginRight: 12 }}>
+              ⚠ {saveError}
+            </span>
+          )}
+
+          <button
+            className="csi-settings-btn"
+            onClick={() => setShowSettings(true)}
+          >
             Settings
-            <span className="csi-notif-dot"/>
           </button>
-          <button className="csi-save-new-btn" onClick={handleSaveAndNew}>Save & New</button>
-          <button className="csi-save-btn" onClick={handleSave}>Save</button>
+
+          <button
+            className="csi-save-new-btn"
+            onClick={handleSaveAndNew}
+            disabled={saving}
+          >
+            {saving ? "Saving…" : "Save & New"}
+          </button>
+
+          <button
+            className="csi-save-btn"
+            onClick={handleSave}
+            disabled={saving}
+          >
+            {saving ? "Saving…" : "Save"}
+          </button>
         </div>
       </div>
 
-      {/* ── Main Body ────────────────────────────────────────────── */}
+
       <div className="csi-body">
-        {/* Top Panel: Party (left) + Meta (right) */}
+
         <div className="csi-top-panel">
+
           <div className="csi-party-col">
             <SIPartySelector
               selectedParty={form.party}
@@ -250,6 +583,7 @@ export default function CreateSalesInvoice({ editId, onBack, onSaveAndNew, fromQ
               onSelectParty={p => set("party", p)}
             />
           </div>
+
           <div className="csi-meta-col">
             <SIMetaFields
               invoiceNo={form.invoiceNo}
@@ -268,9 +602,10 @@ export default function CreateSalesInvoice({ editId, onBack, onSaveAndNew, fromQ
               onShowColumnsChange={cols => set("showColumns", cols)}
             />
           </div>
+
         </div>
 
-        {/* Items Table */}
+
         <SIItemsTable
           items={form.billItems}
           showColumns={form.showColumns}
@@ -278,16 +613,19 @@ export default function CreateSalesInvoice({ editId, onBack, onSaveAndNew, fromQ
           onAddItem={() => setShowAddItems(true)}
         />
 
-        {/* Bottom Panel: Footer (left) + Summary (right) */}
+
         <div className="csi-bottom-panel">
+
           <div className="csi-footer-col">
             <SIFooter
+              partyId={form.party?.id ?? null}
               notes={form.notes}
               termsConditions={form.termsConditions}
               onNotesChange={v => set("notes", v)}
               onTermsChange={v => set("termsConditions", v)}
             />
           </div>
+
           <div className="csi-summary-col">
             <SISummary
               subtotal={subtotal}
@@ -305,38 +643,66 @@ export default function CreateSalesInvoice({ editId, onBack, onSaveAndNew, fromQ
               roundOffAmt={form.roundOffAmt}
               amountReceived={form.amountReceived}
               paymentMethod={form.paymentMethod}
+
               onChargesChange={c => set("additionalCharges", c)}
               onDiscountTypeChange={t => set("discountType", t)}
               onDiscountPctChange={v => set("discountPct", v)}
               onDiscountAmtChange={v => set("discountAmt", v)}
+
               onToggleDiscount={show => {
                 setShowDiscount(show);
-                if (!show) { set("discountPct", 0); set("discountAmt", 0); }
+                if (!show) {
+                  set("discountPct", 0);
+                  set("discountAmt", 0);
+                }
               }}
+
               onTCSChange={(apply, rate, label, base) => {
-                set("applyTCS", apply);
-                set("tcsRate", rate);
-                set("tcsLabel", label);
-                set("tcsBase", base);
+                set("applyTCS",  apply);
+                set("tcsRate",   rate);
+                set("tcsLabel",  label);
+                set("tcsBase",   base);
               }}
-              onRoundOffChange={(mode, amt) => { set("roundOff", mode); set("roundOffAmt", amt); }}
+
+              onRoundOffChange={(mode, amt) => {
+                set("roundOff",    mode);
+                set("roundOffAmt", amt);
+              }}
+
               onAmountReceivedChange={v => set("amountReceived", v)}
-              onPaymentMethodChange={v => set("paymentMethod", v)}
+              onPaymentMethodChange={v => set("paymentMethod",   v)}
+
+              signatureUrl={(form as any).signatureUrl ?? ""}
+              showEmptySignatureBox={(form as any).showEmptySignatureBox ?? false}
+              onSignatureChange={(url, showEmpty) => {
+                set("signatureUrl", url);
+                set("showEmptySignatureBox", showEmpty);
+              }}
             />
           </div>
+
         </div>
+
       </div>
 
-      {/* Modals */}
+
       {showAddItems && (
         <SIAddItemsModal
           onClose={() => setShowAddItems(false)}
-          onAddToBill={items => {
-            set("billItems", [...form.billItems, ...items]);
+          onAddToBill={items => set("billItems", [...form.billItems, ...items])}
+        />
+      )}
+
+      {showSettings && (
+        <QuickSettingsModal
+          onClose={() => setShowSettings(false)}
+          onSaved={(newInvoiceNo) => {
+            // Update the displayed invoice number to match what backend will assign
+            if (!editId) set("invoiceNo", newInvoiceNo);
           }}
         />
       )}
-      {showSettings && <QuickSettingsModal onClose={() => setShowSettings(false)}/>}
+
     </div>
   );
 }

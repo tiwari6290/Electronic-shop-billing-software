@@ -122,6 +122,13 @@ const CalendarPicker: React.FC<CalendarPickerProps> = ({ fromDate, toDate, onApp
 };
 // ───────────────────────────────────────────────────────────────────────────
 
+const fmtDate = (dateStr: string) => {
+  if (!dateStr) return "-";
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return dateStr;
+  return d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+};
+
 const PartyDetails: React.FC = () => {
   const [activeTab, setActiveTab] = useState("Transactions");
   const [showCreateMenu, setShowCreateMenu] = useState(false);
@@ -173,7 +180,7 @@ const PartyDetails: React.FC = () => {
   useEffect(() => {
     const fetchTransactions = async () => {
       try {
-        const res = await axios.get(`http://localhost:4000/api/party/${id}`);
+        const res = await axios.get(`http://localhost:4000/api/transactions/party/${id}`);
         const formatted = res.data.data?.map((t: any) => ({
           id: t.id,
           date: t.date,
@@ -396,8 +403,8 @@ const PartyDetails: React.FC = () => {
                   <tr><td colSpan={5} className="no-txn">No transactions for the selected time period</td></tr>
                 ) : (
                   filteredTransactions.map((txn) => (
-                    <tr key={txn.id}>
-                      <td>{txn.date}</td>
+                    <tr key={`${txn.type}-${txn.id}`}>
+                      <td>{fmtDate(txn.date)}</td>
                       <td>{txn.type}</td>
                       <td>{txn.number}</td>
                       <td>&#8377; {txn.amount.toLocaleString("en-IN")}</td>

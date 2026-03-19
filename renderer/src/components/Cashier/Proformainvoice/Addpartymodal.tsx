@@ -49,51 +49,47 @@ const AddPartyModal: React.FC<Props> = ({ onSelect, onClose }) => {
   };
 
   return (
-    <div className="apm-overlay" onClick={onClose}>
-      <div className="apm-modal" onClick={e => e.stopPropagation()}>
-        <div className="apm-header">
+    <div className="aa-apm-overlay" onClick={onClose}>
+      <div className="aa-apm-modal" onClick={e => e.stopPropagation()}>
+        <div className="aa-apm-header">
           <h2>Select Party</h2>
-          <button className="apm-close" onClick={onClose}><IconClose /></button>
+          <button className="aa-apm-close" onClick={onClose}><IconClose /></button>
         </div>
 
-        <div className="apm-search-wrap">
+        <div className="aa-apm-search-wrap">
           <IconSearch />
           <input
             autoFocus
-            className="apm-search"
+            className="aa-apm-search"
             placeholder="Search party by name or phone..."
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
         </div>
 
-        <div className="apm-list">
+        <div className="aa-apm-list-header">
+          <span>Party Name</span>
+          <span>Balance</span>
+        </div>
+        <div className="aa-apm-list">
           {filtered.length === 0 ? (
-            <div className="apm-empty">No parties found</div>
+            <div className="aa-apm-empty">No parties found</div>
           ) : (
             filtered.map(party => (
-              <div key={party.id} className="apm-item" onClick={() => onSelect(party)}>
-                <div className="apm-item-avatar">{party.name.charAt(0).toUpperCase()}</div>
-                <div className="apm-item-info">
-                  <div className="apm-item-name">{party.name}</div>
-                  {party.mobile && party.mobile !== "-" && (
-                    <div className="apm-item-phone">{party.mobile}</div>
-                  )}
-                  {party.billingAddress && (
-                    <div className="apm-item-addr">{party.billingAddress}</div>
-                  )}
-                  {party.category && party.category !== "-" && (
-                    <span className="apm-item-tag">{party.category}</span>
-                  )}
+              <div key={party.id} className="aa-apm-item" onClick={() => onSelect(party)}>
+                <div className="aa-apm-item-name">{party.name}</div>
+                <div className="aa-apm-item-balance">
+                  ₹ {Math.abs(party.balance || 0).toLocaleString("en-IN")}
+                  {(party.balance || 0) < 0 && <span className="aa-apm-bal-up">↑</span>}
+                  {(party.balance || 0) > 0 && <span className="aa-apm-bal-down">↓</span>}
                 </div>
-                <div className="apm-item-type">{party.type}</div>
               </div>
             ))
           )}
         </div>
 
-        <div className="apm-footer">
-          <button className="apm-create-btn" onClick={handleCreateNewParty}>
+        <div className="aa-apm-footer">
+          <button className="aa-apm-create-btn" onClick={handleCreateNewParty}>
             + Create New Party
           </button>
         </div>
