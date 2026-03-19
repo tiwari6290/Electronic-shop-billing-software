@@ -144,8 +144,8 @@ function PaymentOutView({ payment, onBack, onDelete }: {
             {settledInvoices.length > 0 ? (
               settledInvoices.map((inv: any) => (
                 <tr key={inv.id}>
-                  <td>{inv.purchaseInvoice?.invoiceDate ? formatDate(inv.purchaseInvoice.invoiceDate) : "—"}</td>
-                  <td>{inv.purchaseInvoice?.purchaseInvNo || "—"}</td>
+                  <td>{inv.date ? formatDate(inv.date) : "—"}</td>
+                  <td>{inv.invoiceNumber || "—"}</td>
                   <td>₹ {Number(inv.invoiceAmount || 0).toLocaleString("en-IN")}</td>
                   <td>₹ {Number(inv.discount || 0).toLocaleString("en-IN")}</td>
                   <td>₹ {Number(inv.amountPaid || 0).toLocaleString("en-IN")}</td>

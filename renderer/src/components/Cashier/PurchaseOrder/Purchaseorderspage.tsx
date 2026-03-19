@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from "react";
 import "./Purchaseorderspage.css";
 import api from "@/lib/axios";
 import { getAllParties } from "@/services/partyService";
-
+import { useNavigate } from "react-router-dom";
 
 /* ══════════════════════════════════════════ ICONS ══ */
 const IC = {
@@ -71,19 +71,6 @@ const fmtDateTime = (dateStr:string) => {
 };
 
 
-
-const SEED_ORDERS:PurchaseOrder[] = [
-  {id:1,date:"2026-03-02",poNumber:2,partyName:"anando",partyId:2,partyPhone:"0987643211",
-   validTill:"-",amount:190000,status:"Open",items:[
-     {id:5,name:"HEKER AC",hsn:"",qty:2,price:38000,discount:0,tax:18},
-     {id:6,name:"HISENSE 32 INCH",hsn:"",qty:3,price:18000,discount:0,tax:12},
-   ],charges:[],
-   discountEnabled:false,discountType:"%",discountVal:0,roundOff:false,roundOffDir:"+Add",roundOffVal:0},
-  {id:2,date:"2026-02-27",poNumber:1,partyName:"Cash Sale",partyId:3,partyPhone:"9555780835",
-   validTill:"-",amount:0,status:"Open",items:[],charges:[],
-   discountEnabled:false,discountType:"%",discountVal:0,roundOff:false,roundOffDir:"+Add",roundOffVal:0},
-];
-
 /* ══════════════════════════════════════════ CALENDAR ══ */
 function CalendarPicker({onApply,onCancel}:{onApply:(f:Date,t:Date)=>void;onCancel:()=>void}) {
   const today=new Date();
@@ -140,7 +127,7 @@ function CalendarPicker({onApply,onCancel}:{onApply:(f:Date,t:Date)=>void;onCanc
 }
 
 /* ══════════════════════════════════════════════════════════
-   SETTINGS MODAL  — unchanged
+   SETTINGS MODAL
 ══════════════════════════════════════════════════════════ */
 function POSettingsModal({settings,setSettings,onClose}:{
   settings:POSettings;
@@ -210,7 +197,7 @@ function POSettingsModal({settings,setSettings,onClose}:{
 }
 
 /* ══════════════════════════════════════════════════════════
-   PURCHASE ORDER BILL VIEW  ← NEW
+   PURCHASE ORDER BILL VIEW
 ══════════════════════════════════════════════════════════ */
 interface POBillViewProps {
   po: PurchaseOrder;
@@ -329,7 +316,7 @@ function POBillView({po, orders, onBack, onEdit, onHistory, onDuplicate, onDelet
             )}
           </div>
 
-          {/* 3-dot menu — same 4 options as list */}
+          {/* 3-dot menu */}
           <div ref={dotsRef} style={{position:"relative"}}>
             <button className="report-action-btn bv-dots-btn" onClick={()=>setShowDots(v=>!v)}>
               <IC.Dots/>
@@ -542,7 +529,7 @@ function POBillView({po, orders, onBack, onEdit, onHistory, onDuplicate, onDelet
 }
 
 /* ══════════════════════════════════════════════════════════
-   CREATE / EDIT PURCHASE ORDER PAGE  — unchanged from original
+   CREATE / EDIT PURCHASE ORDER PAGE
 ══════════════════════════════════════════════════════════ */
 interface CreatePOProps {
   mode: "create"|"edit";
@@ -559,6 +546,7 @@ interface CreatePOProps {
 }
 
 function CreatePurchaseOrderPage({mode,editData,seqNo,onBack,onSaved,onSaveAndNew,allParties,setAllParties,settings,onOpenSettings,onCreateParty}:CreatePOProps) {
+    const navigate = useNavigate();
   const isEdit = mode==="edit";
   const initParty = editData ? allParties.find(p=>p.id===editData.partyId)||null : null;
 
@@ -671,7 +659,6 @@ function CreatePurchaseOrderPage({mode,editData,seqNo,onBack,onSaved,onSaveAndNe
             id: i.id,
             name: i.name,
             code: i.itemCode ?? "",
-            /* ── FIX 2: Read stock from ProductStock relation if present ── */
             stock: i.ProductStock?.length
               ? `${i.ProductStock.reduce((s:any,x:any)=>s+(Number(x.openingStock)||0),0)} ${i.unit ?? ""}`.trim()
               : i.currentStock != null
@@ -717,7 +704,6 @@ function CreatePurchaseOrderPage({mode,editData,seqNo,onBack,onSaved,onSaveAndNe
             name: cat.name,
             hsn: "",
             qty: pendingQtys[id] ?? 1,
-            /* ── FIX 4: Prefer purchasePrice > 0, fall back to salesPrice ── */
             price: cat.purchasePrice > 0 ? cat.purchasePrice : cat.salesPrice,
             discount: 0,
             tax: 0,
@@ -731,9 +717,9 @@ function CreatePurchaseOrderPage({mode,editData,seqNo,onBack,onSaved,onSaveAndNe
   const updCharge=(id:number,f:keyof POCharge,v:string|number)=>setCharges(p=>p.map(c=>c.id===id?{...c,[f]:v}:c));
   const removeCharge=(id:number)=>setCharges(p=>p.filter(c=>c.id!==id));
 
-  const buildPO = ():PurchaseOrder => ({
-    id: isEdit ? editData!.id : Date.now(),
-    date: isEdit ? editData!.date : new Date().toISOString().slice(0,10),
+  const buildPO = (): PurchaseOrder => ({
+    id: isEdit ? editData!.id : 0, // backend will assign real id
+    date: isEdit ? editData!.date : new Date().toISOString().slice(0, 10),
     poNumber: Number(poNo),
     partyName: selectedParty!.name,
     partyId: selectedParty!.id,
@@ -741,9 +727,14 @@ function CreatePurchaseOrderPage({mode,editData,seqNo,onBack,onSaved,onSaveAndNe
     validTill: "-",
     amount: totalAmt,
     status: "Open",
-    items, charges,
-    discountEnabled: showDiscount, discountType, discountVal,
-    roundOff, roundOffDir, roundOffVal,
+    items,
+    charges,
+    discountEnabled: showDiscount,
+    discountType,
+    discountVal,
+    roundOff,
+    roundOffDir,
+    roundOffVal,
   });
 
   const handleSave=()=>{
@@ -754,10 +745,20 @@ function CreatePurchaseOrderPage({mode,editData,seqNo,onBack,onSaved,onSaveAndNe
   const handleSaveAndNew=()=>{
     if(!selectedParty){showT("Please select a party first");return;}
     onSaveAndNew(buildPO());
-    setPartyState("empty"); setPartySearch(""); setSelectedParty(null);
-    setItems([]); setCharges([]); setShowDiscount(false); setDiscountType("%"); setDiscountVal(0);
-    setRoundOff(false); setRoundOffDir("+Add"); setRoundOffVal(0);
-    setShowNotes(false); setNotes("");
+    /* Reset form state */
+    setPartyState("empty");
+    setPartySearch("");
+    setSelectedParty(null);
+    setItems([]);
+    setCharges([]);
+    setShowDiscount(false);
+    setDiscountType("%");
+    setDiscountVal(0);
+    setRoundOff(false);
+    setRoundOffDir("+Add");
+    setRoundOffVal(0);
+    setShowNotes(false);
+    setNotes("");
     setShipName("");setShipPhone("");setShipAddr("");setShipCity("");setShipState("");setShipPin("");setShipSaved(false);
     showT("Saved! New purchase order ready.");
   };
@@ -986,7 +987,12 @@ function CreatePurchaseOrderPage({mode,editData,seqNo,onBack,onSaved,onSaveAndNe
             <div className="aim-search-row">
               <div className="aim-search-box"><span className="aim-search-icon"><IC.Search/></span><input className="aim-search-input" placeholder="Search by Item / HSN code / SKU" value={itemSearch} onChange={e=>setItemSearch(e.target.value)} autoFocus/><button className="aim-barcode-btn"><IC.Barcode/></button></div>
               <div className="aim-cat-wrap"><select className="aim-cat-select"><option>Select Category</option><option>Electronics</option><option>Software</option></select></div>
-              <button className="aim-create-btn" onClick={()=>showT("Create new item")}>Create New Item</button>
+             <button
+  className="aim-create-btn"
+  onClick={() => navigate("/cashier/createitem")}
+>
+  Create New Item
+</button>
             </div>
             <div className="aim-table-wrap">
               <table className="aim-table">
@@ -1031,7 +1037,7 @@ function CreatePurchaseOrderPage({mode,editData,seqNo,onBack,onSaved,onSaveAndNe
 }
 
 /* ══════════════════════════════════════════════════════════
-   PURCHASE ORDERS LIST PAGE  — unchanged except row click added
+   PURCHASE ORDERS LIST PAGE
 ══════════════════════════════════════════════════════════ */
 function PurchaseOrdersListPage({orders,setOrders,settings,setSettings,onCreateNew,onEdit,onView,onDuplicate}:{
   orders:PurchaseOrder[];setOrders:React.Dispatch<React.SetStateAction<PurchaseOrder[]>>;
@@ -1204,40 +1210,280 @@ export default function PurchaseOrdersModule() {
   const [editTarget,setEditTarget]=useState<PurchaseOrder|null>(null);
   const [viewTarget,setViewTarget]=useState<PurchaseOrder|null>(null);
   const [duplicateTarget,setDuplicateTarget]=useState<PurchaseOrder|null>(null);
-  const [orders,setOrders]=useState<PurchaseOrder[]>(SEED_ORDERS);
-  const [allParties,setAllParties]=useState<Party[]>(PARTIES);
+
+  /* ── FIX 2: Start with empty array, load from backend ── */
+  const [orders,setOrders]=useState<PurchaseOrder[]>([]);
+
+  const [allParties,setAllParties]=useState<Party[]>([]);
   const [settings,setSettings]=useState<POSettings>({prefixEnabled:true,prefix:"",sequenceNumber:4,showItemImage:true,priceHistory:true});
   const [showSettings,setShowSettings]=useState(false);
   const [saveAndNewKey,setSaveAndNewKey]=useState(0);
 
-  const handleSaved=(po:PurchaseOrder,isEdit:boolean)=>{
-    if(isEdit) setOrders(p=>p.map(o=>o.id===po.id?po:o));
-    else {
-      setOrders(p=>[po,...p]);
-      setSettings(s=>({...s,sequenceNumber:s.sequenceNumber+1}));
+  /* ── FIX 2: Fetch purchase orders on mount ── */
+ useEffect(() => {
+  api.get("/purchase-orders")
+    .then((res: any) => {
+
+      const list = res.data?.data ?? res.data;
+
+     const mapped = list.map((po: any) => ({
+  id: po.id,
+  date: po.poDate,
+  poNumber: po.poNumber,
+
+  partyName: po.party?.partyName || "",
+  partyId: po.partyId,
+  partyPhone: po.party?.mobileNumber || "",
+
+  validTill: po.validTill ?? "-",
+  amount: Number(po.totalAmount || 0),
+
+  status:
+    po.status === "OPEN"
+      ? "Open"
+      : po.status === "CLOSED"
+      ? "Closed"
+      : "Cancelled",
+
+  items: (po.items || []).map((it:any)=>({
+    id: it.productId,
+    name: it.product?.name || "",
+    hsn: it.hsnSac || "",
+    qty: Number(it.quantity || 0),
+    price: Number(it.price || 0),
+    discount: Number(it.discount || 0),
+    tax: Number(it.taxRate || 0)
+  })),
+
+  charges: (po.additionalCharges || []).map((c:any)=>({
+    id: c.id,
+    label: c.name,
+    amount: Number(c.amount || 0),
+    taxRate: "No Tax Applicable"
+  })),
+
+  discountEnabled:false,
+  discountType:"%",
+  discountVal:0,
+  roundOff:false,
+  roundOffDir:"+Add",
+  roundOffVal:0
+}));
+
+      setOrders(mapped);
+
+    })
+    .catch((err) => {
+      console.error("Failed to fetch purchase orders", err);
+    });
+}, []);
+
+  /* ── Load parties from backend on mount ── */
+  useEffect(()=>{
+    getAllParties().then((res:any)=>{
+      const list:any[]=res.data??res;
+      setAllParties(list.map((p:any)=>({
+        id:      p.id,
+        name:    p.partyName??p.name??"",
+        phone:   p.mobileNumber??p.phone??"",
+        pan:     p.gstin??p.pan??"",
+        balance: Number(p.balance??0),
+      })));
+    }).catch((err:any)=>console.error("Failed to load parties:",err));
+  },[]);
+
+  /* ── FIX 1: handleSaved — correct payload shape + re-fetch ── */
+  const handleSaved = async (po: PurchaseOrder, isEdit: boolean) => {
+    try {
+      const payload = {
+        partyId: po.partyId,
+        poDate: po.date,
+        validTill: po.validTill === "-" ? null : po.validTill,
+
+        items: po.items.map(i => ({
+          productId: i.id,
+          quantity: i.qty,
+          price: i.price,
+          discount: i.discount,
+          taxRate: i.tax,
+          taxAmount: (i.qty * i.price * i.tax) / 100,
+          total: (i.qty * i.price) - i.discount,
+          hsnSac: i.hsn,
+        })),
+
+        additionalCharges: po.charges.map(c => ({
+          name: c.label,
+          amount: c.amount,
+        })),
+
+        totalAmount: po.amount,
+        subTotal: po.items.reduce((s, i) => s + (i.qty * i.price - i.discount), 0),
+        taxAmount: po.items.reduce((s, i) => s + (i.qty * i.price * i.tax / 100), 0),
+        discountAmount: po.discountEnabled ? po.discountVal : 0,
+        taxableAmount: po.amount,
+        roundOff: po.roundOffVal,
+      };
+
+      if (isEdit) {
+        await api.put(`/purchase-orders/${po.id}`, payload);
+      } else {
+        await api.post("/purchase-orders", payload);
+      }
+
+      /* Re-fetch full list so UI always matches DB */
+      const res = await api.get("/purchase-orders");
+
+const list = res.data?.data ?? res.data;
+
+const mapped = list.map((po:any)=>({
+  id: po.id,
+  date: po.poDate,
+  poNumber: po.poNumber,
+
+  partyName: po.party?.partyName || "",
+  partyId: po.partyId,
+  partyPhone: po.party?.mobileNumber || "",
+
+  validTill: po.validTill ?? "-",
+  amount: Number(po.totalAmount || 0),
+
+  status:
+    po.status === "OPEN"
+      ? "Open"
+      : po.status === "CLOSED"
+      ? "Closed"
+      : "Cancelled",
+
+  items: (po.items || []).map((it:any)=>({
+    id: it.productId,
+    name: it.product?.name || "",
+    hsn: it.hsnSac || "",
+    qty: Number(it.quantity || 0),
+    price: Number(it.price || 0),
+    discount: Number(it.discount || 0),
+    tax: Number(it.taxRate || 0)
+  })),
+
+  charges: (po.additionalCharges || []).map((c:any)=>({
+    id: c.id,
+    label: c.name,
+    amount: Number(c.amount || 0),
+    taxRate: "No Tax Applicable"
+  })),
+
+  discountEnabled:false,
+  discountType:"%",
+  discountVal:0,
+  roundOff:false,
+  roundOffDir:"+Add",
+  roundOffVal:0
+}));
+
+setOrders(mapped);
+
+      if (!isEdit) {
+        setSettings(s => ({ ...s, sequenceNumber: s.sequenceNumber + 1 }));
+      }
+
+      setEditTarget(null);
+      setPage("list");
+    } catch (err) {
+      console.error("PO save failed", err);
     }
   };
 
-  const handleSaveAndNew=(po:PurchaseOrder)=>{
-    setOrders(p=>[po,...p]);
-    setSettings(s=>({...s,sequenceNumber:s.sequenceNumber+1}));
-    setSaveAndNewKey(k=>k+1);
+  const handleSaveAndNew = async (po: PurchaseOrder) => {
+    try {
+      await handleSaved(po, false);
+      setSaveAndNewKey(k => k + 1);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
-  /* Bill view 3-dot actions */
-  const handleBillEdit=(po:PurchaseOrder)=>{ setEditTarget(po); setViewTarget(null); setPage("edit"); };
-  const handleBillHistory=(po:PurchaseOrder)=>{ /* toast shown inside POBillView */ };
-  const handleBillDuplicate=(po:PurchaseOrder)=>{
-    const dup:PurchaseOrder={...po,id:Date.now(),poNumber:settings.sequenceNumber,date:new Date().toISOString().slice(0,10)};
+  /* ── FIX 3: handleBillDelete — connect to backend ── */
+  const handleBillDelete = async (po: PurchaseOrder) => {
+    try {
+      await api.delete(`/purchase-orders/${po.id}`);
+
+      const res = await api.get("/purchase-orders");
+
+const list = res.data?.data ?? res.data;
+
+const mapped = list.map((po:any)=>({
+  id: po.id,
+  date: po.poDate,
+  poNumber: po.poNumber,
+
+  partyName: po.party?.partyName || "",
+  partyId: po.partyId,
+  partyPhone: po.party?.mobileNumber || "",
+
+  validTill: po.validTill ?? "-",
+  amount: Number(po.totalAmount || 0),
+
+  status:
+    po.status === "OPEN"
+      ? "Open"
+      : po.status === "CLOSED"
+      ? "Closed"
+      : "Cancelled",
+
+  items: (po.items || []).map((it:any)=>({
+    id: it.productId,
+    name: it.product?.name || "",
+    hsn: it.hsnSac || "",
+    qty: Number(it.quantity || 0),
+    price: Number(it.price || 0),
+    discount: Number(it.discount || 0),
+    tax: Number(it.taxRate || 0)
+  })),
+
+  charges: (po.additionalCharges || []).map((c:any)=>({
+    id: c.id,
+    label: c.name,
+    amount: Number(c.amount || 0),
+    taxRate: "No Tax Applicable"
+  })),
+
+  discountEnabled:false,
+  discountType:"%",
+  discountVal:0,
+  roundOff:false,
+  roundOffDir:"+Add",
+  roundOffVal:0
+}));
+setOrders(mapped);
+
+      setViewTarget(null);
+      setPage("list");
+    } catch (err) {
+      console.error("Delete failed", err);
+    }
+  };
+
+  /* ── FIX 2: handleBillDuplicate — local duplicate (Tally/Vyapar style) ── */
+  const handleBillDuplicate = (po: PurchaseOrder) => {
+    const dup: PurchaseOrder = {
+      ...po,
+      id: 0,
+      poNumber: settings.sequenceNumber,
+      date: new Date().toISOString().slice(0, 10),
+    };
     setDuplicateTarget(dup);
     setViewTarget(null);
     setPage("duplicate");
   };
-  const handleBillDelete=(po:PurchaseOrder)=>{
-    setOrders(p=>p.filter(o=>o.id!==po.id));
+
+  /* Bill view edit action */
+  const handleBillEdit = (po: PurchaseOrder) => {
+    setEditTarget(po);
     setViewTarget(null);
-    setPage("list");
+    setPage("edit");
   };
+
+  /* Bill view history action — toast shown inside POBillView */
+  const handleBillHistory = (_po: PurchaseOrder) => {};
 
   /* Bill view page */
   if(page==="view" && viewTarget){
@@ -1286,7 +1532,7 @@ export default function PurchaseOrdersModule() {
     onEdit={po=>{setEditTarget(po);setPage("edit");}}
     onView={po=>{setViewTarget(po);setPage("view");}}
     onDuplicate={po=>{
-      const dup:PurchaseOrder={...po,id:Date.now(),poNumber:settings.sequenceNumber,date:new Date().toISOString().slice(0,10)};
+      const dup:PurchaseOrder={...po,id:0,poNumber:settings.sequenceNumber,date:new Date().toISOString().slice(0,10)};
       setDuplicateTarget(dup);
       setPage("duplicate");
     }}/>;

@@ -446,6 +446,19 @@ const IC = {
       <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
     </svg>
   ),
+  Pen: () => (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+    </svg>
+  ),
 };
 
 /* ══════════════════════════════════════════ TYPES ══ */
@@ -460,16 +473,18 @@ type PageMode =
   | "view";
 
 interface InvoiceItem {
-  id: number; // productId — never overwrite this
+  id: number;
   productId?: number;
   godownId?: number | null;
-  rowId?: number; // UI row key — used for React keys and remove logic
+  rowId?: number;
   name: string;
   hsn: string;
   qty: number;
   price: number;
   discount: number;
+  discountPct: number;
   tax: number;
+  taxLabel?: string;
 }
 
 interface AdditionalCharge {
@@ -557,7 +572,6 @@ interface AppSettings {
   prefix: string;
   sequenceNumber: number;
   showItemImage: boolean;
-  // FIX 2: renamed from priceHistory to enablePriceHistory to match backend field
   enablePriceHistory: boolean;
 }
 type DateFilter =
@@ -686,6 +700,25 @@ const DATE_OPTS: DateFilter[] = [
   "Custom",
 ];
 
+/* ══════════════════════════════════════════ GST OPTIONS ══ */
+const GST_OPTIONS: { label: string; rate: number }[] = [
+  { label: "None", rate: 0 },
+  { label: "Exempted", rate: 0 },
+  { label: "GST @ 0%", rate: 0 },
+  { label: "GST @ 0.1%", rate: 0.1 },
+  { label: "GST @ 0.25%", rate: 0.25 },
+  { label: "GST @ 1.5%", rate: 1.5 },
+  { label: "GST @ 3%", rate: 3 },
+  { label: "GST @ 5%", rate: 5 },
+  { label: "GST @ 6%", rate: 6 },
+  { label: "GST @ 8.9%", rate: 8.9 },
+  { label: "GST @ 12%", rate: 12 },
+  { label: "GST @ 13.8%", rate: 13.8 },
+  { label: "GST @ 18%", rate: 18 },
+  { label: "GST @ 14% + cess @ 12%", rate: 26 },
+  { label: "GST @ 28%", rate: 28 },
+];
+
 const defaultShipping = (name: string, phone: string): ShippingAddr => ({
   name,
   phone,
@@ -695,6 +728,142 @@ const defaultShipping = (name: string, phone: string): ShippingAddr => ({
   pin: "",
   isSame: true,
 });
+
+/* ══════════════════════════════════════════ TAX DROPDOWN ══ */
+function TaxDropdown({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (label: string, rate: number) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const h = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node))
+        setOpen(false);
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, []);
+
+  const display = value || "None";
+
+  return (
+    <div ref={ref} style={{ position: "relative" }}>
+      <div
+        onClick={() => setOpen((v) => !v)}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          border: "1px solid #d0d5dd",
+          borderRadius: 5,
+          padding: "5px 8px",
+          fontSize: 11,
+          cursor: "pointer",
+          background: "#fff",
+          minWidth: 145,
+          gap: 4,
+          userSelect: "none",
+          color: display === "None" ? "#98a2b3" : "#1a2332",
+        }}
+      >
+        <span
+          style={{
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            maxWidth: 115,
+          }}
+        >
+          {display}
+        </span>
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2.5}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          style={{ width: 11, height: 11, color: "#667085", flexShrink: 0 }}
+        >
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </div>
+
+      {open && (
+        <div
+          style={{
+            position: "absolute",
+            top: "calc(100% + 4px)",
+            left: 0,
+            zIndex: 9999,
+            background: "#fff",
+            border: "1px solid #e4e7ec",
+            borderRadius: 7,
+            boxShadow: "0 8px 28px rgba(0,0,0,0.14)",
+            minWidth: 210,
+            maxHeight: 300,
+            overflowY: "auto",
+          }}
+        >
+          {GST_OPTIONS.map((opt) => {
+            const isSelected = opt.label === display;
+            return (
+              <div
+                key={opt.label}
+                onClick={() => {
+                  onChange(opt.label, opt.rate);
+                  setOpen(false);
+                }}
+                style={{
+                  padding: "8px 14px",
+                  fontSize: 12,
+                  cursor: "pointer",
+                  color: isSelected ? "#4361ee" : "#344054",
+                  background: isSelected ? "#f0f3ff" : "transparent",
+                  fontWeight: isSelected ? 600 : 400,
+                  borderBottom: "1px solid #f2f4f7",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                }}
+                onMouseEnter={(e) => {
+                  if (!isSelected)
+                    (e.currentTarget as HTMLDivElement).style.background =
+                      "#f9fafb";
+                }}
+                onMouseLeave={(e) => {
+                  if (!isSelected)
+                    (e.currentTarget as HTMLDivElement).style.background =
+                      "transparent";
+                }}
+              >
+                <span>{opt.label}</span>
+                {isSelected && (
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#4361ee"
+                    strokeWidth={2.5}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    style={{ width: 13, height: 13 }}
+                  >
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 /* ══════════════════════════════════════════ CALENDAR ══ */
 function CalendarPicker({
@@ -710,6 +879,7 @@ function CalendarPicker({
   const [start, setStart] = useState<Date | null>(null);
   const [end, setEnd] = useState<Date | null>(null);
   const [hov, setHov] = useState<Date | null>(null);
+
   const prev = () => {
     if (vm === 0) {
       setVm(11);
@@ -722,6 +892,7 @@ function CalendarPicker({
       setVy((y) => y + 1);
     } else setVm((m) => m + 1);
   };
+
   const cells = () => {
     const f = new Date(vy, vm, 1),
       l = new Date(vy, vm + 1, 0),
@@ -731,10 +902,12 @@ function CalendarPicker({
     while (a.length % 7 !== 0) a.push(null);
     return a;
   };
+
   const same = (a: Date, b: Date) =>
     a.getFullYear() === b.getFullYear() &&
     a.getMonth() === b.getMonth() &&
     a.getDate() === b.getDate();
+
   const inR = (d: Date) => {
     const e2 = end || hov;
     if (!start || !e2) return false;
@@ -742,6 +915,7 @@ function CalendarPicker({
       mx = start < e2 ? e2 : start;
     return d > mn && d < mx;
   };
+
   const pick = (d: Date) => {
     if (!start || (start && end)) {
       setStart(d);
@@ -753,7 +927,9 @@ function CalendarPicker({
       } else setEnd(d);
     }
   };
+
   const cs = cells();
+
   return (
     <div className="pi-cal-overlay">
       <div className="pi-cal-header-row">
@@ -855,6 +1031,7 @@ function SingleDatePicker({
   const [vy, setVy] = useState(value.getFullYear());
   const [vm, setVm] = useState(value.getMonth());
   const [sel, setSel] = useState<Date>(value);
+
   const prev = () => {
     if (vm === 0) {
       setVm(11);
@@ -867,6 +1044,7 @@ function SingleDatePicker({
       setVy((y) => y + 1);
     } else setVm((m) => m + 1);
   };
+
   const cells = () => {
     const f = new Date(vy, vm, 1),
       l = new Date(vy, vm + 1, 0),
@@ -876,16 +1054,19 @@ function SingleDatePicker({
     while (a.length % 7 !== 0) a.push(null);
     return a;
   };
+
   const same = (a: Date, b: Date) =>
     a.getFullYear() === b.getFullYear() &&
     a.getMonth() === b.getMonth() &&
     a.getDate() === b.getDate();
+
   const cs = cells();
   const selLabel = `${sel.getDate().toString().padStart(2, "0")} ${["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][sel.getMonth()]} ${sel.getFullYear()}`;
   const YEAR_OPTS = Array.from(
     { length: 10 },
     (_, i) => today.getFullYear() - 5 + i,
   );
+
   return (
     <div className={`sdp-overlay${compact ? " sdp-compact" : ""}`}>
       <div className="sdp-selected-label">{selLabel}</div>
@@ -1203,6 +1384,19 @@ function InvoiceBillView({
   const [showShareDD, setShowShareDD] = useState(false);
   const [showPrintDD, setShowPrintDD] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+
+  const [signatureUrl, setSignatureUrl] = useState<string | null>(null);
+  const sigInputRef = useRef<HTMLInputElement>(null);
+
+  const handleSignatureUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setSignatureUrl(reader.result as string);
+    reader.readAsDataURL(file);
+    showT("Signature uploaded");
+  };
+
   const shareRef = useRef<HTMLDivElement>(null);
   const printRef = useRef<HTMLDivElement>(null);
 
@@ -1223,10 +1417,13 @@ function InvoiceBillView({
   }, []);
 
   const totalTax = inv.items.reduce(
-    (s, i) => s + (i.qty * i.price * i.tax) / 100,
+    (s, i) => s + ((i.qty * i.price - i.discount) * i.tax) / 100,
     0,
   );
-  const subtotal = inv.items.reduce((s, i) => s + i.qty * i.price, 0);
+  const subtotal = inv.items.reduce(
+    (s, i) => s + i.qty * i.price - (i.discount || 0),
+    0,
+  );
   const chargesTotal = inv.additionalCharges.reduce((s, c) => s + c.amount, 0);
   const discountAmt = inv.discountEnabled
     ? inv.discountType === "%"
@@ -1398,6 +1595,24 @@ function InvoiceBillView({
           >
             <IC.Refresh />
           </button>
+
+          <button
+            className="report-action-btn"
+            onClick={() => sigInputRef.current?.click()}
+            title="Upload Authorised Signature"
+            style={{ display: "flex", alignItems: "center", gap: 5 }}
+          >
+            <IC.Pen />
+            {signatureUrl ? "Change Signature" : "Upload Signature"}
+          </button>
+          <input
+            ref={sigInputRef}
+            type="file"
+            accept="image/*"
+            style={{ display: "none" }}
+            onChange={handleSignatureUpload}
+          />
+
           <div
             className="report-action-split"
             ref={shareRef}
@@ -1545,7 +1760,7 @@ function InvoiceBillView({
             <tbody>
               {inv.items.map((item, idx) => {
                 const amt = item.qty * item.price - item.discount;
-                const taxAmt = (item.qty * item.price * item.tax) / 100;
+                const taxAmt = ((item.qty * item.price - (item.discount || 0)) * item.tax) / 100;
                 return (
                   <tr key={item.rowId ?? item.id}>
                     <td style={{ textAlign: "center", color: "#667085" }}>
@@ -1563,7 +1778,9 @@ function InvoiceBillView({
                     <td style={{ textAlign: "center", color: "#667085" }}>
                       {taxAmt.toLocaleString("en-IN")}
                       <br />
-                      <span style={{ fontSize: 10 }}>({item.tax}%)</span>
+                      <span style={{ fontSize: 10 }}>
+                        ({item.taxLabel || `${item.tax}%`})
+                      </span>
                     </td>
                     <td
                       style={{
@@ -1665,7 +1882,8 @@ function InvoiceBillView({
               </thead>
               <tbody>
                 {inv.items.map((item, i) => {
-                  const taxableVal = item.qty * item.price;
+                  const taxableVal =
+                    item.qty * item.price - (item.discount || 0);
                   const itemTax = (taxableVal * item.tax) / 100;
                   return (
                     <tr key={i}>
@@ -1698,14 +1916,80 @@ function InvoiceBillView({
               <div className="bill-tc-text">
                 1. Goods once sold will not be taken back or exchanged
                 <br />
-                2. All disputes are subject to [ENTER_YOUR_CITY_NAME]
+                2. All disputes are subject to [ENTER_YOUR_CITY_NAME]{" "}
                 jurisdiction only
               </div>
             </div>
             <div className="bill-footer-right">
               <div className="bill-auth-label">Authorised Signatory For</div>
               <div className="bill-auth-company">scratchweb.solutions</div>
-              <div className="bill-sig-box" />
+
+              <div
+                className="bill-sig-box"
+                style={{
+                  position: "relative",
+                  overflow: "hidden",
+                  cursor: "pointer",
+                }}
+                onClick={() => sigInputRef.current?.click()}
+                title={
+                  signatureUrl
+                    ? "Click to change signature"
+                    : "Click to upload signature"
+                }
+              >
+                {signatureUrl ? (
+                  <>
+                    <img
+                      src={signatureUrl}
+                      alt="Authorised Signature"
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "contain",
+                        padding: 4,
+                      }}
+                    />
+                    <div
+                      style={{
+                        position: "absolute",
+                        inset: 0,
+                        background: "rgba(255,255,255,0.82)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: 5,
+                        opacity: 0,
+                        transition: "opacity 0.18s",
+                        fontSize: 11,
+                        color: "#4361ee",
+                        fontWeight: 600,
+                        pointerEvents: "none",
+                      }}
+                      className="sig-hover-overlay"
+                    >
+                      <IC.Pen /> Change Signature
+                    </div>
+                  </>
+                ) : (
+                  <span
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 5,
+                      fontSize: 11,
+                      color: "#c0cad8",
+                    }}
+                  >
+                    <IC.Pen />
+                    <span>Click to upload signature</span>
+                  </span>
+                )}
+              </div>
             </div>
           </div>
           <div className="bill-bottom-footer">
@@ -1776,7 +2060,7 @@ function GSTR2Page({ invoices, onBack }: GSTR2Props) {
 
   const gstr2Rows = filteredInvoices.map((inv) => {
     const totalTax = inv.items.reduce(
-      (s, i) => s + (i.qty * i.price * i.tax) / 100,
+      (s, i) => s + ((i.qty * i.price - (i.discount || 0)) * i.tax) / 100,
       0,
     );
     const taxableVal = inv.items.reduce(
@@ -1941,8 +2225,8 @@ function GSTR2Page({ invoices, onBack }: GSTR2Props) {
                 <tr>
                   <td colSpan={14}>
                     <div className="report-empty">
-                      <div className="report-empty-icon">📄</div>No transactions
-                      available to generate report
+                      <div className="report-empty-icon">📄</div>
+                      No transactions available to generate report
                     </div>
                   </td>
                 </tr>
@@ -2045,8 +2329,8 @@ function GSTR2Page({ invoices, onBack }: GSTR2Props) {
               <tr>
                 <td colSpan={15}>
                   <div className="report-empty">
-                    <div className="report-empty-icon">📄</div>No transactions
-                    available to generate report
+                    <div className="report-empty-icon">📄</div>
+                    No transactions available to generate report
                   </div>
                 </td>
               </tr>
@@ -2237,8 +2521,8 @@ function DaybookPage({ invoices, onBack }: DaybookProps) {
               <tr>
                 <td colSpan={9}>
                   <div className="report-empty">
-                    <div className="report-empty-icon">📄</div>No transactions
-                    available to generate report
+                    <div className="report-empty-icon">📄</div>
+                    No transactions available to generate report
                   </div>
                 </td>
               </tr>
@@ -2265,8 +2549,7 @@ function DaybookPage({ invoices, onBack }: DaybookProps) {
 }
 
 /* ══════════════════════════════════════════════════════════
-   SETTINGS PANEL — shared render helper
-   Used in both the list-page modal and the CPI settings modal
+   SETTINGS PANEL
 ══════════════════════════════════════════════════════════ */
 function SettingsPanel({
   settings,
@@ -2281,7 +2564,6 @@ function SettingsPanel({
 }) {
   return (
     <>
-      {/* ── Prefix & Sequence ── */}
       <div className="pi-s-block">
         <div className="pi-s-top">
           <span className="pi-s-name">
@@ -2292,7 +2574,10 @@ function SettingsPanel({
               type="checkbox"
               checked={settings.prefixEnabled}
               onChange={(e) =>
-                setSettings((p) => ({ ...p, prefixEnabled: e.target.checked }))
+                setSettings((p) => ({
+                  ...p,
+                  prefixEnabled: e.target.checked,
+                }))
               }
             />
             <span className="toggle-slider" />
@@ -2304,7 +2589,6 @@ function SettingsPanel({
         {settings.prefixEnabled && (
           <>
             <div className="pi-s-fields">
-              {/* FIX 4: Prefix is editable */}
               <div>
                 <label>Prefix</label>
                 <input
@@ -2315,7 +2599,6 @@ function SettingsPanel({
                   }
                 />
               </div>
-              {/* FIX 3: Sequence Number is read-only — DB controls it */}
               <div>
                 <label>Sequence Number</label>
                 <input
@@ -2334,7 +2617,6 @@ function SettingsPanel({
         )}
       </div>
 
-      {/* ── Show Item Image ── */}
       <div className="pi-s-block">
         <div className="pi-s-top">
           <span className="pi-s-name">Show Item Image on Invoice</span>
@@ -2343,7 +2625,10 @@ function SettingsPanel({
               type="checkbox"
               checked={settings.showItemImage}
               onChange={(e) =>
-                setSettings((p) => ({ ...p, showItemImage: e.target.checked }))
+                setSettings((p) => ({
+                  ...p,
+                  showItemImage: e.target.checked,
+                }))
               }
             />
             <span className="toggle-slider" />
@@ -2354,7 +2639,6 @@ function SettingsPanel({
         </p>
       </div>
 
-      {/* ── Price History ── */}
       <div className="pi-s-block">
         <div className="pi-s-top">
           <span className="pi-s-name">
@@ -2435,7 +2719,13 @@ function CreatePurchaseInvoicePage({
   const [partySearch, setPartySearch] = useState("");
   const [selectedParty, setSelectedParty] = useState<Party | null>(initParty);
   const [invoiceItems, setInvoiceItems] = useState<InvoiceItem[]>(
-    editData ? [...editData.items] : [],
+    editData
+      ? editData.items.map((i) => ({
+          ...i,
+          discountPct: i.discountPct ?? 0,
+          taxLabel: i.taxLabel ?? "None",
+        }))
+      : [],
   );
 
   const [invNo, setInvNo] = useState<string | number>(
@@ -2447,13 +2737,14 @@ function CreatePurchaseInvoicePage({
       setInvoiceItems(
         editData.items.map((item) => ({
           ...item,
+          discountPct: item.discountPct ?? 0,
+          taxLabel: item.taxLabel ?? "None",
           rowId: Date.now() + Math.random(),
         })),
       );
     }
   }, [isDup, editData]);
 
-  // FIX 6: invoice number fetch — already correct, no sequenceNumber sent
   useEffect(() => {
     if (isNew || isDup) {
       api
@@ -2543,8 +2834,10 @@ function CreatePurchaseInvoicePage({
   const [cpGSTIN, setCpGSTIN] = useState("");
   const [cpErr, setCpErr] = useState(false);
   const [itemSearch, setItemSearch] = useState("");
-  const [pendingQtys, setPendingQtys] = useState<Record<number, number>>({});
-  const [addedIds, setAddedIds] = useState<number[]>([]);
+  // ── single source of truth: id→qty (present = added, absent = not added) ──
+  const [addedItems, setAddedItems] = useState<Record<number, number>>({});
+  const pendingQtys = addedItems;
+  const addedIds = Object.keys(addedItems).map(Number);
   const [showCPISettings, setShowCPISettings] = useState(false);
 
   const partyRef = useRef<HTMLDivElement>(null);
@@ -2573,7 +2866,7 @@ function CreatePurchaseInvoicePage({
 
   const totalTax = useMemo(() => {
     return invoiceItems.reduce(
-      (s, i) => s + (i.qty * i.price * i.tax) / 100,
+      (s, i) => s + ((i.qty * i.price - (i.discount || 0)) * i.tax) / 100,
       0,
     );
   }, [invoiceItems]);
@@ -2634,9 +2927,14 @@ function CreatePurchaseInvoicePage({
             name: i.name,
             code: i.itemCode ?? "",
             hsn: i.hsnCode ? String(i.hsnCode) : "",
-            stock: i.productStock?.[0]?.currentStock
-              ? `${i.productStock[0].currentStock} ${i.unit ?? ""}`
-              : "",
+            stock: (() => {
+              const arr = (i.ProductStock ?? i.productStock ?? []) as any[];
+              const total = arr.reduce(
+                (s: number, ps: any) => s + (Number(ps.currentStock) || 0),
+                0,
+              );
+              return arr.length > 0 ? `${total} ${i.unit ?? ""}`.trim() : "0";
+            })(),
             salesPrice: Number(i.salesPrice ?? 0),
             purchasePrice: Number(i.purchasePrice ?? 0),
           })),
@@ -2681,49 +2979,53 @@ function CreatePurchaseInvoicePage({
     invoiceItems.forEach((i) => {
       init[i.id] = i.qty;
     });
-    setPendingQtys(init);
-    setAddedIds(invoiceItems.map((i) => i.id));
+    setAddedItems(init);
     setShowAddItems(true);
   };
 
+  // ── toggleItem: single state update — no sync issues ──
   const toggleItem = (cat: CatalogItem) => {
-    if (addedIds.includes(cat.id)) {
-      setAddedIds((p) => p.filter((x) => x !== cat.id));
-      setPendingQtys((p) => {
-        const n = { ...p };
-        delete n[cat.id];
-        return n;
-      });
-    } else {
-      setAddedIds((p) => [...p, cat.id]);
-      setPendingQtys((p) => ({ ...p, [cat.id]: 1 }));
-    }
+    setAddedItems((prev) => {
+      if (cat.id in prev) {
+        const next = { ...prev };
+        delete next[cat.id];
+        return next;
+      } else {
+        return { ...prev, [cat.id]: 1 };
+      }
+    });
   };
-  const setPendingQty = (id: number, v: number) =>
-    setPendingQtys((p) => ({ ...p, [id]: Math.max(1, v) }));
+
+  const setPendingQty = (id: number, v: number) => {
+    const safeVal = v <= 0 ? 1 : v;
+    setAddedItems((prev) => ({ ...prev, [id]: safeVal }));
+  };
 
   const addToBill = () => {
     const newItems: InvoiceItem[] = addedIds.map((id) => {
       const existing = invoiceItems.find((i) => i.id === id);
       const cat = catalog.find((c) => c.id === id)!;
       return existing
-        ? { ...existing, qty: pendingQtys[id] ?? existing.qty }
+        ? { ...existing, qty: Number(pendingQtys[id] || existing.qty || 1) }
         : {
             id: cat.id,
             productId: cat.id,
             godownId: null,
-            rowId: Date.now(),
+            rowId: Date.now() + Math.random(),
             name: cat.name,
             hsn: cat.hsn ?? "",
-            qty: pendingQtys[id] ?? 1,
+            qty: Number(pendingQtys[id] ?? 1),
             price: cat.purchasePrice || cat.salesPrice,
             discount: 0,
+            discountPct: 0,
             tax: 0,
+            taxLabel: "None",
           };
     });
     setInvoiceItems(newItems);
     setShowAddItems(false);
     setItemSearch("");
+    setAddedItems({});
   };
 
   const removeItem = (rowId: number) =>
@@ -2738,10 +3040,46 @@ function CreatePurchaseInvoicePage({
       ),
     );
 
+  const updateDiscountPct = (rowId: number, pct: number, item: InvoiceItem) => {
+    const rs = parseFloat(((item.qty * item.price * pct) / 100).toFixed(2));
+    setInvoiceItems((p) =>
+      p.map((i) =>
+        (i.rowId ?? i.id) === rowId
+          ? { ...i, discountPct: pct, discount: rs }
+          : i,
+      ),
+    );
+  };
+
+  const updateDiscountRs = (rowId: number, rs: number, item: InvoiceItem) => {
+    const base = item.qty * item.price;
+    const pct = base > 0 ? parseFloat(((rs / base) * 100).toFixed(2)) : 0;
+    setInvoiceItems((p) =>
+      p.map((i) =>
+        (i.rowId ?? i.id) === rowId
+          ? { ...i, discount: rs, discountPct: pct }
+          : i,
+      ),
+    );
+  };
+
+  const updateItemTax = (rowId: number, label: string, rate: number) => {
+    setInvoiceItems((p) =>
+      p.map((i) =>
+        (i.rowId ?? i.id) === rowId ? { ...i, tax: rate, taxLabel: label } : i,
+      ),
+    );
+  };
+
   const addCharge = () =>
     setAdditionalCharges((p) => [
       ...p,
-      { id: Date.now(), label: "", amount: 0, taxRate: "No Tax Applicable" },
+      {
+        id: Date.now(),
+        label: "",
+        amount: 0,
+        taxRate: "No Tax Applicable",
+      },
     ]);
   const updCharge = (
     id: number,
@@ -2793,8 +3131,8 @@ function CreatePurchaseInvoicePage({
           name: c.label,
           amount: c.amount,
         })),
-        // NOTE: sequenceNumber is NOT sent — DB controls it (FIX 5)
       };
+
       let raw: any;
       if (isEdit) {
         raw = await updatePurchaseInvoice(editData!.id, payload);
@@ -2844,55 +3182,43 @@ function CreatePurchaseInvoicePage({
         amtPaid: Number(raw.amountPaid ?? amtPaid),
         payMethod,
       };
+
       if (createNew && !isEdit) {
-
-  onSaved(inv,false,false)
-  
-
-  // clear form
-  setSelectedParty(null);
-  setPartyState("empty");
-  setPartySearch("");
-  setInvoiceItems([]);
-  setAdditionalCharges([]);
-  setAmtPaid(0);
-  setPayMethod("Cash");
-  setMarkPaid(false);
-  setShowDiscount(false);
-  setDiscountType("%");
-  setDiscountVal(0);
-  setRoundOff(false);
-  setRoundOffDir("+Add");
-  setRoundOffVal(0);
-  setShowNotes(false);
-  setNotes("");
-  setShipName("");
-  setShipPhone("");
-  setShipAddr("");
-  setShipState("");
-  setShipPin("");
-  setShipCity("");
-  setShipSaved(false);
-  setInvDateObj(new Date());
-
-  // load next invoice number
-  try {
-    const res = await api.get("/purchase-invoices/next-invoice-number");
-    setInvNo(res.data.invoiceNumber);
-  } catch {
-    setInvNo("");
-  }
-
-  showT("Invoice saved. Ready for next.");
-}
-else {
-
-  // 🔴 THIS IS THE IMPORTANT FIX
-  // normal SAVE should redirect to list
-  onSaved(inv, isEdit,true);
-
-}
-
+        onSaved(inv, false, false);
+        setSelectedParty(null);
+        setPartyState("empty");
+        setPartySearch("");
+        setInvoiceItems([]);
+        setAdditionalCharges([]);
+        setAmtPaid(0);
+        setPayMethod("Cash");
+        setMarkPaid(false);
+        setShowDiscount(false);
+        setDiscountType("%");
+        setDiscountVal(0);
+        setRoundOff(false);
+        setRoundOffDir("+Add");
+        setRoundOffVal(0);
+        setShowNotes(false);
+        setNotes("");
+        setShipName("");
+        setShipPhone("");
+        setShipAddr("");
+        setShipState("");
+        setShipPin("");
+        setShipCity("");
+        setShipSaved(false);
+        setInvDateObj(new Date());
+        try {
+          const res = await api.get("/purchase-invoices/next-invoice-number");
+          setInvNo(res.data.invoiceNumber);
+        } catch {
+          setInvNo("");
+        }
+        showT("Invoice saved. Ready for next.");
+      } else {
+        onSaved(inv, isEdit, true);
+      }
     } catch (err: any) {
       const msg =
         err?.response?.data?.message ||
@@ -2906,7 +3232,6 @@ else {
     }
   };
 
-  // FIX 5: save settings — only send prefix/flags, NOT sequenceNumber
   const handleSaveSettings = async () => {
     try {
       await api.put("/purchase-invoices/settings", {
@@ -2914,7 +3239,6 @@ else {
         enablePrefix: settings.prefixEnabled,
         showItemImage: settings.showItemImage,
         enablePriceHistory: settings.enablePriceHistory,
-        // sequenceNumber intentionally omitted — DB manages it
       });
       setShowCPISettings(false);
       showT("Settings saved");
@@ -2961,7 +3285,6 @@ else {
               onClick={() => handleSave(true)}
               disabled={!selectedParty || saving}
             >
-              {" "}
               Save &amp; New
             </button>
           )}
@@ -3331,6 +3654,7 @@ else {
           </div>
         </div>
 
+        {/* ══════════ ITEMS TABLE ══════════ */}
         <div className="cpi-items-section">
           <table className="items-table">
             <thead>
@@ -3340,8 +3664,8 @@ else {
                 <th style={{ width: 110 }}>HSN/ SAC</th>
                 <th style={{ width: 72 }}>QTY</th>
                 <th style={{ width: 130 }}>PRICE/ITEM (₹)</th>
-                <th style={{ width: 110 }}>DISCOUNT</th>
-                <th style={{ width: 80 }}>TAX</th>
+                <th style={{ width: 130 }}>DISCOUNT</th>
+                <th style={{ width: 170 }}>TAX</th>
                 <th style={{ width: 120 }}>AMOUNT (₹)</th>
                 <th style={{ width: 40 }}>
                   <div
@@ -3359,6 +3683,7 @@ else {
             <tbody>
               {invoiceItems.map((item, idx) => {
                 const rowKey = item.rowId ?? item.id;
+                const lineTotal = item.qty * item.price - (item.discount || 0);
                 return (
                   <tr key={rowKey}>
                     <td style={{ color: "#667085", textAlign: "center" }}>
@@ -3392,7 +3717,7 @@ else {
                         <input
                           className="qty-input"
                           type="number"
-                          value={item.qty}
+                          value={item.qty || 1}
                           onChange={(e) =>
                             updItem(rowKey, "qty", e.target.value)
                           }
@@ -3420,6 +3745,8 @@ else {
                         }
                       />
                     </td>
+
+                    {/* ── DISCOUNT CELL ── */}
                     <td>
                       <div
                         style={{
@@ -3435,17 +3762,27 @@ else {
                             gap: 3,
                           }}
                         >
-                          <span style={{ fontSize: 11, color: "#667085" }}>
+                          <span
+                            style={{
+                              fontSize: 11,
+                              color: "#667085",
+                              minWidth: 10,
+                            }}
+                          >
                             %
                           </span>
                           <input
                             className="qty-input"
-                            style={{ width: 60 }}
+                            style={{ width: 68 }}
                             type="number"
-                            value={item.discount || ""}
+                            value={item.discountPct || ""}
                             placeholder="0"
                             onChange={(e) =>
-                              updItem(rowKey, "discount", e.target.value)
+                              updateDiscountPct(
+                                rowKey,
+                                Number(e.target.value) || 0,
+                                item,
+                              )
                             }
                           />
                         </div>
@@ -3456,43 +3793,59 @@ else {
                             gap: 3,
                           }}
                         >
-                          <span style={{ fontSize: 11, color: "#667085" }}>
+                          <span
+                            style={{
+                              fontSize: 11,
+                              color: "#667085",
+                              minWidth: 10,
+                            }}
+                          >
                             ₹
                           </span>
                           <input
                             className="qty-input"
-                            style={{ width: 60 }}
+                            style={{ width: 68 }}
                             type="number"
                             value={item.discount || ""}
                             placeholder="0"
                             onChange={(e) =>
-                              updItem(rowKey, "discount", e.target.value)
+                              updateDiscountRs(
+                                rowKey,
+                                Number(e.target.value) || 0,
+                                item,
+                              )
                             }
                           />
                         </div>
                       </div>
                     </td>
-                    <td>
-                      <div
-                        style={{
-                          display: "flex",
-                          flexDirection: "column",
-                          gap: 3,
-                        }}
-                      >
-                        <div style={{ fontSize: 11, color: "#667085" }}>
-                          {item.tax}%
-                        </div>
-                        <div style={{ fontSize: 11, color: "#667085" }}>
-                          (₹{" "}
+
+                    {/* ── TAX CELL ── */}
+                    <td style={{ minWidth: 170 }}>
+                      <TaxDropdown
+                        value={item.taxLabel ?? "None"}
+                        onChange={(label, rate) =>
+                          updateItemTax(rowKey, label, rate)
+                        }
+                      />
+                      {item.tax > 0 && (
+                        <div
+                          style={{
+                            fontSize: 10,
+                            color: "#667085",
+                            marginTop: 3,
+                          }}
+                        >
+                          ₹{" "}
                           {(
-                            (item.qty * item.price * item.tax) /
+                            ((item.qty * item.price - (item.discount || 0)) *
+                              item.tax) /
                             100
                           ).toLocaleString("en-IN")}
-                          )
                         </div>
-                      </div>
+                      )}
                     </td>
+
                     <td>
                       <div
                         style={{
@@ -3504,11 +3857,13 @@ else {
                         <span style={{ fontSize: 11, color: "#98a2b3" }}>
                           ₹
                         </span>
-                        <span style={{ fontWeight: 700, color: "#1d2939" }}>
-                          {(
-                            item.qty * item.price -
-                            (item.discount || 0)
-                          ).toLocaleString("en-IN")}
+                        <span
+                          style={{
+                            fontWeight: 700,
+                            color: "#1d2939",
+                          }}
+                        >
+                          {lineTotal.toLocaleString("en-IN")}
                         </span>
                       </div>
                     </td>
@@ -3821,6 +4176,7 @@ else {
         </div>
       </div>
 
+      {/* ══════════ MODALS ══════════ */}
       {showCreateParty && (
         <div
           className="modal-overlay"
@@ -4098,6 +4454,7 @@ else {
         </div>
       )}
 
+      {/* ══════════ ADD ITEMS MODAL ══════════ */}
       {showAddItems && (
         <div
           className="modal-overlay"
@@ -4170,12 +4527,26 @@ else {
                 <tbody>
                   {filtCatalog.map((c) => {
                     const isAdded = addedIds.includes(c.id);
+                    // ── FIX: use ?? instead of || so qty is always 1 when shown ──
                     const qty = pendingQtys[c.id] ?? 1;
                     return (
                       <tr key={c.id} className={isAdded ? "aim-row-added" : ""}>
                         <td className="aim-item-name">{c.name}</td>
                         <td className="aim-td-muted">{c.code}</td>
-                        <td className="aim-td-muted">{c.stock}</td>
+                        <td className="aim-td-muted">
+                          <span
+                            style={{
+                              color:
+                                !c.stock || c.stock === "0"
+                                  ? "#e11d48"
+                                  : "#16a34a",
+                              fontWeight: 500,
+                              fontSize: 11,
+                            }}
+                          >
+                            {c.stock || "0"}
+                          </span>
+                        </td>
                         <td className="aim-td-muted">
                           {c.salesPrice > 0
                             ? `₹${c.salesPrice.toLocaleString("en-IN")}`
@@ -4191,17 +4562,28 @@ else {
                             <div className="aim-qty-controls">
                               <button
                                 className="aim-qty-btn"
-                                onClick={() => setPendingQty(c.id, qty - 1)}
+                                onClick={() => {
+                                  if (qty <= 1) {
+                                    toggleItem(c);
+                                  } else {
+                                    setPendingQty(c.id, qty - 1);
+                                  }
+                                }}
                               >
                                 −
                               </button>
                               <input
                                 className="aim-qty-input"
                                 type="number"
-                                value={qty}
-                                onChange={(e) =>
-                                  setPendingQty(c.id, Number(e.target.value))
-                                }
+                                value={qty || ""}
+                                onChange={(e) => {
+                                  const val = Number(e.target.value);
+                                  if (val <= 0) {
+                                    toggleItem(c);
+                                  } else {
+                                    setPendingQty(c.id, val);
+                                  }
+                                }}
                               />
                               <button
                                 className="aim-qty-btn"
@@ -4259,6 +4641,7 @@ else {
                   onClick={() => {
                     setShowAddItems(false);
                     setItemSearch("");
+                    setAddedItems({});
                   }}
                 >
                   Cancel (ESC)
@@ -4272,7 +4655,6 @@ else {
         </div>
       )}
 
-      {/* FIX 3+4+5: CPI Settings modal uses shared SettingsPanel with read-only sequence */}
       {showCPISettings && (
         <div className="pi-overlay" onClick={() => setShowCPISettings(false)}>
           <div className="pi-modal" onClick={(e) => e.stopPropagation()}>
@@ -4376,6 +4758,28 @@ function PurchaseInvoicesPage({
     setTimeout(() => setToast(null), 2400);
   };
 
+  const highlight = (text: string, q: string) => {
+    if (!q.trim()) return <>{text}</>;
+    const idx = text.toLowerCase().indexOf(q.toLowerCase().trim());
+    if (idx === -1) return <>{text}</>;
+    return (
+      <>
+        {text.slice(0, idx)}
+        <mark
+          style={{
+            background: "#fef08a",
+            color: "#1a2332",
+            padding: "0 1px",
+            borderRadius: 2,
+          }}
+        >
+          {text.slice(idx, idx + q.trim().length)}
+        </mark>
+        {text.slice(idx + q.trim().length)}
+      </>
+    );
+  };
+
   const displayed = useCallback(() => {
     const [from, to] = getRange(
       dateFilter,
@@ -4389,15 +4793,26 @@ function PurchaseInvoicesPage({
       if (activeCard === "paid" && inv.amtPaid < inv.amount) return false;
       if (activeCard === "unpaid" && inv.amtPaid >= inv.amount) return false;
       if (query.trim()) {
-        const q = query.toLowerCase();
+        const q = query.toLowerCase().trim();
+        if (searchType === "Mobile Number") {
+          return inv.partyPhone.toLowerCase().includes(q);
+        }
         return (
           inv.partyName.toLowerCase().includes(q) ||
-          inv.invoiceNumber.toString().includes(q)
+          inv.invoiceNumber.toString().toLowerCase().includes(q)
         );
       }
       return true;
     });
-  }, [invoices, activeCard, dateFilter, customFrom, customTo, query])();
+  }, [
+    invoices,
+    activeCard,
+    dateFilter,
+    customFrom,
+    customTo,
+    query,
+    searchType,
+  ])();
 
   const totalAll = invoices.reduce((sum, inv) => sum + Number(inv.amount), 0);
   const totalPaid = invoices.reduce(
@@ -4458,7 +4873,6 @@ function PurchaseInvoicesPage({
     }
   };
 
-  // FIX 5: save settings from list-page modal — only prefix/flags, NOT sequenceNumber
   const handleSaveSettings = async () => {
     try {
       await api.put("/purchase-invoices/settings", {
@@ -4466,7 +4880,6 @@ function PurchaseInvoicesPage({
         enablePrefix: settings.prefixEnabled,
         showItemImage: settings.showItemImage,
         enablePriceHistory: settings.enablePriceHistory,
-        // sequenceNumber intentionally omitted
       });
       setShowSettings(false);
       showT("Settings saved");
@@ -4574,17 +4987,38 @@ function PurchaseInvoicesPage({
           </span>
           <input
             className="pi-search-input"
-            placeholder="Search Purchase Invoice"
+            placeholder={
+              searchType === "Mobile Number"
+                ? "Search by mobile number…"
+                : "Search by invoice no. or party name…"
+            }
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
+          {query && (
+            <button
+              onClick={() => setQuery("")}
+              title="Clear search"
+              style={{
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                color: "#98a2b3",
+                display: "flex",
+                alignItems: "center",
+                padding: "0 6px",
+              }}
+            >
+              <IC.X />
+            </button>
+          )}
           <div className="pi-stype-wrap" ref={stypeRef}>
             <button
               className="pi-stype-btn"
               onClick={() => setShowSType((v) => !v)}
             >
               {searchType === "Invoice No. & Party name"
-                ? "Invoice No. & Party na..."
+                ? "Invoice No. & Party name"
                 : "Mobile Number"}
               <IC.Chevron />
             </button>
@@ -4598,9 +5032,28 @@ function PurchaseInvoicesPage({
                     className={`pi-dd-item ${searchType === t ? "sel" : ""}`}
                     onClick={() => {
                       setSearchType(t);
+                      setQuery("");
                       setShowSType(false);
                     }}
                   >
+                    {searchType === t && (
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={2.5}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        style={{
+                          width: 12,
+                          height: 12,
+                          marginRight: 6,
+                          color: "#4361ee",
+                        }}
+                      >
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    )}
                     {t}
                   </div>
                 ))}
@@ -4657,6 +5110,45 @@ function PurchaseInvoicesPage({
       </div>
 
       <div className="pi-table-wrap">
+        {query.trim() && displayed.length > 0 && (
+          <div
+            style={{
+              padding: "8px 16px",
+              fontSize: 12,
+              color: "#667085",
+              borderBottom: "1px solid #f0f2f5",
+              background: "#fafbfc",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+            }}
+          >
+            <span>
+              <strong style={{ color: "#344054" }}>{displayed.length}</strong>{" "}
+              result{displayed.length !== 1 ? "s" : ""} for{" "}
+              <strong style={{ color: "#4361ee" }}>"{query}"</strong>
+              {searchType === "Mobile Number"
+                ? " in mobile numbers"
+                : " in invoice numbers & party names"}
+            </span>
+            <button
+              onClick={() => setQuery("")}
+              style={{
+                fontSize: 11,
+                color: "#98a2b3",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: 3,
+              }}
+            >
+              <IC.X /> Clear
+            </button>
+          </div>
+        )}
+
         <table>
           <thead>
             <tr>
@@ -4679,7 +5171,42 @@ function PurchaseInvoicesPage({
             ) : displayed.length === 0 ? (
               <tr>
                 <td colSpan={7}>
-                  <div className="pi-empty">No purchase invoices found.</div>
+                  <div className="pi-empty">
+                    {query.trim() ? (
+                      <>
+                        <div
+                          style={{
+                            fontSize: 15,
+                            marginBottom: 4,
+                            color: "#667085",
+                          }}
+                        >
+                          No results for "{query}"
+                        </div>
+                        <div style={{ fontSize: 12, color: "#98a2b3" }}>
+                          {searchType === "Mobile Number"
+                            ? "Try searching by a different mobile number"
+                            : "Try searching by party name or invoice number"}
+                        </div>
+                        <button
+                          onClick={() => setQuery("")}
+                          style={{
+                            marginTop: 10,
+                            fontSize: 12,
+                            color: "#4361ee",
+                            background: "none",
+                            border: "none",
+                            cursor: "pointer",
+                            textDecoration: "underline",
+                          }}
+                        >
+                          Clear search
+                        </button>
+                      </>
+                    ) : (
+                      "No purchase invoices found."
+                    )}
+                  </div>
                 </td>
               </tr>
             ) : (
@@ -4691,8 +5218,30 @@ function PurchaseInvoicesPage({
                   style={{ cursor: "pointer" }}
                 >
                   <td>{fmtDate(new Date(inv.date))}</td>
-                  <td>{inv.invoiceNumber}</td>
-                  <td>{inv.partyName}</td>
+                  <td>
+                    {searchType === "Invoice No. & Party name"
+                      ? highlight(inv.invoiceNumber.toString(), query)
+                      : inv.invoiceNumber}
+                  </td>
+                  <td>
+                    {searchType === "Invoice No. & Party name" ? (
+                      highlight(inv.partyName, query)
+                    ) : searchType === "Mobile Number" ? (
+                      <>
+                        {inv.partyName}{" "}
+                        <span
+                          style={{
+                            fontSize: 11,
+                            color: "#667085",
+                          }}
+                        >
+                          ({highlight(inv.partyPhone, query)})
+                        </span>
+                      </>
+                    ) : (
+                      inv.partyName
+                    )}
+                  </td>
                   <td>{inv.dueIn}</td>
                   <td className="td-amt">
                     ₹ {inv.amount.toLocaleString("en-IN")}
@@ -4761,7 +5310,6 @@ function PurchaseInvoicesPage({
         </div>
       )}
 
-      {/* FIX 3+4+5: List settings modal uses shared SettingsPanel with read-only sequence */}
       {showSettings && (
         <div className="pi-overlay" onClick={() => setShowSettings(false)}>
           <div className="pi-modal" onClick={(e) => e.stopPropagation()}>
@@ -4805,7 +5353,7 @@ export default function PurchaseModule() {
     prefix: "",
     sequenceNumber: 1,
     showItemImage: true,
-    enablePriceHistory: true, // FIX 2: renamed from priceHistory
+    enablePriceHistory: true,
   });
 
   const mapInvoice = (raw: RawPurchaseInvoice): Invoice => ({
@@ -4842,7 +5390,9 @@ export default function PurchaseModule() {
       qty: Number(i.quantity),
       price: Number(i.price),
       discount: Number(i.discount ?? 0),
+      discountPct: 0,
       tax: Number(i.taxRate ?? 0),
+      taxLabel: "None",
     })),
     additionalCharges: (raw.additionalCharges ?? []).map(
       (c: RawAdditionalCharge) => ({
@@ -4900,8 +5450,6 @@ export default function PurchaseModule() {
   useEffect(() => {
     loadInvoices();
     loadParties();
-
-    // FIX 1+2: load all settings fields from backend, including showItemImage & enablePriceHistory
     api
       .get("/purchase-invoices/settings")
       .then((res: any) => {
@@ -4909,7 +5457,7 @@ export default function PurchaseModule() {
         setSettings({
           prefixEnabled: data.enablePrefix,
           prefix: data.prefix,
-          sequenceNumber: data.sequenceNumber, // read-only display only
+          sequenceNumber: data.sequenceNumber,
           showItemImage: data.showItemImage,
           enablePriceHistory: data.enablePriceHistory,
         });
@@ -4919,27 +5467,24 @@ export default function PurchaseModule() {
       });
   }, []);
 
- const handleSaved = (
-  inv: Invoice,
-  isEdit: boolean,
-  goToList: boolean = true
-) => {
-
-  setInvoices(prev => {
-    if (isEdit) {
-      return prev.map(i => i.id === inv.id ? inv : i);
+  const handleSaved = (
+    inv: Invoice,
+    isEdit: boolean,
+    goToList: boolean = true,
+  ) => {
+    setInvoices((prev) => {
+      if (isEdit) {
+        return prev.map((i) => (i.id === inv.id ? inv : i));
+      }
+      return [inv, ...prev];
+    });
+    setEditTarget(null);
+    if (goToList) {
+      setPage("list");
     }
-    return [inv, ...prev];
-  });
+    setTimeout(loadInvoices, 500);
+  };
 
-  setEditTarget(null);
-
-  if (goToList) {
-    setPage("list");
-  }
-
-  setTimeout(loadInvoices, 500);
-};
   const handleEdit = (inv: Invoice) => {
     setEditTarget(inv);
     setPage("edit");
