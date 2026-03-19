@@ -45,15 +45,17 @@ export interface SaleInvoice {
     billingAddress?: string | null;
     shippingAddress?: string | null;
   };
+  // FIX: discountPct added to line item type so TypeScript knows it exists
   items: Array<{
     id: number;
     productId: number;
     quantity: number;
     price: number;
-    discount?: number | null;
+    discount?: number | null;       // total flat ₹ discount stored in DB
+    discountPct?: number | null;    // percentage discount — now stored in DB
     taxRate?: number | null;
     taxAmount?: number | null;
-    total: number;
+    total: number;                  // post-discount + tax (correct net amount)
     product: {
       id: number;
       name: string;
@@ -141,77 +143,81 @@ export interface FeSalesInvoice {
 
 export function fromSaleInvoice(inv: SaleInvoice): FeSalesInvoice {
   const statusMap: Record<string, FeSalesInvoice["status"]> = {
-    PAID: "Paid",
-    OPEN: "Unpaid",
-    PARTIAL: "Partially Paid",
+    PAID:      "Paid",
+    OPEN:      "Unpaid",
+    PARTIAL:   "Partially Paid",
     CANCELLED: "Cancelled",
   };
 
   return {
-    id: String(inv.id),
-    invoiceNo: inv.invoiceNo,
-    invoiceDate: inv.invoiceDate?.split("T")[0] ?? "",
-    dueDate: inv.dueDate?.split("T")[0] ?? "",
-    showDueDate: !!inv.dueDate,
+    id:               String(inv.id),
+    invoiceNo:        inv.invoiceNo,
+    invoiceDate:      inv.invoiceDate?.split("T")[0] ?? "",
+    dueDate:          inv.dueDate?.split("T")[0] ?? "",
+    showDueDate:      !!inv.dueDate,
     paymentTermsDays: 30,
-    eWayBillNo: inv.ewayBillNo ?? "",
-    challanNo: inv.challanNo ?? "",
-    financedBy: inv.financedBy ?? "",
-    salesman: inv.salesman ?? "",
-    emailId: inv.emailId ?? "",
-    warrantyPeriod: inv.warrantyPeriod ?? "",
-    notes: inv.notes ?? "",
-    termsConditions: inv.termsConditions ?? "",
+    eWayBillNo:       inv.ewayBillNo    ?? "",
+    challanNo:        inv.challanNo     ?? "",
+    financedBy:       inv.financedBy    ?? "",
+    salesman:         inv.salesman      ?? "",
+    emailId:          inv.emailId       ?? "",
+    warrantyPeriod:   inv.warrantyPeriod ?? "",
+    notes:            inv.notes         ?? "",
+    termsConditions:  inv.termsConditions ?? "",
     party: inv.party
       ? {
-          id: inv.party.id,
-          name: inv.party.partyName || inv.party.name,
-          mobile: inv.party.mobileNumber ?? "",
-          balance: 0,
-          email: inv.party.email ?? undefined,
-          gstin: inv.party.gstin ?? undefined,
+          id:             inv.party.id,
+          name:           inv.party.partyName || inv.party.name,
+          mobile:         inv.party.mobileNumber ?? "",
+          balance:        0,
+          email:          inv.party.email          ?? undefined,
+          gstin:          inv.party.gstin          ?? undefined,
           billingAddress: inv.party.billingAddress ?? undefined,
           shippingAddress: inv.party.shippingAddress ?? undefined,
         }
       : null,
     shipTo: null,
     billItems: (inv.items ?? []).map((item, idx) => ({
-      rowId: `row-${item.id}-${idx}`,
-      itemId: item.productId,
-      name: item.product?.name ?? "",
+      rowId:       `row-${item.id}-${idx}`,
+      itemId:      item.productId,
+      name:        item.product?.name ?? "",
       description: "",
-      hsn: item.product?.hsnCode ?? "",
-      qty: item.quantity,
-      unit: item.product?.unit ?? "PCS",
-      price: Number(item.price),
-      discountPct: 0,
+      hsn:         item.product?.hsnCode ?? "",
+      qty:         item.quantity,
+      unit:        item.product?.unit ?? "PCS",
+      price:       Number(item.price),
+      // FIX: read discountPct back from DB (was always 0 before)
+      discountPct: Number(item.discountPct ?? 0),
+      // FIX: discountAmt is the total flat ₹ stored (pct-derived + fixed combined)
+      //      We display it as-is; the bill paper computes display from discountPct first
       discountAmt: Number(item.discount ?? 0),
-      taxLabel: item.product?.gstRate ? `GST ${item.product.gstRate}%` : "None",
-      taxRate: Number(item.taxRate ?? 0),
-      amount: Number(item.total),
+      taxLabel:    item.product?.gstRate ? `GST ${item.product.gstRate}%` : "None",
+      taxRate:     Number(item.taxRate ?? 0),
+      // FIX: item.total is now correctly post-discount + tax from the backend
+      amount:      Number(item.total),
     })),
     additionalCharges: (inv.additionalCharges ?? []).map((c) => ({
-      id: String(c.id),
-      label: c.name,
-      amount: Number(c.amount),
+      id:       String(c.id),
+      label:    c.name,
+      amount:   Number(c.amount),
       taxLabel: "No Tax Applicable",
     })),
-    discountType: "Discount After Tax",
-    discountPct: 0,
-    discountAmt: Number(inv.discountAmount ?? 0),
-    applyTCS: inv.applyTcs,
-    tcsRate: 0,
-    tcsLabel: "",
-    tcsBase: "Taxable Amount",
-    roundOff: inv.autoRoundOff ? "+Add" : "none",
-    roundOffAmt: Number(inv.roundOff ?? 0),
-    amountReceived: Number(inv.receivedAmount ?? 0),
-    paymentMethod: inv.paymentMode ?? "Cash",
-    showColumns: { pricePerItem: true, quantity: true },
-    signatureUrl: inv.signatureUrl ?? "",
+    discountType:    "Discount After Tax",
+    discountPct:     0,
+    discountAmt:     Number(inv.discountAmount ?? 0),
+    applyTCS:        inv.applyTcs,
+    tcsRate:         0,
+    tcsLabel:        "",
+    tcsBase:         "Taxable Amount",
+    roundOff:        inv.autoRoundOff ? "+Add" : "none",
+    roundOffAmt:     Number(inv.roundOff ?? 0),
+    amountReceived:  Number(inv.receivedAmount ?? 0),
+    paymentMethod:   inv.paymentMode ?? "Cash",
+    showColumns:     { pricePerItem: true, quantity: true },
+    signatureUrl:    inv.signatureUrl ?? "",
     showEmptySignatureBox: inv.showEmptySignatureBox ?? false,
-    status: statusMap[inv.status] ?? "Unpaid",
-    createdAt: inv.createdAt?.split("T")[0] ?? "",
+    status:          statusMap[inv.status] ?? "Unpaid",
+    createdAt:       inv.createdAt?.split("T")[0] ?? "",
   };
 }
 
@@ -236,11 +242,12 @@ export interface CreateInvoicePayload {
   applyTcs: boolean;
   autoRoundOff: boolean;
   items: Array<{
-    productId: number;
-    quantity: number;
-    price: number;
-    taxRate: number;
-    discount: number;
+    productId:   number;
+    quantity:    number;
+    price:       number;
+    taxRate:     number;
+    discountPct: number;   // FIX: now included so backend can store it
+    discount:    number;   // flat ₹ (used as additive on top of pct discount)
   }>;
   additionalCharges: Array<{ name: string; amount: number }>;
   // ── Pre-computed totals injected by CreateSalesInvoice before saving ──
@@ -257,30 +264,33 @@ export interface CreateInvoicePayload {
 
 export function toCreatePayload(form: FeSalesInvoice): CreateInvoicePayload {
   return {
-    partyId: form.party!.id,
-    invoiceDate: form.invoiceDate,
-    dueDate: form.showDueDate ? form.dueDate : undefined,
-    ewayBillNo: form.eWayBillNo || undefined,
-    challanNo: form.challanNo || undefined,
-    financedBy: form.financedBy || undefined,
-    salesman: form.salesman || undefined,
-    emailId: form.emailId || undefined,
+    partyId:        form.party!.id,
+    invoiceDate:    form.invoiceDate,
+    dueDate:        form.showDueDate ? form.dueDate : undefined,
+    ewayBillNo:     form.eWayBillNo    || undefined,
+    challanNo:      form.challanNo     || undefined,
+    financedBy:     form.financedBy    || undefined,
+    salesman:       form.salesman      || undefined,
+    emailId:        form.emailId       || undefined,
     warrantyPeriod: form.warrantyPeriod || undefined,
-    notes: form.notes || undefined,
+    notes:          form.notes         || undefined,
     termsConditions: form.termsConditions || undefined,
-    paymentMode: form.paymentMethod || undefined,
+    paymentMode:    form.paymentMethod || undefined,
     receivedAmount: Number(form.amountReceived) || 0,
-    discountAmount: Number(form.discountAmt) || 0,   // raw flat amt; % resolved value injected by CreateSalesInvoice
-    roundOff: Number(form.roundOffAmt) || 0,         // overridden by CreateSalesInvoice with computed value
-    applyTcs: form.applyTCS,
-    tcsRate: form.tcsRate,
-    autoRoundOff: form.roundOff !== "none",
+    discountAmount: Number(form.discountAmt)    || 0,
+    roundOff:       Number(form.roundOffAmt)    || 0,
+    applyTcs:       form.applyTCS,
+    tcsRate:        form.tcsRate,
+    autoRoundOff:   form.roundOff !== "none",
     items: form.billItems.map((i) => ({
-      productId: i.itemId,
-      quantity:  Number(i.qty)   || 0,
-      price:     Number(i.price) || 0,
-      taxRate:   Number(i.taxRate) || 0,
-      discount:  Number(i.discountAmt) || 0,
+      productId:   i.itemId,
+      quantity:    Number(i.qty)         || 0,
+      price:       Number(i.price)       || 0,
+      taxRate:     Number(i.taxRate)     || 0,
+      // FIX: send discountPct to backend so it gets stored in InvoiceItem.discountPct
+      discountPct: Number(i.discountPct) || 0,
+      // flat ₹ additive discount (on top of pct); usually 0 when pct is used
+      discount:    Number(i.discountAmt) || 0,
     })),
     additionalCharges: form.additionalCharges.map((c) => ({
       name:   c.label,
@@ -294,14 +304,14 @@ export function toCreatePayload(form: FeSalesInvoice): CreateInvoicePayload {
 // ─── API params for GET /invoices ─────────────────────────────────────────────
 
 export interface GetInvoicesParams {
-  page?: number;
-  limit?: number;
-  search?: string;
-  status?: string;
-  from?: string;
-  to?: string;
-   sortField?: string;
-  sortDir?: "asc" | "desc";
+  page?:      number;
+  limit?:     number;
+  search?:    string;
+  status?:    string;
+  from?:      string;
+  to?:        string;
+  sortField?: string;
+  sortDir?:   "asc" | "desc";
 }
 
 // ─── Generic fetch helper ─────────────────────────────────────────────────────
@@ -328,17 +338,16 @@ export async function getInvoices(params: GetInvoicesParams = {}): Promise<{
   pages: number;
 }> {
   const qs = new URLSearchParams();
-  if (params.page)   qs.set("page",   String(params.page));
-  if (params.limit)  qs.set("limit",  String(params.limit));
-  if (params.search) qs.set("search", params.search);
-  if (params.status) qs.set("status", params.status);
-  if (params.from)   qs.set("from",   params.from);
-  if (params.to)     qs.set("to",     params.to);
+  if (params.page)      qs.set("page",      String(params.page));
+  if (params.limit)     qs.set("limit",     String(params.limit));
+  if (params.search)    qs.set("search",    params.search);
+  if (params.status)    qs.set("status",    params.status);
+  if (params.from)      qs.set("from",      params.from);
+  if (params.to)        qs.set("to",        params.to);
   if (params.sortField) qs.set("sortField", params.sortField);
-if (params.sortDir) qs.set("sortDir", params.sortDir);
+  if (params.sortDir)   qs.set("sortDir",   params.sortDir);
 
   const json = await apiFetch<{ success: boolean; data: any }>(`/invoices?${qs}`);
-  // Backend returns { success, data: invoice[] } or { success, data: { invoices, total, page, pages } }
   if (Array.isArray(json.data)) {
     return { invoices: json.data, total: json.data.length, page: 1, pages: 1 };
   }
@@ -355,7 +364,7 @@ export async function getInvoiceById(id: string | number): Promise<SaleInvoice> 
 export async function createInvoice(payload: CreateInvoicePayload): Promise<SaleInvoice> {
   const json = await apiFetch<{ success: boolean; data: SaleInvoice }>("/invoices", {
     method: "POST",
-    body: JSON.stringify(payload),
+    body:   JSON.stringify(payload),
   });
   return json.data;
 }
@@ -367,7 +376,7 @@ export async function updateInvoice(
 ): Promise<SaleInvoice> {
   const json = await apiFetch<{ success: boolean; data: SaleInvoice }>(`/invoices/${id}`, {
     method: "PUT",
-    body: JSON.stringify(payload),
+    body:   JSON.stringify(payload),
   });
   return json.data;
 }
@@ -377,7 +386,7 @@ export async function cancelInvoice(id: string | number): Promise<void> {
   await apiFetch(`/invoices/${id}/cancel`, { method: "PATCH" });
 }
 
-/** DELETE /api/invoices/:id  — backend must expose this route */
+/** DELETE /api/invoices/:id */
 export async function deleteInvoice(id: string | number): Promise<void> {
   await apiFetch(`/invoices/${id}`, { method: "DELETE" });
 }
@@ -395,7 +404,6 @@ export async function recordPayment(
     tdsAmount?:   number;
   }
 ): Promise<SaleInvoice> {
-  // id from frontend state is String(inv.id) — ensure we send the numeric DB id
   const numericId = typeof id === "string" ? id.replace(/\D/g, "") || id : id;
   const json = await apiFetch<{ success: boolean; data: SaleInvoice }>(
     `/invoices/${numericId}/payment`,
@@ -406,14 +414,14 @@ export async function recordPayment(
 
 /** GET /api/invoices/summary */
 export async function getInvoiceSummary(): Promise<{
-  totalSales: number;
-  totalReceived: number;
+  totalSales:       number;
+  totalReceived:    number;
   totalOutstanding: number;
-  totalCancelled: number;
-  openCount: number;
-  partialCount: number;
-  paidCount: number;
-  cancelledCount: number;
+  totalCancelled:   number;
+  openCount:        number;
+  partialCount:     number;
+  paidCount:        number;
+  cancelledCount:   number;
 }> {
   const json = await apiFetch<{ success: boolean; data: any }>("/invoices/summary");
   return {
@@ -458,7 +466,7 @@ export async function createParty(payload: {
 }): Promise<BackendParty> {
   const json = await apiFetch<{ success: boolean; data: BackendParty }>("/parties", {
     method: "POST",
-    body: JSON.stringify(payload),
+    body:   JSON.stringify(payload),
   });
   return json.data;
 }
@@ -477,9 +485,9 @@ export interface BackendItem {
   gstRate?: string | null;
   itemType: string;
   ProductStock?: Array<{
-  openingStock: number;
-  currentStock?: number;
-}>;
+    openingStock: number;
+    currentStock?: number;
+  }>;
 }
 
 export async function getItems(): Promise<BackendItem[]> {
@@ -487,7 +495,7 @@ export async function getItems(): Promise<BackendItem[]> {
   return json.data;
 }
 
-// ─── Party Shipping Addresses (backend-persisted) ─────────────────────────────
+// ─── Party Shipping Addresses ─────────────────────────────────────────────────
 
 export interface ShippingAddressPayload {
   partyId: number;
@@ -528,7 +536,7 @@ export async function createPartyAddress(
   return json.data;
 }
 
-// ─── Party Bank Accounts (backend-persisted) ──────────────────────────────────
+// ─── Party Bank Accounts ──────────────────────────────────────────────────────
 
 export interface BackendBankAccount {
   id: number;
