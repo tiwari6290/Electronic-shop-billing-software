@@ -160,8 +160,7 @@ export function calcBillItemAmount(item: BillItem): number {
   return Math.round((afterDisc + tax) * 100) / 100;
 }
 
-const DEFAULT_TERMS = `1. Goods once sold will not be taken back or exchanged
-2. All disputes are subject to [ENTER_YOUR_CITY_NAME] jurisdiction only`;
+const DEFAULT_TERMS = `1. Goods once sold will not be taken back or exchanged after 7 days`;
 
 export function makeBlankInvoice(nextNo: string): SalesInvoice {
   const today = todayStr();

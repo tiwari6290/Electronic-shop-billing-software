@@ -50,7 +50,7 @@ const Login: React.FC = () => {
             </label>
             <div className="grid grid-cols-3 gap-[18px]">
               {/* Admin Card */}
-              <button
+              {/* <button
                 type="button"
                 onClick={() => setSelectedRole('Admin')}
                 className={`w-full h-full py-[26px] rounded-[18px] border-2 transition-all duration-200 ${
@@ -82,7 +82,7 @@ const Login: React.FC = () => {
                     Admin
                   </span>
                 </div>
-              </button>
+              </button> */}
 
               {/* Cashier Card */}
               <button
@@ -120,7 +120,7 @@ const Login: React.FC = () => {
               </button>
 
               {/* Accountant Card */}
-              <button
+              {/* <button
                 type="button"
                 onClick={() => setSelectedRole('Accountant')}
                 className={`w-full h-full py-[26px] rounded-[18px] border-2 transition-all duration-200 ${
@@ -152,7 +152,7 @@ const Login: React.FC = () => {
                     Accountant
                   </span>
                 </div>
-              </button>
+              </button> */}
             </div>
           </div>
 

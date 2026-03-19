@@ -45,17 +45,16 @@ export interface SaleInvoice {
     billingAddress?: string | null;
     shippingAddress?: string | null;
   };
-  // FIX: discountPct added to line item type so TypeScript knows it exists
   items: Array<{
     id: number;
     productId: number;
     quantity: number;
     price: number;
-    discount?: number | null;       // total flat ₹ discount stored in DB
-    discountPct?: number | null;    // percentage discount — now stored in DB
+    discount?: number | null;
+    discountPct?: number | null;
     taxRate?: number | null;
     taxAmount?: number | null;
-    total: number;                  // post-discount + tax (correct net amount)
+    total: number;
     product: {
       id: number;
       name: string;
@@ -99,7 +98,7 @@ export interface FeSalesInvoice {
     billingAddress?: string;
     shippingAddress?: string;
   } | null;
-  shipTo: null;
+  shipTo: { name: string; mobile?: string; billingAddress?: string } | null;
   billItems: Array<{
     rowId: string;
     itemId: number;
@@ -176,26 +175,44 @@ export function fromSaleInvoice(inv: SaleInvoice): FeSalesInvoice {
           shippingAddress: inv.party.shippingAddress ?? undefined,
         }
       : null,
-    shipTo: null,
-    billItems: (inv.items ?? []).map((item, idx) => ({
-      rowId:       `row-${item.id}-${idx}`,
-      itemId:      item.productId,
-      name:        item.product?.name ?? "",
-      description: "",
-      hsn:         item.product?.hsnCode ?? "",
-      qty:         item.quantity,
-      unit:        item.product?.unit ?? "PCS",
-      price:       Number(item.price),
-      // FIX: read discountPct back from DB (was always 0 before)
-      discountPct: Number(item.discountPct ?? 0),
-      // FIX: discountAmt is the total flat ₹ stored (pct-derived + fixed combined)
-      //      We display it as-is; the bill paper computes display from discountPct first
-      discountAmt: Number(item.discount ?? 0),
-      taxLabel:    item.product?.gstRate ? `GST ${item.product.gstRate}%` : "None",
-      taxRate:     Number(item.taxRate ?? 0),
-      // FIX: item.total is now correctly post-discount + tax from the backend
-      amount:      Number(item.total),
-    })),
+    shipTo: inv.party?.shippingAddress
+      ? {
+          name:           inv.party.partyName || inv.party.name,
+          mobile:         inv.party.mobileNumber ?? "",
+          billingAddress: inv.party.shippingAddress,
+        }
+      : null,
+    billItems: (inv.items ?? []).map((item, idx) => {
+      // FIX: resolve taxRate from line item first, then fall back to product.gstRate
+      // This ensures the TAX column in InvoiceViewModal always shows the correct rate
+      const resolvedTaxRate = Number(
+        item.taxRate != null && item.taxRate !== 0
+          ? item.taxRate
+          : item.product?.gstRate ?? 0
+      ) || 0;
+
+      // FIX: taxLabel must never be "None" — leave empty so InvoiceViewModal
+      // derives it from resolvedTaxRate (shows "GST 18%" or "-" automatically)
+      const resolvedTaxLabel = resolvedTaxRate > 0
+        ? `GST ${resolvedTaxRate}%`
+        : "";
+
+      return {
+        rowId:       `row-${item.id}-${idx}`,
+        itemId:      item.productId,
+        name:        item.product?.name ?? "",
+        description: "",
+        hsn:         item.product?.hsnCode ?? "",
+        qty:         item.quantity,
+        unit:        item.product?.unit ?? "PCS",
+        price:       Number(item.price),
+        discountPct: Number(item.discountPct ?? 0),
+        discountAmt: Number(item.discount ?? 0),
+        taxRate:     resolvedTaxRate,     // ← line item taxRate OR product gstRate
+        taxLabel:    resolvedTaxLabel,    // ← "GST 18%" or "" (never "None")
+        amount:      Number(item.total),
+      };
+    }),
     additionalCharges: (inv.additionalCharges ?? []).map((c) => ({
       id:       String(c.id),
       label:    c.name,
@@ -246,11 +263,10 @@ export interface CreateInvoicePayload {
     quantity:    number;
     price:       number;
     taxRate:     number;
-    discountPct: number;   // FIX: now included so backend can store it
-    discount:    number;   // flat ₹ (used as additive on top of pct discount)
+    discountPct: number;
+    discount:    number;
   }>;
   additionalCharges: Array<{ name: string; amount: number }>;
-  // ── Pre-computed totals injected by CreateSalesInvoice before saving ──
   subTotal?:               number;
   taxAmount?:              number;
   tcsAmount?:              number;
@@ -287,9 +303,7 @@ export function toCreatePayload(form: FeSalesInvoice): CreateInvoicePayload {
       quantity:    Number(i.qty)         || 0,
       price:       Number(i.price)       || 0,
       taxRate:     Number(i.taxRate)     || 0,
-      // FIX: send discountPct to backend so it gets stored in InvoiceItem.discountPct
       discountPct: Number(i.discountPct) || 0,
-      // flat ₹ additive discount (on top of pct); usually 0 when pct is used
       discount:    Number(i.discountAmt) || 0,
     })),
     additionalCharges: form.additionalCharges.map((c) => ({
