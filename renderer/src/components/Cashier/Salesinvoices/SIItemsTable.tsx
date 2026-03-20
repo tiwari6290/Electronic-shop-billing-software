@@ -130,7 +130,15 @@ export default function SIItemsTable({ items, showColumns, onChange, onAddItem }
                     }}>
                     {TAX_OPTIONS.map(t => <option key={t.label}>{t.label}</option>)}
                   </select>
-                  <div className="si-tax-amt">(₹ {Math.round(item.qty * item.price * item.taxRate / 100)})</div>
+                 <div className="si-tax-amt">
+  (₹ {Math.round(
+    (
+      item.qty * item.price
+      - (item.qty * item.price * item.discountPct / 100)
+      - item.discountAmt
+    ) * item.taxRate / 100
+  )})
+</div>
                 </td>
                 <td className="si-td si-td--amt">
                   <span className="si-rs">₹</span>

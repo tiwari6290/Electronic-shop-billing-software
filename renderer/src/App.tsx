@@ -58,6 +58,9 @@ import CreateSalesInvoice from "./components/Cashier/Salesinvoices/CreateSalesIn
 import Inventory from "./components/Cashier/Inventory/Inventory";
 import Godown from "./components/Cashier/Godown/Godown";
 
+import InvoiceBuilderModel from "./components/Cashier/InvoiceBuilderModel/InvoiceBuilderModel";
+
+
 const Page = ({ title }: { title: string }) => (
   <div style={{ padding: 30, fontSize: 22, fontWeight: 600 }}>{title}</div>
 );
@@ -184,6 +187,7 @@ function App() {
           <Route path="parties"             element={<Parties />} />
           <Route path="party/:id"           element={<PartyDetails />} />
           <Route path="party-ledger/:id"    element={<PartyLedger />} />
+          <Route path="invoice-builder" element={<InvoiceBuilderModel />} />
 
           {/* Payment In */}
           <Route path="payment-in"          element={<PaymentIn />} />

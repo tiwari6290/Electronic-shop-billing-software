@@ -19,6 +19,7 @@ import {
   LogOut,
   Handshake,
   ChevronDown,
+ FilePlus,
 } from 'lucide-react';
 
 interface NavItem {
@@ -65,6 +66,7 @@ const Sidebar: React.FC = () => {
         { id: 'Parties', label: 'Parties', icon: <Handshake size={18} />, path: '/cashier/parties' },
         { id: 'POS-billing', label: 'POS Billing', icon: <Users size={18} />, path: '/cashier/POS-billing' },
         { id: 'reports', label: 'Reports', icon: <FileSpreadsheet size={18} />, path: '/cashier/reports' },
+        { id: 'invoice builder', label: 'Invoice Builder', icon: <FilePlus size={18} />, path: '/cashier/invoice-builder' },
       ]
     },
     {

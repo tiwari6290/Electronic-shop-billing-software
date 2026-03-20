@@ -229,7 +229,7 @@ export default function SISummary(p: Props) {
       </div>
 
       {/* ── Discount ───────────────────────────────────────── */}
-      {!p.showDiscount ? (
+      {/* {!p.showDiscount ? (
         <button className="si-sum-link" style={{ margin: "8px 0" }} onClick={() => p.onToggleDiscount(true)}>
           + Add Discount
         </button>
@@ -250,7 +250,7 @@ export default function SISummary(p: Props) {
               )}
             </div>
             <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-              {/* % input — auto-computes ₹ value */}
+              
               <span className="si-rs-sm">%</span>
               <input
                 type="number"
@@ -262,13 +262,13 @@ export default function SISummary(p: Props) {
                 onChange={e => {
                   const v = Math.min(100, Math.max(0, Number(e.target.value)));
                   p.onDiscountPctChange(v);
-                  // Auto-compute ₹ from %
+                  
                   const computedAmt = taxableBase > 0 ? Math.round(taxableBase * v / 100 * 100) / 100 : 0;
                   p.onDiscountAmtChange(computedAmt);
                 }}
               />
               <span className="si-disc-sep">/</span>
-              {/* ₹ input — auto-computes % value */}
+              
               <span className="si-rs-sm">₹</span>
               <input
                 type="number"
@@ -279,7 +279,7 @@ export default function SISummary(p: Props) {
                 onChange={e => {
                   const v = Math.max(0, Number(e.target.value));
                   p.onDiscountAmtChange(v);
-                  // Auto-compute % from ₹
+                  
                   const computedPct = taxableBase > 0 ? Math.round(v / taxableBase * 10000) / 100 : 0;
                   p.onDiscountPctChange(Math.min(100, computedPct));
                 }}
@@ -288,7 +288,7 @@ export default function SISummary(p: Props) {
             </div>
           </div>
 
-          {/* Show computed discount value */}
+          
           {discValue > 0 && (
             <div className="si-sum-row" style={{ color: "#dc2626", fontSize: 13, paddingTop: 4 }}>
               <span className="si-sum-lbl">Discount</span>
@@ -296,7 +296,7 @@ export default function SISummary(p: Props) {
             </div>
           )}
         </div>
-      )}
+      )} 
 
       {/* ── Tax Total (item-level) ──────────────────────────── */}
       {p.totalTax > 0 && (
