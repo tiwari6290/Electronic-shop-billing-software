@@ -90,6 +90,11 @@ interface InvoiceDetailsState {
   salesman: string;
   showWarranty: boolean;
   warrantyPeriod: string;
+  showDispatchedThrough: boolean;
+  dispatchedThrough: string;
+  showTransportName: boolean;
+  transportName: string;
+  showEmailId: boolean;
   customFields: { label: string; value: string }[];
 }
 
@@ -223,6 +228,9 @@ const DEFAULT_DET: InvoiceDetailsState = {
   showFinancedBy: true, financedBy: "HDFC BANK",
   showSalesman: true, salesman: "Tiwari",
   showWarranty: true, warrantyPeriod: "19/10/2027",
+  showDispatchedThrough: false, dispatchedThrough: "",
+  showTransportName: false, transportName: "",
+  showEmailId: true,
   customFields: [],
 };
 
@@ -1365,11 +1373,43 @@ const HomePage: React.FC<HomePageProps> = ({ savedTemplates, onCreateOwn, onUse,
   const [itemColOpen, setItemColOpen] = useState(false);
   const [miscOpen, setMiscOpen] = useState(false);
 
-  const [invDet, setInvDet] = useState({
-    challan: true, dispatched: false, email: false, financed: true,
-    salesman: true, transport: false, warranty: true, po: false, eway: true, vehicle: false,
+  const [invDet, setInvDet] = useState(() => {
+    // Load from localStorage on mount so checkboxes survive page refresh
+    try {
+      const raw = localStorage.getItem("activeInvoiceTemplate");
+      if (raw) {
+        const t = JSON.parse(raw);
+        const d = t?.det;
+        if (d) {
+          return {
+            challan:    d.showChallan       ?? true,
+            dispatched: d.showDispatchedThrough ?? false,
+            email:      d.showEmailId       ?? false,
+            financed:   d.showFinancedBy    ?? true,
+            salesman:   d.showSalesman      ?? true,
+            transport:  d.showTransportName ?? false,
+            warranty:   d.showWarranty      ?? true,
+            po:         d.showPO            ?? false,
+            eway:       d.showEwayBill      ?? true,
+            vehicle:    d.showVehicle       ?? false,
+          };
+        }
+      }
+    } catch { /* ignore */ }
+    return { challan: true, dispatched: false, email: false, financed: true,
+             salesman: true, transport: false, warranty: true, po: false, eway: true, vehicle: false };
   });
   type InvDetKey = keyof typeof invDet;
+
+  const [invCustomFields, setInvCustomFields] = useState<{ label: string; value: string }[]>(() => {
+    try {
+      const raw = localStorage.getItem("activeInvoiceTemplate");
+      if (raw) { const t = JSON.parse(raw); return t?.det?.customFields ?? []; }
+    } catch { /* ignore */ }
+    return [];
+  });
+  const [addingInvField, setAddingInvField] = useState(false);
+  const [newInvField, setNewInvField] = useState({ label: "", value: "" });
 
   const [partyCustomFields, setPartyCustomFields] = useState<{ label: string; value: string }[]>([]);
   const [addingPartyField, setAddingPartyField] = useState(false);
@@ -1411,6 +1451,31 @@ const HomePage: React.FC<HomePageProps> = ({ savedTemplates, onCreateOwn, onUse,
   const [saveSuccess, setSaveSuccess] = useState(false);
 
   const handleSaveChanges = () => {
+    // Map the HomePage invDet checkboxes → InvoiceDetailsState shape used by SIMetaFields
+    const mappedDet: InvoiceDetailsState = {
+      industryType:          "Electronics",
+      layout:                "Advanced GST (Tally)",
+      showChallan:           invDet.challan,
+      challanNo:             DEFAULT_DET.challanNo,
+      showDispatchedThrough: invDet.dispatched,
+      dispatchedThrough:     DEFAULT_DET.dispatchedThrough ?? "",
+      showEmailId:           invDet.email,
+      showFinancedBy:        invDet.financed,
+      financedBy:            DEFAULT_DET.financedBy,
+      showSalesman:          invDet.salesman,
+      salesman:              DEFAULT_DET.salesman,
+      showTransportName:     invDet.transport,
+      transportName:         DEFAULT_DET.transportName ?? "",
+      showWarranty:          invDet.warranty,
+      warrantyPeriod:        DEFAULT_DET.warrantyPeriod,
+      showPO:                invDet.po,
+      showEwayBill:          invDet.eway,
+      ewayBillNo:            DEFAULT_DET.ewayBillNo,
+      showVehicle:           invDet.vehicle,
+      vehicleNo:             DEFAULT_DET.vehicleNo,
+      customFields:          invCustomFields,
+    };
+
     const t: SavedTemplate = {
       id: "active-home-settings",
       name: "Active Invoice Settings",
@@ -1422,7 +1487,7 @@ const HomePage: React.FC<HomePageProps> = ({ savedTemplates, onCreateOwn, onUse,
       inv: DEFAULT_INVOICE,
       style: { ...DEFAULT_STYLE, themeColor: selectedColor, logoUrl, showLogo },
       vis: DEFAULT_VIS,
-      det: DEFAULT_DET,
+      det: mappedDet,
       pv: DEFAULT_PV,
       ts: { ...DEFAULT_TS, backgroundUrl: bgImageUrl, backgroundOpacity: bgOpacity },
       misc: { ...DEFAULT_MISC, signatureUrl },
@@ -1610,9 +1675,10 @@ const HomePage: React.FC<HomePageProps> = ({ savedTemplates, onCreateOwn, onUse,
               <div className="hp-collapse-body">
                 <div className="hp-field-group">
                   <label className="hp-field-label">Industry Type</label>
-                  <select className="hp-field-select">
-                    <option>Electronics</option><option>General</option><option>Retail</option><option>Services</option>
-                  </select>
+                  <div style={{ padding: "7px 10px", border: "1.5px solid #e5e7eb", borderRadius: 7, fontSize: 13, fontWeight: 600, color: "#374151", background: "#f9fafb" }}>
+                    🔌 Electronics
+                    <span style={{ marginLeft: 8, fontSize: 11, color: "#9ca3af", fontWeight: 400 }}>(fixed)</span>
+                  </div>
                 </div>
                 {([
                   { key: "challan", label: "Challan No." },
@@ -1631,7 +1697,39 @@ const HomePage: React.FC<HomePageProps> = ({ savedTemplates, onCreateOwn, onUse,
                     <span className="hp-check-label">{label}</span>
                   </label>
                 ))}
-                <button className="hp-add-field-btn" type="button">+ Add Custom Field</button>
+                {invCustomFields.map((f, i) => (
+                  <div key={i} className="hp-cf-item">
+                    <span>{f.label}{f.value ? `: ${f.value}` : ""}</span>
+                    <button className="hp-del-icon" type="button" onClick={() => setInvCustomFields(p => p.filter((_, j) => j !== i))}>🗑</button>
+                  </div>
+                ))}
+                {addingInvField && (
+                  <div className="hp-add-form">
+                    <input
+                      className="hp-add-input"
+                      placeholder="Custom Field"
+                      value={newInvField.label}
+                      onChange={e => setNewInvField(p => ({ ...p, label: e.target.value }))}
+                    />
+                    <div className="hp-add-form-row">
+                      <input
+                        className="hp-add-input"
+                        placeholder="Default value (optional)"
+                        value={newInvField.value}
+                        onChange={e => setNewInvField(p => ({ ...p, value: e.target.value }))}
+                      />
+                      <button className="hp-add-sm-btn" type="button" onClick={() => {
+                        if (newInvField.label.trim()) {
+                          setInvCustomFields(p => [...p, { label: newInvField.label.trim(), value: newInvField.value }]);
+                          setNewInvField({ label: "", value: "" });
+                          setAddingInvField(false);
+                        }
+                      }}>Add</button>
+                      <button className="hp-cancel-sm-btn" type="button" onClick={() => setAddingInvField(false)}>✕</button>
+                    </div>
+                  </div>
+                )}
+                <button className="hp-add-field-btn" type="button" onClick={() => setAddingInvField(true)}>+ Add Custom Field</button>
               </div>
             )}
           </div>
@@ -1860,44 +1958,154 @@ const BusinessPanel: React.FC<{ inv: InvoiceData; setInv: React.Dispatch<React.S
   </div>
 );
 
-const InvoiceDetPanel: React.FC<{ inv: InvoiceData; setInv: React.Dispatch<React.SetStateAction<InvoiceData>>; det: InvoiceDetailsState; setDet: React.Dispatch<React.SetStateAction<InvoiceDetailsState>> }> = ({ inv, setInv, det, setDet }) => (
+const InvoiceDetPanel: React.FC<{ inv: InvoiceData; setInv: React.Dispatch<React.SetStateAction<InvoiceData>>; det: InvoiceDetailsState; setDet: React.Dispatch<React.SetStateAction<InvoiceDetailsState>> }> = ({ inv, setInv, det, setDet }) => {
+  // Track which custom field row is "open" (showing the default value input + Add btn)
+  const [addingIdx, setAddingIdx] = React.useState<number | null>(null);
+  const [pendingLabel, setPendingLabel] = React.useState("");
+  const [pendingValue, setPendingValue] = React.useState("");
+
+  function commitAdd() {
+    if (!pendingLabel.trim()) return;
+    setDet((d) => ({ ...d, customFields: [...d.customFields, { label: pendingLabel.trim(), value: pendingValue }] }));
+    setPendingLabel("");
+    setPendingValue("");
+    setAddingIdx(null);
+  }
+
+  return (
   <div>
+    {/* Industry Type — fixed to Electronics for this business */}
     <SL>INDUSTRY TYPE</SL>
-    <IBSelect value={det.industryType} onChange={(v) => setDet((d) => ({ ...d, industryType: v }))} options={["Electronics", "General", "Manufacturing", "Retail", "Services", "Construction"]} />
+    <div style={{ padding: "6px 0 10px", fontSize: 13, color: "#374151", fontWeight: 600 }}>
+      🔌 Electronics
+      <span style={{ marginLeft: 8, fontSize: 11, color: "#6b7280", fontWeight: 400 }}>(fixed for your business)</span>
+    </div>
+
     <SL>LAYOUT</SL>
     <IBSelect value={det.layout} onChange={(v) => setDet((d) => ({ ...d, layout: v }))} options={["Advanced GST (Tally)", "Advanced GST", "Billbook", "Modern", "Simple"]} />
+
+    <SL>INVOICE DETAILS FIELDS</SL>
+    <p style={{ fontSize: 11, color: "#9ca3af", margin: "0 0 8px" }}>
+      Toggle on/off which fields appear on the Create Invoice page.
+    </p>
+
+    <SettingRow label="Challan No." checked={det.showChallan} onChange={(v) => setDet((d) => ({ ...d, showChallan: v }))}>
+      {det.showChallan && <IBInput value={det.challanNo} onChange={(v) => setDet((d) => ({ ...d, challanNo: v }))} placeholder="Challan No." />}
+    </SettingRow>
+    <SettingRow label="Dispatched Through" checked={det.showDispatchedThrough ?? false} onChange={(v) => setDet((d) => ({ ...d, showDispatchedThrough: v }))}>
+      {(det.showDispatchedThrough) && <IBInput value={det.dispatchedThrough ?? ""} onChange={(v) => setDet((d) => ({ ...d, dispatchedThrough: v }))} placeholder="Dispatched through" />}
+    </SettingRow>
+    <SettingRow label="Email ID" checked={det.showEmailId ?? true} onChange={(v) => setDet((d) => ({ ...d, showEmailId: v }))} />
     <SettingRow label="Financed By" checked={det.showFinancedBy} onChange={(v) => setDet((d) => ({ ...d, showFinancedBy: v }))}>
       {det.showFinancedBy && <IBInput value={det.financedBy} onChange={(v) => setDet((d) => ({ ...d, financedBy: v }))} placeholder="Financed By" />}
     </SettingRow>
     <SettingRow label="Salesman" checked={det.showSalesman} onChange={(v) => setDet((d) => ({ ...d, showSalesman: v }))}>
       {det.showSalesman && <IBInput value={det.salesman} onChange={(v) => setDet((d) => ({ ...d, salesman: v }))} placeholder="Salesman name" />}
     </SettingRow>
-    <SettingRow label="Challan No." checked={det.showChallan} onChange={(v) => setDet((d) => ({ ...d, showChallan: v }))}>
-      {det.showChallan && <IBInput value={det.challanNo} onChange={(v) => setDet((d) => ({ ...d, challanNo: v }))} placeholder="Challan No." />}
+    <SettingRow label="Transport Name" checked={det.showTransportName ?? false} onChange={(v) => setDet((d) => ({ ...d, showTransportName: v }))}>
+      {(det.showTransportName) && <IBInput value={det.transportName ?? ""} onChange={(v) => setDet((d) => ({ ...d, transportName: v }))} placeholder="Transport name" />}
     </SettingRow>
     <SettingRow label="Warranty Period" checked={det.showWarranty} onChange={(v) => setDet((d) => ({ ...d, showWarranty: v }))}>
       {det.showWarranty && <IBInput value={det.warrantyPeriod} onChange={(v) => setDet((d) => ({ ...d, warrantyPeriod: v }))} placeholder="Warranty Period" />}
     </SettingRow>
-    <SettingRow label="E-way Bill" checked={det.showEwayBill} onChange={(v) => setDet((d) => ({ ...d, showEwayBill: v }))}>
+    <SettingRow label="PO Number" checked={det.showPO} onChange={(v) => setDet((d) => ({ ...d, showPO: v }))}>
+      {det.showPO && <IBInput value={inv.poNo} onChange={(v) => setInv((i) => ({ ...i, poNo: v }))} placeholder="PO Number" />}
+    </SettingRow>
+    <SettingRow label="E-way Bill Number" checked={det.showEwayBill} onChange={(v) => setDet((d) => ({ ...d, showEwayBill: v }))}>
       {det.showEwayBill && <IBInput value={det.ewayBillNo} onChange={(v) => setDet((d) => ({ ...d, ewayBillNo: v }))} placeholder="E-way Bill No." />}
     </SettingRow>
     <SettingRow label="Vehicle Number" checked={det.showVehicle} onChange={(v) => setDet((d) => ({ ...d, showVehicle: v }))}>
       {det.showVehicle && <IBInput value={det.vehicleNo} onChange={(v) => setDet((d) => ({ ...d, vehicleNo: v }))} placeholder="Vehicle No." />}
     </SettingRow>
-    <SettingRow label="PO Number" checked={det.showPO} onChange={(v) => setDet((d) => ({ ...d, showPO: v }))}>
-      {det.showPO && <IBInput value={inv.poNo} onChange={(v) => setInv((i) => ({ ...i, poNo: v }))} />}
-    </SettingRow>
+
+    {/* ── Custom Fields ── */}
     <SL>CUSTOM FIELDS</SL>
+    <p style={{ fontSize: 11, color: "#9ca3af", margin: "0 0 8px" }}>
+      Add extra fields that will appear on the Create Invoice page.
+    </p>
+
     {det.customFields.map((f, i) => (
-      <div className="custom-field-row" key={i}>
-        <IBInput value={f.label} onChange={(v) => setDet((d) => ({ ...d, customFields: d.customFields.map((x, j) => j === i ? { ...x, label: v } : x) }))} placeholder="Label" />
-        <IBInput value={f.value} onChange={(v) => setDet((d) => ({ ...d, customFields: d.customFields.map((x, j) => j === i ? { ...x, value: v } : x) }))} placeholder="Value" />
-        <button className="remove-btn" onClick={() => setDet((d) => ({ ...d, customFields: d.customFields.filter((_, j) => j !== i) }))} type="button">×</button>
+      <div key={i} style={{ marginBottom: 8 }}>
+        {/* Label row */}
+        <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+          <IBInput
+            value={f.label}
+            onChange={(v) => setDet((d) => ({ ...d, customFields: d.customFields.map((x, j) => j === i ? { ...x, label: v } : x) }))}
+            placeholder="Custom Field"
+          />
+          <button
+            className="remove-btn"
+            onClick={() => setDet((d) => ({ ...d, customFields: d.customFields.filter((_, j) => j !== i) }))}
+            type="button"
+            title="Remove field"
+            style={{ flexShrink: 0 }}
+          >
+            🗑
+          </button>
+        </div>
+        {/* Default value row */}
+        <IBInput
+          value={f.value}
+          onChange={(v) => setDet((d) => ({ ...d, customFields: d.customFields.map((x, j) => j === i ? { ...x, value: v } : x) }))}
+          placeholder="Default value (optional)"
+        />
       </div>
     ))}
-    <button className="add-btn" onClick={() => setDet((d) => ({ ...d, customFields: [...d.customFields, { label: "Field", value: "" }] }))} type="button">+ Add Field</button>
+
+    {/* "+ Add Custom Field" button / inline form */}
+    {addingIdx === null ? (
+      <button
+        className="add-btn"
+        onClick={() => { setAddingIdx(det.customFields.length); setPendingLabel(""); setPendingValue(""); }}
+        type="button"
+        style={{ marginTop: 4 }}
+      >
+        + Add Custom Field
+      </button>
+    ) : (
+      <div style={{ border: "1.5px solid #e5e7eb", borderRadius: 8, padding: "12px", marginTop: 6, background: "#fafafa" }}>
+        <IBInput
+          value={pendingLabel}
+          onChange={setPendingLabel}
+          placeholder="Custom Field"
+        />
+        <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 8 }}>
+          <div style={{ flex: 1 }}>
+            <IBInput
+              value={pendingValue}
+              onChange={setPendingValue}
+              placeholder="Default value (optional)"
+            />
+          </div>
+          <button
+            className="ib-btn-primary"
+            type="button"
+            onClick={commitAdd}
+            style={{ padding: "6px 14px", borderRadius: 6, background: pendingLabel.trim() ? "#6366f1" : "#c7d2fe", border: "none", color: "#fff", fontWeight: 600, cursor: "pointer", fontSize: 13 }}
+          >
+            Add
+          </button>
+          <button
+            type="button"
+            onClick={() => setAddingIdx(null)}
+            style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18, color: "#9ca3af", lineHeight: 1 }}
+          >
+            ×
+          </button>
+        </div>
+        <button
+          className="add-btn"
+          onClick={() => { setAddingIdx(null); }}
+          type="button"
+          style={{ marginTop: 10 }}
+        >
+          + Add Custom Field
+        </button>
+      </div>
+    )}
   </div>
-);
+  );
+};
 
 const PartyPanel: React.FC<{ inv: InvoiceData; setInv: React.Dispatch<React.SetStateAction<InvoiceData>>; pv: PartyVisibility; setPv: React.Dispatch<React.SetStateAction<PartyVisibility>> }> = ({ inv, setInv, pv, setPv }) => (
   <div>
@@ -2022,6 +2230,16 @@ const BuilderView: React.FC<BuilderProps> = ({ initialTemplate, onBack, onSaved 
   const [pv, setPv]       = useState<PartyVisibility>(initialTemplate?.pv ?? DEFAULT_PV);
   const [ts, setTs]       = useState<TableSettings>(initialTemplate?.ts ?? DEFAULT_TS);
   const [misc, setMisc]   = useState<MiscState>(initialTemplate?.misc ?? DEFAULT_MISC);
+
+  // Auto-sync det to localStorage so CreateSalesInvoice reads live changes
+  // without requiring the user to click "Save Template" first.
+  React.useEffect(() => {
+    try {
+      const existing = localStorage.getItem("activeInvoiceTemplate");
+      const parsed = existing ? JSON.parse(existing) : {};
+      localStorage.setItem("activeInvoiceTemplate", JSON.stringify({ ...parsed, det }));
+    } catch { /* quota */ }
+  }, [det]);
 
   const activeLabel = NAV_ITEMS.find((n) => n.id === activeTab)?.label ?? "";
   const panels: Record<NavId, React.ReactNode> = {

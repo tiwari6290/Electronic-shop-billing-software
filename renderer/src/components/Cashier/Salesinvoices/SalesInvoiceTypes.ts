@@ -66,6 +66,27 @@ export interface SalesInvoice {
   salesman: string;
   emailId: string;
   warrantyPeriod: string;
+  // ── Extra optional meta fields (controlled by InvoiceBuilder) ──────────────
+  poNumber?: string;
+  vehicleNo?: string;
+  dispatchedThrough?: string;
+  transportName?: string;
+  /** key→value map for custom fields defined in InvoiceBuilder, e.g. { "abc": "some value" } */
+  customFieldValues?: Record<string, string>;
+  /** Payment details (ref no, bank, card type etc.) based on payment mode */
+  paymentDetails?: {
+    method: string; amount: number;
+    refNo?: string; chequeDate?: string; authNo?: string;
+    bankName?: string; cardType?: string; branchName?: string;
+  };
+  /** Finance/EMI details */
+  financeDetails?: {
+    enabled: boolean;
+    financerName?: string; loanRefNo?: string; loanAmount?: number;
+    emi?: number; emiCount?: number; extraEmi?: number; extraEmiCount?: number;
+    dbdCharges?: number; processingFee?: number;
+    agentName?: string; agentContact?: string; reference?: string;
+  };
   billItems: BillItem[];
   additionalCharges: AdditionalCharge[];
   discountType: "Discount After Tax" | "Discount Before Tax";
@@ -180,6 +201,11 @@ export function makeBlankInvoice(nextNo: string): SalesInvoice {
     salesman: "",
     emailId: "",
     warrantyPeriod: "",
+    poNumber: "",
+    vehicleNo: "",
+    dispatchedThrough: "",
+    transportName: "",
+    customFieldValues: {},
     billItems: [],
     additionalCharges: [],
     discountType: "Discount After Tax",

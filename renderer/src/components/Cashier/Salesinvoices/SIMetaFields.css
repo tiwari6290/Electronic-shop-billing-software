@@ -44,7 +44,9 @@
 .si-days-label { font-size: 13px; color: #374151; }
 
 /* Grid rows */
-.si-meta-grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 10px; }
+.si-meta-grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px 12px; margin-bottom: 10px; }
+@media (max-width: 800px) { .si-meta-grid4 { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 500px) { .si-meta-grid4 { grid-template-columns: 1fr; } }
 .si-meta-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
 /* + Column button */
@@ -97,3 +99,16 @@
 .si-toggle-thumb { position:absolute; top:2px; left:2px; width:18px; height:18px; border-radius:50%; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,.2); transition:left .2s; }
 .si-toggle--on .si-toggle-thumb { left:20px; }
 .si-link { color:#6366f1; text-decoration:underline; cursor:pointer; }
+.si-custom-badge {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 10px;
+  background: #ede9fe;
+  color: #7c3aed;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  vertical-align: middle;
+}

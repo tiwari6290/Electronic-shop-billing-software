@@ -27,6 +27,23 @@ import SIFooter        from "./SIFooter";
 import "./CreateSalesInvoice.css";
 
 
+// ─── Read builder custom-field defaults from localStorage ────────────────────
+function loadBuilderCustomFieldDefaults(): Record<string, string> {
+  try {
+    const raw = localStorage.getItem("activeInvoiceTemplate");
+    if (!raw) return {};
+    const t = JSON.parse(raw);
+    const customFields: { label: string; value: string }[] = t?.det?.customFields ?? [];
+    const defaults: Record<string, string> = {};
+    customFields.forEach(cf => {
+      if (cf.label) defaults[cf.label] = cf.value ?? "";
+    });
+    return defaults;
+  } catch {
+    return {};
+  }
+}
+
 /*────────────────────────────────────────────
  QUICK SETTINGS MODAL
  - Loads current settings from backend on open
@@ -342,15 +359,18 @@ export default function CreateSalesInvoice({
   }
 
   const [form, setForm] = useState<SalesInvoice>(() => {
-    if (fromChallan)   return challanToInvoice(fromChallan);
-    if (fromQuotation) return quotationToInvoice(fromQuotation);
-    return makeBlankInvoice("…");   // placeholder — real number loaded below
+    // Pre-load builder custom field defaults so they show immediately on new invoice
+    const cfDefaults = loadBuilderCustomFieldDefaults();
+    if (fromChallan)   return { ...challanToInvoice(fromChallan),   customFieldValues: cfDefaults };
+    if (fromQuotation) return { ...quotationToInvoice(fromQuotation), customFieldValues: cfDefaults };
+    return { ...makeBlankInvoice("…"), customFieldValues: cfDefaults };
   });
 
   const [showAddItems, setShowAddItems] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showDiscount, setShowDiscount] = useState(false);
-  const [saving,       setSaving]       = useState(false);
+  const [savingMain,    setSavingMain]    = useState(false);  // "Save" button
+  const [savingNew,     setSavingNew]     = useState(false);  // "Save & New" button
   const [saveError,    setSaveError]    = useState<string | null>(null);
 
   /*────────────────────────────
@@ -390,13 +410,22 @@ export default function CreateSalesInvoice({
   }, [editId]);
 
   function set(field: string, value: any) {
-    setForm(prev => ({ ...prev, [field]: value }));
+    // Custom fields from InvoiceBuilder stored under customFieldValues map
+    if (field.startsWith('customField_')) {
+      const label = field.replace('customField_', '');
+      setForm(prev => ({
+        ...prev,
+        customFieldValues: { ...(prev.customFieldValues ?? {}), [label]: value },
+      }));
+    } else {
+      setForm(prev => ({ ...prev, [field]: value }));
+    }
   }
 
   /*────────────────────────────
    SAVE INVOICE TO BACKEND
   ────────────────────────────*/
-  async function handleSave(): Promise<boolean> {
+  async function handleSave(calledFromSaveAndNew = false): Promise<boolean> {
     if (!form.party) {
       setSaveError("Please select a party before saving.");
       return false;
@@ -406,7 +435,8 @@ export default function CreateSalesInvoice({
       return false;
     }
 
-    setSaving(true);
+    if (calledFromSaveAndNew) setSavingNew(true);
+    else setSavingMain(true);
     setSaveError(null);
 
     try {
@@ -466,19 +496,22 @@ export default function CreateSalesInvoice({
       setSaveError(error.message ?? "Failed to save invoice");
       return false;
     } finally {
-      setSaving(false);
+      setSavingMain(false);
+      setSavingNew(false);
     }
   }
 
   async function handleSaveAndNew() {
-    const ok = await handleSave();
+    const ok = await handleSave(true);  // true = called from Save & New
     if (!ok) return;
 
     // After saving, reload settings to get the next sequence number
     const settings = await getInvoiceSettings().catch(() => null);
     const nextNo   = settings ? buildInvoiceNo(settings) : "INV-00001";
 
-    setForm(makeBlankInvoice(nextNo));
+    // Re-populate builder custom field defaults for the fresh invoice
+    const cfDefaults = loadBuilderCustomFieldDefaults();
+    setForm({ ...makeBlankInvoice(nextNo), customFieldValues: cfDefaults });
     setShowDiscount(false);
     if (onSaveAndNew) onSaveAndNew();
   }
@@ -517,11 +550,14 @@ export default function CreateSalesInvoice({
     ? Math.round(tcsBaseAmt * (form.tcsRate / 100) * 100) / 100
     : 0;
   const preRound       = Math.round((afterTax + tcsValue) * 100) / 100;
-  const roundOffAmt    = form.roundOff === "+Add"
+  // roundOffAmt is kept in sync by SISummary's useEffect which calls onRoundOffChange
+  // whenever preRound or mode changes. We use form.roundOffAmt directly here.
+  // Fallback: re-compute if somehow form.roundOffAmt is stale (e.g. on first render)
+  const roundOffAmt    = form.roundOff === "none"
+    ? (Number(form.roundOffAmt) || 0)
+    : form.roundOff === "+Add"
     ? Math.round((Math.ceil(preRound)  - preRound) * 100) / 100
-    : form.roundOff === "-Reduce"
-    ? Math.round((Math.floor(preRound) - preRound) * 100) / 100
-    : (Number(form.roundOffAmt) || 0);
+    : Math.round((Math.floor(preRound) - preRound) * 100) / 100;
   const computedTotal       = Math.round((preRound + roundOffAmt) * 100) / 100;
   const computedOutstanding = Math.max(
     0,
@@ -556,17 +592,17 @@ export default function CreateSalesInvoice({
           <button
             className="csi-save-new-btn"
             onClick={handleSaveAndNew}
-            disabled={saving}
+            disabled={savingNew || savingMain}
           >
-            {saving ? "Saving…" : "Save & New"}
+            {savingNew ? "Saving…" : "Save & New"}
           </button>
 
           <button
             className="csi-save-btn"
-            onClick={handleSave}
-            disabled={saving}
+            onClick={() => handleSave(false)}
+            disabled={savingMain || savingNew}
           >
-            {saving ? "Saving…" : "Save"}
+            {savingMain ? "Saving…" : "Save"}
           </button>
         </div>
       </div>
@@ -597,6 +633,11 @@ export default function CreateSalesInvoice({
               salesman={form.salesman}
               emailId={form.emailId}
               warrantyPeriod={form.warrantyPeriod}
+              poNumber={form.poNumber ?? ""}
+              vehicleNo={form.vehicleNo ?? ""}
+              dispatchedThrough={form.dispatchedThrough ?? ""}
+              transportName={form.transportName ?? ""}
+              customFieldValues={form.customFieldValues ?? {}}
               showColumns={form.showColumns}
               onChange={(field, value) => set(field, value)}
               onShowColumnsChange={cols => set("showColumns", cols)}
@@ -630,6 +671,7 @@ export default function CreateSalesInvoice({
             <SISummary
               subtotal={subtotal}
               totalTax={totalTax}
+              billItems={form.billItems}
               additionalCharges={form.additionalCharges}
               discountType={form.discountType}
               discountPct={form.discountPct}
@@ -678,6 +720,11 @@ export default function CreateSalesInvoice({
                 set("signatureUrl", url);
                 set("showEmptySignatureBox", showEmpty);
               }}
+
+              paymentDetails={(form as any).paymentDetails}
+              financeDetails={(form as any).financeDetails}
+              onPaymentDetailsChange={d => set("paymentDetails", d)}
+              onFinanceDetailsChange={d => set("financeDetails", d)}
             />
           </div>
 
