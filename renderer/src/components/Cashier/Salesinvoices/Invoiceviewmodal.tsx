@@ -98,7 +98,7 @@ interface SalesInvoice {
   party: { id?: number; name: string; mobile?: string; billingAddress?: string; gstin?: string } | null;
   shipTo?: { name: string; mobile?: string; billingAddress?: string } | null;
   billItems: BillItem[];
-  additionalCharges: { label?: string; amount: number }[];
+  additionalCharges: { label?: string; amount: number; taxLabel?: string }[];
   discountPct: number;
   discountAmt: number;
   applyTCS: boolean;
@@ -119,6 +119,25 @@ interface SalesInvoice {
   createdAt: string;
   signatureUrl?: string;
   showEmptySignatureBox?: boolean;
+  // ── New fields from InvoiceBuilder & SISummary ──────────────────────────
+  poNumber?: string;
+  vehicleNo?: string;
+  dispatchedThrough?: string;
+  transportName?: string;
+  emailId?: string;
+  customFieldValues?: Record<string, string>;
+  paymentDetails?: {
+    method: string; amount: number;
+    refNo?: string; chequeDate?: string; authNo?: string;
+    bankName?: string; cardType?: string; branchName?: string;
+  };
+  financeDetails?: {
+    enabled?: boolean;
+    financerName?: string; loanRefNo?: string; loanAmount?: number;
+    emi?: number; emiCount?: number; extraEmi?: number; extraEmiCount?: number;
+    dbdCharges?: number; processingFee?: number;
+    agentName?: string; agentContact?: string; reference?: string;
+  };
 }
 
 interface SavedTemplate {
@@ -507,266 +526,405 @@ function AdvancedGSTLayout({ invoice, business, template, printRef, themeColor, 
     logoUrl, showLogo, sigUrl, defaultTerms,
     discountAmt, roundOff, grandTotal, alreadyReceived, hsnRows, taxRows } = useInvoiceData(invoice, business, template);
 
+  const B  = "1px solid #bbb";
+  const TH: React.CSSProperties = { border: B, padding: "5px 7px", fontSize: 10.5, fontWeight: 700,
+    background: themeColor, color: "#fff", textAlign: "center" as const, whiteSpace: "nowrap" as const };
+  const TD: React.CSSProperties = { border: B, padding: "5px 7px", fontSize: 10.5, color: "#1a1a1a", verticalAlign: "top" as const };
+  const ML: React.CSSProperties = { fontSize: 8.5, color: "#666", fontWeight: 700, textTransform: "uppercase" as const, marginBottom: 1 };
+  const MV: React.CSSProperties = { fontSize: 10.5 };
+
+  // ── Build dynamic meta fields — only show non-empty ones ────────────────
+  type MetaField = { label: string; val: string };
+  const rawMeta: MetaField[] = [
+    { label: "Financed By",      val: invoice.financedBy      || "" },
+    { label: "Salesman",         val: invoice.salesman        || "" },
+    { label: "Challan No.",      val: invoice.challanNo       || "" },
+    { label: "E-Way Bill No.",   val: invoice.eWayBillNo      || "" },
+    { label: "Warranty Period",  val: invoice.warrantyPeriod  || "" },
+    { label: "PO Number",        val: invoice.poNumber        || "" },
+    { label: "Vehicle No.",      val: invoice.vehicleNo       || "" },
+    { label: "Dispatched Through", val: invoice.dispatchedThrough || "" },
+    { label: "Transport Name",   val: invoice.transportName   || "" },
+    { label: "Email ID",         val: invoice.emailId         || "" },
+    // Custom fields from InvoiceBuilder
+    ...Object.entries(invoice.customFieldValues ?? {}).map(([k, v]) => ({ label: k, val: v })),
+  ].filter(f => f.val.trim() !== "");
+
+  // Group into rows of 3
+  const metaRows: MetaField[][] = [];
+  for (let i = 0; i < rawMeta.length; i += 3) metaRows.push(rawMeta.slice(i, i + 3));
+
+  // ── Payment section ──────────────────────────────────────────────────────
+  const pd = invoice.paymentDetails;
+  const fin = invoice.financeDetails;
+  const hasFin = fin?.enabled && (fin.financerName || fin.loanRefNo || fin.loanAmount);
+
+  // ── Items table columns: Sl | Description | HSN | Qty | Basic Price | Taxable Value | CGST% | CGST Amt | SGST% | SGST Amt | Amount ──
+  const NCOLS = 11;
   const MIN_ROWS = 5;
   const fillerCount = Math.max(0, MIN_ROWS - invoice.billItems.length);
-  const B = "1px solid #bbb";
-  const NCOLS = 8;
-
-  const TH: React.CSSProperties = { border: B, padding: "5px 8px", fontSize: 11, fontWeight: 700,
-    background: themeColor, color: "#fff", textAlign: "center" as const, whiteSpace: "nowrap" as const };
-  const TD: React.CSSProperties = { border: B, padding: "5px 8px", fontSize: 11, color: "#1a1a1a", verticalAlign: "top" as const };
-  const metaLabel: React.CSSProperties = { fontSize: 8.5, color: "#666", fontWeight: 700, textTransform: "uppercase" as const, marginBottom: 1 };
-  const metaValue: React.CSSProperties = { fontSize: 10.5, fontWeight: 700 };
-  const metaValueNormal: React.CSSProperties = { fontSize: 10.5 };
 
   return (
     <div ref={printRef} className="ivm-invoice-paper"
-      style={{ fontFamily: "Arial, sans-serif", fontSize: "11px", color: "#1a1a1a",
-        border: "1px solid #bbb", background: "#fff", padding: 0, overflow: "hidden",
-        width: "100%", maxWidth: "100%", margin: 0, position: "relative" }}>
+      style={{ fontFamily:"Arial,sans-serif", fontSize:"11px", color:"#1a1a1a",
+        border: B, background:"#fff", padding:0, overflow:"hidden",
+        width:"100%", maxWidth:"100%", margin:0, position:"relative" }}>
       <BgOverlay url={bgImageUrl} opacity={bgOpacity} />
-      <div style={{ position: "relative", zIndex: 1 }}>
-        {/* Row 1: TAX INVOICE badge */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "5px 12px", borderBottom: B }}>
-          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.03em" }}>TAX INVOICE</span>
-          <span style={{ fontSize: 9.5, border: "1px solid #999", padding: "1px 7px", borderRadius: 2, color: "#444" }}>ORIGINAL FOR RECIPIENT</span>
+      <div style={{ position:"relative", zIndex:1 }}>
+
+        {/* ── Row 1: TAX INVOICE badge ── */}
+        <div style={{ display:"flex", alignItems:"center", gap:10, padding:"5px 12px", borderBottom:B }}>
+          <span style={{ fontSize:11, fontWeight:700, letterSpacing:"0.03em" }}>TAX INVOICE</span>
+          <span style={{ fontSize:9.5, border:"1px solid #999", padding:"1px 7px", borderRadius:2, color:"#444" }}>ORIGINAL FOR RECIPIENT</span>
         </div>
 
-        {/* Row 2: Company | Invoice meta */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", borderBottom: B }}>
-          <div style={{ padding: "8px 12px", borderRight: B, display: "flex", alignItems: "flex-start", gap: 10 }}>
-            {/* LOGO */}
+        {/* ── Row 2: Company LEFT | Invoice meta RIGHT ── */}
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", borderBottom:B }}>
+          {/* Company */}
+          <div style={{ padding:"8px 12px", borderRight:B, display:"flex", alignItems:"flex-start", gap:10 }}>
             {showLogo && logoUrl && (
-              <img src={logoUrl} alt="Logo"
-                style={{ height: 52, width: 52, objectFit: "contain", borderRadius: 4, flexShrink: 0, border: "1px solid #eee" }} />
+              <img src={logoUrl} alt="Logo" style={{ height:52, width:52, objectFit:"contain", borderRadius:4, flexShrink:0, border:"1px solid #eee" }} />
             )}
-            <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 13, fontWeight: 800, color: themeColor, marginBottom: 2 }}>{companyName}</div>
-              <div style={{ fontSize: 10.5, color: "#333", marginBottom: 1 }}>{address}</div>
-              {phone && <div style={{ fontSize: 10.5, color: "#333", marginBottom: 1 }}>Phone: {phone}</div>}
-              <div style={{ fontSize: 10.5, color: "#333", marginBottom: 1 }}>G.S.T. No.: {gstin}</div>
+            <div style={{ flex:1 }}>
+              <div style={{ fontSize:13, fontWeight:800, color:themeColor, marginBottom:2 }}>{companyName}</div>
+              {address && <div style={{ fontSize:10.5, color:"#333", marginBottom:1 }}>{address}</div>}
+              {phone  && <div style={{ fontSize:10.5, color:"#333", marginBottom:1 }}>Phone: {phone}</div>}
+              {gstin  && <div style={{ fontSize:10.5, color:"#333" }}>G.S.T. No.: {gstin}</div>}
             </div>
           </div>
+          {/* Invoice meta always shows: Invoice No, Date, Due Date */}
           <div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", borderBottom: B }}>
-              <div style={{ padding: "4px 8px", borderRight: B }}><div style={metaLabel}>Invoice No.</div><div style={metaValue}>{invoice.invoiceNo}</div></div>
-              <div style={{ padding: "4px 8px", borderRight: B }}><div style={metaLabel}>Invoice Date</div><div style={metaValueNormal}>{fmtDateSlash(invoice.invoiceDate)}</div></div>
-              <div style={{ padding: "4px 8px" }}><div style={metaLabel}>Due Date</div><div style={metaValueNormal}>{invoice.dueDate ? fmtDateSlash(invoice.dueDate) : "-"}</div></div>
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", borderBottom:B }}>
+              <div style={{ padding:"4px 8px", borderRight:B }}><div style={ML}>Invoice No.</div><div style={{ ...MV, fontWeight:700 }}>{invoice.invoiceNo}</div></div>
+              <div style={{ padding:"4px 8px", borderRight:B }}><div style={ML}>Invoice Date</div><div style={MV}>{fmtDateSlash(invoice.invoiceDate)}</div></div>
+              <div style={{ padding:"4px 8px" }}><div style={ML}>Due Date</div><div style={MV}>{invoice.dueDate ? fmtDateSlash(invoice.dueDate) : "-"}</div></div>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", borderBottom: B }}>
-              <div style={{ padding: "4px 8px", borderRight: B }}><div style={metaLabel}>Financed By</div><div style={metaValueNormal}>{invoice.financedBy || "-"}</div></div>
-              <div style={{ padding: "4px 8px", borderRight: B }}><div style={metaLabel}>Salesman</div><div style={metaValueNormal}>{invoice.salesman || "-"}</div></div>
-              <div style={{ padding: "4px 8px" }}><div style={metaLabel}>Challan No.</div><div style={metaValueNormal}>{invoice.challanNo || "-"}</div></div>
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr" }}>
-              <div style={{ padding: "4px 8px", borderRight: B }}><div style={metaLabel}>E-Way Bill No.</div><div style={metaValueNormal}>{invoice.eWayBillNo || "-"}</div></div>
-              <div style={{ padding: "4px 8px" }}><div style={metaLabel}>Warranty Period</div><div style={metaValueNormal}>{invoice.warrantyPeriod || "-"}</div></div>
-            </div>
+            {/* Dynamic meta rows — only non-empty fields, 3 per row */}
+            {metaRows.map((row, ri) => (
+              <div key={ri} style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", borderBottom: ri < metaRows.length - 1 ? B : "none" }}>
+                {row.map((f, fi) => (
+                  <div key={fi} style={{ padding:"4px 8px", borderRight: fi < 2 ? B : "none" }}>
+                    <div style={ML}>{f.label}</div>
+                    <div style={MV}>{f.val}</div>
+                  </div>
+                ))}
+                {/* pad empty slots */}
+                {row.length < 3 && Array.from({ length: 3 - row.length }).map((_, pi) => (
+                  <div key={`p${pi}`} style={{ padding:"4px 8px" }} />
+                ))}
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Row 3: Bill To / Ship To */}
-        <div style={{ display: "grid", gridTemplateColumns: invoice.shipTo ? "1fr 1fr" : "1fr", borderBottom: B }}>
-          <div style={{ padding: "7px 12px", borderRight: invoice.shipTo ? B : "none" }}>
-            <div style={{ fontSize: 9, fontWeight: 700, color: "#444", textTransform: "uppercase" as const, marginBottom: 4 }}>BILL TO</div>
+        {/* ── Row 3: Bill To / Ship To ── */}
+        <div style={{ display:"grid", gridTemplateColumns: invoice.shipTo ? "1fr 1fr" : "1fr", borderBottom:B }}>
+          <div style={{ padding:"7px 12px", borderRight: invoice.shipTo ? B : "none" }}>
+            <div style={{ fontSize:9, fontWeight:700, color:"#444", textTransform:"uppercase" as const, marginBottom:4 }}>BILL TO</div>
             {invoice.party ? (
               <>
-                <div style={{ fontSize: 11.5, fontWeight: 700, color: "#111", marginBottom: 2 }}>{invoice.party.name}</div>
-                {invoice.party.billingAddress && <div style={{ fontSize: 10.5, color: "#333", lineHeight: 1.5, marginBottom: 1 }}>Address: {invoice.party.billingAddress}</div>}
-                {invoice.party.gstin && <div style={{ fontSize: 10.5, color: "#333", marginBottom: 1 }}>GSTIN: {invoice.party.gstin}</div>}
-                {invoice.party.mobile && <div style={{ fontSize: 10.5, color: "#333" }}>Mobile: {invoice.party.mobile}</div>}
+                <div style={{ fontSize:11.5, fontWeight:700, color:"#111", marginBottom:2 }}>{invoice.party.name}</div>
+                {invoice.party.billingAddress && <div style={{ fontSize:10.5, color:"#333", lineHeight:1.5, marginBottom:1 }}>Address: {invoice.party.billingAddress}</div>}
+                {invoice.party.gstin  && <div style={{ fontSize:10.5, color:"#333", marginBottom:1 }}>GSTIN: {invoice.party.gstin}</div>}
+                {invoice.party.mobile && <div style={{ fontSize:10.5, color:"#333" }}>Mobile: {invoice.party.mobile}</div>}
               </>
-            ) : <div style={{ fontSize: 10.5, color: "#aaa" }}>–</div>}
+            ) : <div style={{ fontSize:10.5, color:"#aaa" }}>–</div>}
           </div>
           {invoice.shipTo && (
-            <div style={{ padding: "7px 12px" }}>
-              <div style={{ fontSize: 9, fontWeight: 700, color: "#444", textTransform: "uppercase" as const, marginBottom: 4 }}>SHIP TO</div>
-              <div style={{ fontSize: 11.5, fontWeight: 700, color: "#111", marginBottom: 2 }}>{invoice.shipTo.name}</div>
-              {invoice.shipTo.billingAddress && <div style={{ fontSize: 10.5, color: "#333", lineHeight: 1.5, marginBottom: 1 }}>Address: {invoice.shipTo.billingAddress}</div>}
-              {invoice.shipTo.mobile && <div style={{ fontSize: 10.5, color: "#333" }}>Mobile: {invoice.shipTo.mobile}</div>}
+            <div style={{ padding:"7px 12px" }}>
+              <div style={{ fontSize:9, fontWeight:700, color:"#444", textTransform:"uppercase" as const, marginBottom:4 }}>SHIP TO</div>
+              <div style={{ fontSize:11.5, fontWeight:700, color:"#111", marginBottom:2 }}>{invoice.shipTo.name}</div>
+              {invoice.shipTo.billingAddress && <div style={{ fontSize:10.5, color:"#333", lineHeight:1.5, marginBottom:1 }}>Address: {invoice.shipTo.billingAddress}</div>}
+              {invoice.shipTo.mobile && <div style={{ fontSize:10.5, color:"#333" }}>Mobile: {invoice.shipTo.mobile}</div>}
             </div>
           )}
         </div>
 
-        {/* Items Table */}
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+        {/* ── Items Table — PDF format: Sl | Description | HSN | Qty | Basic Price | Taxable Value | CGST% | CGST Amt | SGST% | SGST Amt | Amount ── */}
+        <table style={{ width:"100%", borderCollapse:"collapse" }}>
           <colgroup>
-            <col style={{ width: "5%" }}/><col style={{ width: "27%" }}/><col style={{ width: "9%" }}/>
-            <col style={{ width: "9%" }}/><col style={{ width: "11%" }}/><col style={{ width: "13%" }}/>
-            <col style={{ width: "9%" }}/><col style={{ width: "17%" }}/>
+            <col style={{ width:"4%"  }}/><col style={{ width:"24%" }}/><col style={{ width:"7%" }}/>
+            <col style={{ width:"7%"  }}/><col style={{ width:"10%" }}/><col style={{ width:"10%" }}/>
+            <col style={{ width:"5%"  }}/><col style={{ width:"8%"  }}/><col style={{ width:"5%" }}/>
+            <col style={{ width:"8%"  }}/><col style={{ width:"12%" }}/>
           </colgroup>
           <thead>
             <tr>
-              {["S.NO.","ITEMS","HSN","QTY.","RATE","DISCOUNT","TAX","AMOUNT"].map((h,i) => (
-                <th key={h} style={{ ...TH, textAlign: (i===1 ? "left" : "center") as any }}>{h}</th>
-              ))}
+              <th style={{ ...TH }}>Sl.</th>
+              <th style={{ ...TH, textAlign:"left" as const }}>Description</th>
+              <th style={{ ...TH }}>HSN</th>
+              <th style={{ ...TH }}>Qty</th>
+              <th style={{ ...TH }}>Basic Price</th>
+              <th style={{ ...TH }}>Taxable Value</th>
+              <th style={{ ...TH }}>CGST %</th>
+              <th style={{ ...TH }}>CGST Amt</th>
+              <th style={{ ...TH }}>SGST %</th>
+              <th style={{ ...TH }}>SGST Amt</th>
+              <th style={{ ...TH }}>Amount</th>
             </tr>
           </thead>
           <tbody>
             {invoice.billItems.map((item, idx) => {
-              const raw = item as any;
-              const unitLabel = item.unit || "PCS";
-              const pct = Number(raw.discountPct ?? raw.discount_pct ?? 0) || 0;
-              const amt = Number(raw.discountAmt ?? raw.discount_amt ?? 0) || 0;
-              const base = Number(item.qty) * Number(item.price);
-              const taxRate = Number(raw.taxRate ?? raw.tax_rate ?? 0) || 0;
-              const taxLabel = taxRate > 0 ? (raw.taxLabel || `GST ${taxRate}%`) : "-";
+              const raw      = item as any;
+              const taxRate  = Number(raw.taxRate ?? raw.tax_rate ?? 0) || 0;
+              const qty      = Number(item.qty) || 0;
+              const price    = Number(item.price) || 0;
+              const pct      = Number(raw.discountPct ?? raw.discount_pct ?? 0) || 0;
+              const discAmt  = Number(raw.discountAmt ?? raw.discount_amt ?? 0) || 0;
+              const lineGross = qty * price;
+              const totalDisc = Math.round((lineGross * pct / 100 + discAmt) * 100) / 100;
+              const taxable   = Math.max(0, lineGross - totalDisc);
+              const cgstPct   = taxRate / 2;
+              const cgstAmt   = Math.round(taxable * cgstPct / 100 * 100) / 100;
+              const sgstAmt   = cgstAmt;
               return (
                 <tr key={idx}>
-                  <td style={{ ...TD, textAlign: "center" as const }}>{idx + 1}</td>
+                  <td style={{ ...TD, textAlign:"center" as const }}>{idx + 1}</td>
                   <td style={{ ...TD }}>
-                    <div style={{ fontWeight: 600 }}>{item.name || "Item"}</div>
-                    {item.description && <div style={{ fontSize: 9.5, color: "#555", marginTop: 1 }}>{item.description}</div>}
+                    <div style={{ fontWeight:600 }}>{item.name || "Item"}</div>
+                    {item.description && <div style={{ fontSize:9.5, color:"#555", marginTop:1 }}>{item.description}</div>}
                   </td>
-                  <td style={{ ...TD, textAlign: "center" as const }}>{item.hsn || "-"}</td>
-                  <td style={{ ...TD, textAlign: "center" as const }}>{item.qty} {unitLabel}</td>
-                  <td style={{ ...TD, textAlign: "right" as const }}>{Number(item.price).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                  <td style={{ ...TD, textAlign: "center" as const }}>
-                    {pct > 0 ? <span>{pct}%<br/><span style={{ fontSize:10,color:"#555" }}>({fmtN(Math.round(base*(pct/100)*100)/100)})</span></span>
-                      : amt > 0 ? <span>{fmtN(amt)}</span> : <span>-</span>}
-                  </td>
-                  <td style={{ ...TD, textAlign: "center" as const }}>{taxRate > 0 ? taxLabel : "-"}</td>
-                  <td style={{ ...TD, textAlign: "right" as const, fontWeight: 600 }}>{fmtN(Number(item.amount))}</td>
+                  <td style={{ ...TD, textAlign:"center" as const }}>{item.hsn || "-"}</td>
+                  <td style={{ ...TD, textAlign:"center" as const }}>{qty} {item.unit || "PCS"}</td>
+                  <td style={{ ...TD, textAlign:"right"  as const }}>{fmtN(price)}</td>
+                  <td style={{ ...TD, textAlign:"right"  as const }}>{fmtN(taxable)}</td>
+                  <td style={{ ...TD, textAlign:"center" as const }}>{taxRate > 0 ? cgstPct : "-"}</td>
+                  <td style={{ ...TD, textAlign:"right"  as const }}>{taxRate > 0 ? fmtN(cgstAmt) : "-"}</td>
+                  <td style={{ ...TD, textAlign:"center" as const }}>{taxRate > 0 ? cgstPct : "-"}</td>
+                  <td style={{ ...TD, textAlign:"right"  as const }}>{taxRate > 0 ? fmtN(sgstAmt) : "-"}</td>
+                  <td style={{ ...TD, textAlign:"right"  as const, fontWeight:600 }}>{fmtN(Number(item.amount))}</td>
                 </tr>
               );
             })}
+            {/* Filler rows */}
             {Array.from({ length: fillerCount }).map((_,i) => (
-              <tr key={`filler${i}`} style={{ height: 22 }}>
-                {Array.from({ length: NCOLS }).map((__,j) => <td key={j} style={{ ...TD, borderTop:"none",borderBottom:"none" }}/>)}
+              <tr key={`fill${i}`} style={{ height:22 }}>
+                {Array.from({ length: NCOLS }).map((__,j) => <td key={j} style={{ ...TD, borderTop:"none", borderBottom:"none" }}/>)}
               </tr>
             ))}
+            {/* Separator */}
             <tr style={{ height:0 }}>
-              {Array.from({ length: NCOLS }).map((_,j) => <td key={j} style={{ ...TD,padding:0,height:0,borderTop:B,borderBottom:"none" }}/>)}
+              {Array.from({ length: NCOLS }).map((_,j) => <td key={j} style={{ ...TD, padding:0, height:0, borderTop:B, borderBottom:"none" }}/>)}
             </tr>
-            {taxRows.map((row,i) => [
-              <tr key={`cgst-${i}`}>
-                <td colSpan={5} style={{ border:"none",borderRight:B,padding:"4px 8px",fontSize:10.5,fontStyle:"italic" as const,color:"#333",textAlign:"right" as const }}>CGST @{row.rate/2}%</td>
-                <td style={{ ...TD,textAlign:"center" as const,color:"#555",fontSize:10.5 }}>-</td>
-                <td style={{ ...TD,textAlign:"center" as const,color:"#555",fontSize:10.5 }}>-</td>
-                <td style={{ ...TD,textAlign:"right" as const,fontWeight:600 }}>₹ {fmtN(row.cgst)}</td>
-              </tr>,
-              <tr key={`sgst-${i}`}>
-                <td colSpan={5} style={{ border:"none",borderRight:B,padding:"4px 8px",fontSize:10.5,fontStyle:"italic" as const,color:"#333",textAlign:"right" as const }}>SGST @{row.rate/2}%</td>
-                <td style={{ ...TD,textAlign:"center" as const,color:"#555",fontSize:10.5 }}>-</td>
-                <td style={{ ...TD,textAlign:"center" as const,color:"#555",fontSize:10.5 }}>-</td>
-                <td style={{ ...TD,textAlign:"right" as const,fontWeight:600 }}>₹ {fmtN(row.sgst)}</td>
-              </tr>,
-            ])}
+            {/* Additional charges */}
             {invoice.additionalCharges.map((c,i) => (
-              <tr key={`charge-${i}`}>
-                <td colSpan={NCOLS-1} style={{ ...TD,textAlign:"right" as const,fontSize:10.5 }}>{c.label||"Additional Charge"}</td>
-                <td style={{ ...TD,textAlign:"right" as const,fontWeight:600 }}>₹ {fmtN(Number(c.amount))}</td>
+              <tr key={`ch${i}`}>
+                <td colSpan={NCOLS-1} style={{ ...TD, textAlign:"right" as const, fontSize:10.5 }}>{c.label || "Additional Charge"}</td>
+                <td style={{ ...TD, textAlign:"right" as const, fontWeight:600 }}>₹ {fmtN(Number(c.amount))}</td>
               </tr>
             ))}
+            {/* Invoice-level discount if any */}
             {discountAmt > 0 && (
               <tr>
-                <td colSpan={NCOLS-1} style={{ ...TD,textAlign:"right" as const,fontSize:10.5 }}>Discount</td>
-                <td style={{ ...TD,textAlign:"right" as const,fontWeight:600,color:"#16a34a" }}>- ₹ {fmtN(discountAmt)}</td>
+                <td colSpan={NCOLS-1} style={{ ...TD, textAlign:"right" as const, fontSize:10.5 }}>Discount</td>
+                <td style={{ ...TD, textAlign:"right" as const, fontWeight:600, color:"#16a34a" }}>- ₹ {fmtN(discountAmt)}</td>
               </tr>
             )}
+            {/* Round Off */}
             {roundOff !== 0 && (
               <tr>
-                <td colSpan={NCOLS-1} style={{ ...TD,textAlign:"right" as const,fontSize:10.5 }}>Round Off</td>
-                <td style={{ ...TD,textAlign:"right" as const,fontWeight:600 }}>{roundOff>0?"+":""}₹ {fmtN(Math.abs(roundOff))}</td>
+                <td colSpan={NCOLS-1} style={{ ...TD, textAlign:"right" as const, fontSize:10.5 }}>Round Off</td>
+                <td style={{ ...TD, textAlign:"right" as const, fontWeight:600 }}>{roundOff>0?"+":""}₹ {fmtN(Math.abs(roundOff))}</td>
               </tr>
             )}
+            {/* Total row */}
             <tr>
-              <td colSpan={6} style={{ ...TD,fontWeight:700,textAlign:"center" as const,fontSize:11,letterSpacing:"0.06em",background:"#f0f0f0",textTransform:"uppercase" as const }}>TOTAL</td>
-              <td style={{ ...TD,textAlign:"center" as const,fontWeight:600,background:"#f0f0f0",color:"#555" }}>-</td>
-              <td style={{ ...TD,textAlign:"right" as const,fontWeight:700,fontSize:11,background:"#f0f0f0" }}>₹ {fmtN(grandTotal)}</td>
+              <td colSpan={NCOLS-1} style={{ ...TD, fontWeight:700, textAlign:"right" as const, fontSize:11, background:"#f0f0f0", textTransform:"uppercase" as const }}>Total</td>
+              <td style={{ ...TD, textAlign:"right" as const, fontWeight:700, fontSize:11, background:"#f0f0f0" }}>₹ {fmtN(grandTotal)}</td>
             </tr>
             <tr>
-              <td colSpan={NCOLS-1} style={{ ...TD,fontWeight:700,textAlign:"right" as const,fontSize:11,textTransform:"uppercase" as const }}>RECEIVED AMOUNT</td>
-              <td style={{ ...TD,textAlign:"right" as const,fontWeight:700,fontSize:11 }}>₹ {fmtN(alreadyReceived)}</td>
+              <td colSpan={NCOLS-1} style={{ ...TD, fontWeight:700, textAlign:"right" as const, fontSize:11, textTransform:"uppercase" as const }}>Received Amount</td>
+              <td style={{ ...TD, textAlign:"right" as const, fontWeight:700, fontSize:11 }}>₹ {fmtN(alreadyReceived)}</td>
             </tr>
             <tr>
-              <td colSpan={NCOLS-1} style={{ ...TD,fontWeight:700,textAlign:"right" as const,fontSize:11,textTransform:"uppercase" as const }}>BALANCE AMOUNT</td>
-              <td style={{ ...TD,textAlign:"right" as const,fontWeight:700,fontSize:11,color:safeN(grandTotal-alreadyReceived)>0?"#dc2626":"#16a34a" }}>₹ {fmtN(safeN(grandTotal-alreadyReceived))}</td>
+              <td colSpan={NCOLS-1} style={{ ...TD, fontWeight:700, textAlign:"right" as const, fontSize:11, textTransform:"uppercase" as const }}>Balance Amount</td>
+              <td style={{ ...TD, textAlign:"right" as const, fontWeight:700, fontSize:11, color: safeN(grandTotal-alreadyReceived)>0?"#dc2626":"#16a34a" }}>₹ {fmtN(safeN(grandTotal-alreadyReceived))}</td>
             </tr>
           </tbody>
         </table>
 
-        {/* HSN Summary */}
-        {hsnRows.length > 0 && (
-          <table style={{ width:"100%",borderCollapse:"collapse" }}>
-            <thead>
-              <tr>
-                <th style={{ ...TD,fontWeight:700,background:"#f0f0f0",textAlign:"left" as const,width:"12%" }} rowSpan={2}>HSN/SAC</th>
-                <th style={{ ...TD,fontWeight:700,background:"#f0f0f0",width:"16%",textAlign:"right" as const }} rowSpan={2}>Taxable Value</th>
-                <th style={{ ...TD,fontWeight:700,background:"#f0f0f0",textAlign:"center" as const }} colSpan={2}>CGST</th>
-                <th style={{ ...TD,fontWeight:700,background:"#f0f0f0",textAlign:"center" as const }} colSpan={2}>SGST</th>
-                <th style={{ ...TD,fontWeight:700,background:"#f0f0f0",width:"16%",textAlign:"right" as const }} rowSpan={2}>Total Tax Amount</th>
-              </tr>
-              <tr>
-                {["Rate","Amount","Rate","Amount"].map(h => <th key={h} style={{ ...TD,fontWeight:700,background:"#f0f0f0",fontSize:10,textAlign:"center" as const }}>{h}</th>)}
-              </tr>
-            </thead>
-            <tbody>
-              {hsnRows.map((row,i) => (
-                <tr key={i}>
-                  <td style={{ ...TD }}>{row.hsn}</td>
-                  <td style={{ ...TD,textAlign:"right" as const }}>{fmtN(row.taxable)}</td>
-                  <td style={{ ...TD,textAlign:"center" as const }}>{row.rate/2}%</td>
-                  <td style={{ ...TD,textAlign:"right" as const }}>{fmtN(row.cgst)}</td>
-                  <td style={{ ...TD,textAlign:"center" as const }}>{row.rate/2}%</td>
-                  <td style={{ ...TD,textAlign:"right" as const }}>{fmtN(row.sgst)}</td>
-                  <td style={{ ...TD,textAlign:"right" as const,fontWeight:600 }}>₹ {fmtN(row.cgst+row.sgst)}</td>
-                </tr>
-              ))}
-              <tr style={{ background:"#f0f0f0" }}>
-                <td style={{ ...TD,fontWeight:700 }}>Total</td>
-                <td style={{ ...TD,textAlign:"right" as const,fontWeight:600 }}>{fmtN(hsnRows.reduce((s,r)=>s+r.taxable,0))}</td>
-                <td style={{ ...TD }}/>
-                <td style={{ ...TD,textAlign:"right" as const,fontWeight:600 }}>{fmtN(hsnRows.reduce((s,r)=>s+r.cgst,0))}</td>
-                <td style={{ ...TD }}/>
-                <td style={{ ...TD,textAlign:"right" as const,fontWeight:600 }}>{fmtN(hsnRows.reduce((s,r)=>s+r.sgst,0))}</td>
-                <td style={{ ...TD,textAlign:"right" as const,fontWeight:700 }}>₹ {fmtN(hsnRows.reduce((s,r)=>s+r.cgst+r.sgst,0))}</td>
-              </tr>
-            </tbody>
-          </table>
-        )}
-
-        {/* Total in words */}
-        <div style={{ padding:"6px 12px",borderTop:B,borderBottom:B,fontSize:11 }}>
+        {/* ── Total in words ── */}
+        <div style={{ padding:"6px 12px", borderTop:B, borderBottom:B, fontSize:11 }}>
           <strong>Total Amount (in words): </strong>{numToWords(grandTotal)}
         </div>
 
-        {/* Notes | Bank */}
-        <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",borderBottom:B }}>
-          <div style={{ borderRight:B,padding:"8px 12px",minHeight:64 }}>
-            <div style={{ fontSize:10.5,fontWeight:700,color:"#222",marginBottom:4 }}>Notes</div>
-            <div style={{ fontSize:10.5,color:"#333",lineHeight:1.6,whiteSpace:"pre-line" as const }}>{invoice.notes||""}</div>
+        {/* ══════════════════════════════════════════════════════
+            P A Y M E N T  — exact PDF table layout
+            Columns: Payment Type | Ref. No | Cheque Date | Auth No.
+                     | Bank Name | Card Type | Branch Name
+                     | Total Coupon | Coupon Type | Amount
+        ══════════════════════════════════════════════════════ */}
+        {pd && (
+          <div style={{ borderTop:B, borderBottom:B }}>
+            {/* Header row — letter-spaced bold like PDF */}
+            <div style={{
+              padding:"5px 12px",
+              fontWeight:700, fontSize:12,
+              letterSpacing:"0.18em",
+              borderBottom:B,
+            }}>
+              P A Y M E N T
+            </div>
+            <table style={{ width:"100%", borderCollapse:"collapse", fontSize:10 }}>
+              <thead>
+                <tr>
+                  {([
+                    ["Payment","Type"],
+                    ["Ref. No",""],
+                    ["Cheque","Date"],
+                    ["Auth No.",""],
+                    ["Bank Name",""],
+                    ["Card Type",""],
+                    ["Branch Name",""],
+                    ["Total","Coupon"],
+                    ["Coupon","Type"],
+                    ["Amount",""],
+                  ] as [string,string][]).map(([l1,l2],i) => (
+                    <th key={i} style={{
+                      ...TD, fontWeight:700, fontSize:9.5,
+                      textAlign:"center" as const,
+                      background:"#f5f5f5",
+                      lineHeight:1.3,
+                    }}>
+                      {l1}{l2 ? <><br/>{l2}</> : null}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td style={{ ...TD, textAlign:"center" as const }}>{pd.method || ""}</td>
+                  <td style={{ ...TD, textAlign:"center" as const }}>{pd.refNo    || ""}</td>
+                  <td style={{ ...TD, textAlign:"center" as const }}>{pd.chequeDate ? fmtDateSlash(pd.chequeDate) : ""}</td>
+                  <td style={{ ...TD, textAlign:"center" as const }}>{pd.authNo    || ""}</td>
+                  <td style={{ ...TD, textAlign:"center" as const }}>{pd.bankName  || ""}</td>
+                  <td style={{ ...TD, textAlign:"center" as const }}>{pd.cardType  || ""}</td>
+                  <td style={{ ...TD, textAlign:"center" as const }}>{pd.branchName|| ""}</td>
+                  <td style={{ ...TD, textAlign:"center" as const }}>{/* Total Coupon */}</td>
+                  <td style={{ ...TD, textAlign:"center" as const }}>{/* Coupon Type */}</td>
+                  <td style={{ ...TD, textAlign:"right"  as const, fontWeight:600 }}>
+                    {fmtN(Number(pd.amount) || alreadyReceived)}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
-          <div style={{ padding:"8px 12px",minHeight:64 }}>
-            <div style={{ fontSize:10.5,fontWeight:700,color:"#222",marginBottom:4 }}>Bank Details</div>
-            <div style={{ fontSize:10.5,color:"#333",lineHeight:1.9 }}>
-              {bank && <div><span style={{ display:"inline-block",minWidth:90 }}>Name:</span>{bank}</div>}
-              {bankName && <div><span style={{ display:"inline-block",minWidth:90 }}>Bank:</span>{bankName}</div>}
-              {accountNo && <div><span style={{ display:"inline-block",minWidth:90 }}>A/C No.:</span>{accountNo}</div>}
-              {branch && <div><span style={{ display:"inline-block",minWidth:90 }}>Branch:</span>{branch}</div>}
-              {ifsc && <div><span style={{ display:"inline-block",minWidth:90 }}>IFSC:</span>{ifsc}</div>}
+        )}
+
+        {/* ── Banking Details | E & O.E. ── (always shown, matches PDF) */}
+        <div style={{ display:"grid", gridTemplateColumns:"1fr auto", borderBottom:B, alignItems:"flex-start" }}>
+          <div style={{ padding:"7px 12px", borderRight:B }}>
+            <div style={{ fontSize:10.5, fontWeight:700, color:"#222", marginBottom:3 }}>Banking Details:</div>
+            <div style={{ fontSize:10, color:"#333", lineHeight:1.8 }}>
+              {bank      && <span>Account Name: <strong>{bank}</strong>{"  "}</span>}
+              {bankName  && <span>Bank: <strong>{bankName}</strong>{"  "}</span>}
+              {accountNo && <span>A/c No.: <strong>{accountNo}</strong>{"  "}</span>}
+              {ifsc      && <span>IFSC: <strong>{ifsc}</strong>{"  "}</span>}
+              {branch    && <span>Branch: <strong>{branch}</strong></span>}
+            </div>
+          </div>
+          <div style={{ padding:"7px 12px", fontSize:10, fontWeight:700, color:"#333", whiteSpace:"nowrap" as const }}>
+            E &amp; O.E.
+          </div>
+        </div>
+
+        {/* ── Terms + For [Company] right-aligned ── */}
+        <div style={{ borderBottom:B }}>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr auto", alignItems:"flex-start" }}>
+            <div style={{ padding:"7px 12px", borderRight:B }}>
+              <div style={{ fontSize:10, color:"#333", lineHeight:1.6, whiteSpace:"pre-line" as const }}>
+                {invoice.termsConditions || defaultTerms}
+              </div>
+              {invoice.notes && (
+                <div style={{ fontSize:10, color:"#333", marginTop:6 }}>
+                  <strong>Notes: </strong>{invoice.notes}
+                </div>
+              )}
+            </div>
+            <div style={{ padding:"7px 12px 7px 14px", display:"flex", flexDirection:"column" as const, alignItems:"flex-end", justifyContent:"space-between", minWidth:180 }}>
+              {/* Signature */}
+              <div style={{ textAlign:"center" as const, marginBottom:8 }}>
+                {sigUrl
+                  ? <img src={sigUrl} alt="Signature" style={{ maxHeight:50, maxWidth:150, objectFit:"contain", display:"block", margin:"0 auto 3px" }}/>
+                  : invoice.showEmptySignatureBox
+                    ? <div style={{ height:44, width:140, border:"1px dashed #bbb", margin:"0 auto 3px" }}/>
+                    : <div style={{ height:44 }}/>
+                }
+                <div style={{ fontSize:9, color:"#333" }}>For <strong>{companyName}</strong></div>
+              </div>
+              <div style={{ fontSize:9, color:"#555", textAlign:"right" as const }}>
+                No Tax Payable on Reverse Charge
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Terms */}
-        <div style={{ padding:"8px 12px",borderBottom:B }}>
-          <div style={{ fontSize:10.5,fontWeight:700,color:"#222",marginBottom:4 }}>Terms and Conditions</div>
-          <div style={{ fontSize:10.5,color:"#333",lineHeight:1.7,whiteSpace:"pre-line" as const }}>{invoice.termsConditions||defaultTerms}</div>
-        </div>
+        {/* ══════════════════════════════════════════════════════
+            F I N A N C E   D E T A I L S — exact PDF layout
+            Only shown when financeDetails.enabled = true
+        ══════════════════════════════════════════════════════ */}
+        {hasFin && (
+          <div style={{ borderBottom:B }}>
+            {/* Centred title */}
+            <div style={{
+              padding:"5px 12px",
+              textAlign:"center" as const,
+              fontWeight:700, fontSize:11,
+              letterSpacing:"0.08em",
+              borderBottom:B, background:"#fafafa",
+            }}>
+              FINANCE DETAILS
+            </div>
 
-        {/* Signature — larger box */}
-        <div style={{ display:"flex",justifyContent:"flex-end",padding:"10px 14px 12px",minHeight:100 }}>
-          <div style={{ textAlign:"center",minWidth:160 }}>
-            {sigUrl
-              ? <img src={sigUrl} alt="Signature" style={{ height:54,maxWidth:160,objectFit:"contain",marginBottom:4,display:"block",margin:"0 auto 4px" }}/>
-              : invoice.showEmptySignatureBox
-                ? <div style={{ height:48,width:140,border:"1px dashed #bbb",marginBottom:4,margin:"0 auto 4px" }}/>
-                : <div style={{ height:48,marginBottom:4 }}/>
-            }
-            <div style={{ fontSize:10,color:"#333",marginTop:4 }}>Authorised Signatory For<br/><strong style={{ color:themeColor }}>{companyName}</strong></div>
+            {/* Row 1: SF Code | EMI Details | DBD | PF | FINANCE DUE */}
+            <div style={{ display:"grid", gridTemplateColumns:"130px 1fr 90px 90px 160px", borderBottom:B, fontSize:10.5 }}>
+              {/* SF CODE + EMI DETAILS stacked */}
+              <div style={{ padding:"6px 10px", borderRight:B }}>
+                <div style={{ fontSize:9, color:"#555", fontWeight:700, marginBottom:2 }}>SF CODE:</div>
+                <div style={{ fontWeight:700 }}>{fin!.loanRefNo || "-"}</div>
+                <div style={{ fontSize:9, color:"#555", fontWeight:700, marginTop:4, marginBottom:2 }}>EMI DETAILS:</div>
+                <div style={{ fontWeight:600, fontSize:10 }}>
+                  {fin!.emi
+                    ? `${fin!.emi}*${fin!.emiCount||1}${fin!.extraEmi ? `+${fin!.extraEmi}*${fin!.extraEmiCount||1}` : ""}`
+                    : "-"}
+                </div>
+              </div>
+              {/* Middle spacer / notes */}
+              <div style={{ padding:"6px 10px", borderRight:B }} />
+              {/* DBD */}
+              <div style={{ padding:"6px 10px", borderRight:B }}>
+                <div style={{ fontSize:9, color:"#555", fontWeight:700, marginBottom:2 }}>DBD:</div>
+                <div style={{ fontWeight:600 }}>{fin!.dbdCharges != null ? fin!.dbdCharges.toFixed(2) : "0.00"}</div>
+              </div>
+              {/* PF */}
+              <div style={{ padding:"6px 10px", borderRight:B }}>
+                <div style={{ fontSize:9, color:"#555", fontWeight:700, marginBottom:2 }}>PF:</div>
+                <div style={{ fontWeight:600 }}>{fin!.processingFee != null ? fin!.processingFee.toFixed(2) : "0.00"}</div>
+              </div>
+              {/* FINANCE DUE FROM FINANCER */}
+              <div style={{ padding:"6px 10px", background:"#f5f5f5" }}>
+                <div style={{ fontSize:9, color:"#555", fontWeight:700, marginBottom:2, lineHeight:1.4 }}>
+                  FINANCE DUE<br/>FROM FINANCER :
+                </div>
+                <div style={{ fontWeight:700, fontSize:12, color:"#111" }}>
+                  {fin!.loanAmount != null
+                    ? Number(fin!.loanAmount).toLocaleString("en-IN", { minimumFractionDigits:2 })
+                    : "-"}
+                </div>
+                {fin!.financerName && (
+                  <div style={{ fontSize:9, color:"#555", marginTop:3 }}>{fin!.financerName}</div>
+                )}
+              </div>
+            </div>
+
+            {/* Row 2: ISD Name | Contact | References */}
+            <div style={{ padding:"5px 10px", fontSize:10, borderBottom:B }}>
+              {fin!.agentName    && <span><strong>ISD Name : </strong>{fin!.agentName}{"  "}</span>}
+              {fin!.agentContact && <span><strong>Contact No : </strong>{fin!.agentContact}{"  "}</span>}
+              {fin!.reference    && <span><strong>References : </strong>{fin!.reference}</span>}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

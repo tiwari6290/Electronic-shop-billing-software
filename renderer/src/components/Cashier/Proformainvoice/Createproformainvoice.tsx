@@ -93,6 +93,40 @@ const IconMinusCircle = () => (
   </svg>
 );
 
+// ── Invoice Builder Det — mirrors InvoiceBuilderApp's InvoiceDetailsState ─────
+interface InvoiceBuilderDet {
+  showPO: boolean;
+  showEwayBill: boolean;
+  showVehicle: boolean;
+  showChallan: boolean;
+  showFinancedBy: boolean;
+  showSalesman: boolean;
+  showWarranty: boolean;
+  showDispatchedThrough?: boolean;
+  showTransportName?: boolean;
+  showEmailId?: boolean;
+  customFields: { label: string; value: string }[];
+}
+
+const BUILDER_DET_DEFAULT: InvoiceBuilderDet = {
+  showPO: false, showEwayBill: true, showVehicle: false,
+  showChallan: true, showFinancedBy: true, showSalesman: true,
+  showWarranty: true, showDispatchedThrough: false,
+  showTransportName: false, showEmailId: true,
+  customFields: [],
+};
+
+function loadBuilderDetCPI(): InvoiceBuilderDet {
+  try {
+    const raw = localStorage.getItem("activeInvoiceTemplate");
+    if (!raw) return BUILDER_DET_DEFAULT;
+    const t = JSON.parse(raw);
+    return t?.det ? { ...BUILDER_DET_DEFAULT, ...t.det } : BUILDER_DET_DEFAULT;
+  } catch {
+    return BUILDER_DET_DEFAULT;
+  }
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const todayStr = () => new Date().toISOString().split("T")[0];
 const fmtDate = (d: string) => {
@@ -120,6 +154,30 @@ interface Props {
 
 const CreateProformaInvoice: React.FC<Props> = ({ nextNumber, settings, editData, isEdit, onSave, onSaveNew, onBack }) => {
   const ed = editData ?? null;
+
+  // ── Invoice Builder det — controls which extra fields are visible ──────────
+  const [det, setDet] = useState<InvoiceBuilderDet>(loadBuilderDetCPI);
+
+  useEffect(() => {
+    const sync = () => {
+      const next = loadBuilderDetCPI();
+      setDet(prev => JSON.stringify(prev) !== JSON.stringify(next) ? next : prev);
+    };
+    sync();
+    const timer = setInterval(sync, 400);
+    const onStorage = (e: StorageEvent) => { if (e.key === "activeInvoiceTemplate") sync(); };
+    window.addEventListener("storage", onStorage);
+    return () => { clearInterval(timer); window.removeEventListener("storage", onStorage); };
+  }, []);
+
+  // ── Custom field values (keyed by label) ────────────────────────────────────
+  const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
+
+  // ── Signature ──────────────────────────────────────────────────────────────
+  const [showSignatureModal, setShowSignatureModal] = useState(false);
+  const [signatureMode, setSignatureMode] = useState<null | "image" | "empty">(null);
+  const [signatureUrl, setSignatureUrl] = useState<string>("");
+  const signatureFileRef = useRef<HTMLInputElement>(null);
 
   // ── Invoice meta ──────────────────────────────────────────────────────────
   const [invoiceDate, setInvoiceDate] = useState(ed?.invoiceDate ?? todayStr());
@@ -481,33 +539,63 @@ const CreateProformaInvoice: React.FC<Props> = ({ nextNumber, settings, editData
             </div>
           )}
 
-          {/* Extra Fields */}
-          <div className="aa-cpi-extra-grid">
-            <div className="aa-cpi-extra-field">
-              <label>E-Way Bill No: <span className="aa-cpi-info-icon"><IconInfo /></span></label>
-              <input className="aa-cpi-extra-input" value={eWayBill} onChange={e => setEWayBill(e.target.value)} />
-            </div>
-            <div className="aa-cpi-extra-field">
-              <label>Challan No.:</label>
-              <input className="aa-cpi-extra-input" value={challanNo} onChange={e => setChallanNo(e.target.value)} />
-            </div>
-            <div className="aa-cpi-extra-field">
-              <label>Financed By:</label>
-              <input className="aa-cpi-extra-input" value={financedBy} onChange={e => setFinancedBy(e.target.value)} />
-            </div>
-            <div className="aa-cpi-extra-field">
-              <label>Salesman:</label>
-              <input className="aa-cpi-extra-input" value={salesman} onChange={e => setSalesman(e.target.value)} />
-            </div>
-            <div className="aa-cpi-extra-field">
-              <label>Email ID:</label>
-              <input className="aa-cpi-extra-input" value={emailId} onChange={e => setEmailId(e.target.value)} />
-            </div>
-            <div className="aa-cpi-extra-field">
-              <label>Warranty Period:</label>
-              <input className="aa-cpi-extra-input" value={warrantyPeriod} onChange={e => setWarrantyPeriod(e.target.value)} />
-            </div>
-          </div>
+          {/* Extra Fields — driven by Invoice Builder det */}
+          {(() => {
+            type FieldDef = { label: string; key: string; isCustom?: boolean };
+            const visibleFields: FieldDef[] = [
+              ...(det.showEwayBill             ? [{ label: "E-Way Bill No:",       key: "eWayBill"    }] : []),
+              ...(det.showChallan              ? [{ label: "Challan No.:",         key: "challanNo"   }] : []),
+              ...(det.showFinancedBy           ? [{ label: "Financed By:",         key: "financedBy"  }] : []),
+              ...(det.showSalesman             ? [{ label: "Salesman:",            key: "salesman"    }] : []),
+              ...(det.showEmailId === true      ? [{ label: "Email ID:",            key: "emailId"     }] : []),
+              ...(det.showWarranty             ? [{ label: "Warranty Period:",      key: "warrantyPeriod" }] : []),
+              ...(det.showPO                   ? [{ label: "PO Number:",           key: "poNumber"    }] : []),
+              ...(det.showVehicle              ? [{ label: "Vehicle No:",          key: "vehicleNo"   }] : []),
+              ...(det.showDispatchedThrough === true ? [{ label: "Dispatched Through:", key: "dispatchedThrough" }] : []),
+              ...(det.showTransportName === true     ? [{ label: "Transport Name:",      key: "transportName"    }] : []),
+              ...(det.customFields ?? []).map(cf => ({ label: cf.label + ":", key: `custom_${cf.label}`, isCustom: true, defaultValue: cf.value })),
+            ];
+            if (visibleFields.length === 0) return null;
+
+            const getVal = (f: FieldDef & { defaultValue?: string }): string => {
+              if (f.key === "eWayBill")    return eWayBill;
+              if (f.key === "challanNo")   return challanNo;
+              if (f.key === "financedBy")  return financedBy;
+              if (f.key === "salesman")    return salesman;
+              if (f.key === "emailId")     return emailId;
+              if (f.key === "warrantyPeriod") return warrantyPeriod;
+              if (f.isCustom) return customFieldValues[f.label] ?? (f.defaultValue ?? "");
+              return customFieldValues[f.key] ?? "";
+            };
+
+            const setVal = (f: FieldDef, val: string) => {
+              if (f.key === "eWayBill")    { setEWayBill(val); return; }
+              if (f.key === "challanNo")   { setChallanNo(val); return; }
+              if (f.key === "financedBy")  { setFinancedBy(val); return; }
+              if (f.key === "salesman")    { setSalesman(val); return; }
+              if (f.key === "emailId")     { setEmailId(val); return; }
+              if (f.key === "warrantyPeriod") { setWarrantyPeriod(val); return; }
+              setCustomFieldValues(prev => ({ ...prev, [f.isCustom ? f.label : f.key]: val }));
+            };
+
+            return (
+              <div className="aa-cpi-extra-grid">
+                {visibleFields.map(f => (
+                  <div className="aa-cpi-extra-field" key={f.key}>
+                    <label>
+                      {f.label}
+                      {f.key === "eWayBill" && <span className="aa-cpi-info-icon"><IconInfo /></span>}
+                    </label>
+                    <input
+                      className="aa-cpi-extra-input"
+                      value={getVal(f as any)}
+                      onChange={e => setVal(f, e.target.value)}
+                    />
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
         </div>
       </div>
 
@@ -885,10 +973,110 @@ const CreateProformaInvoice: React.FC<Props> = ({ nextNumber, settings, editData
             <div className="aa-cpi-signature-label">
               Authorized signatory for <strong>scratchweb.solutions</strong>
             </div>
-            <div className="aa-cpi-signature-box" />
+
+            {/* No signature chosen yet */}
+            {signatureMode === null && (
+              <button className="aa-cpi-sig-add-btn" onClick={() => setShowSignatureModal(true)}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+                Add Signature
+              </button>
+            )}
+
+            {/* Empty signature box chosen */}
+            {signatureMode === "empty" && (
+              <div className="aa-cpi-signature-empty-wrap">
+                <div className="aa-cpi-signature-box" />
+                <button className="aa-cpi-sig-change-btn" onClick={() => setShowSignatureModal(true)}>Change</button>
+                <button className="aa-cpi-sig-remove-btn" onClick={() => { setSignatureMode(null); setSignatureUrl(""); }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                  </svg>
+                </button>
+              </div>
+            )}
+
+            {/* Uploaded image signature */}
+            {signatureMode === "image" && signatureUrl && (
+              <div className="aa-cpi-signature-img-wrap">
+                <img src={signatureUrl} alt="Signature" className="aa-cpi-signature-img" />
+                <div className="aa-cpi-sig-img-actions">
+                  <button className="aa-cpi-sig-change-btn" onClick={() => setShowSignatureModal(true)}>Change</button>
+                  <button className="aa-cpi-sig-remove-btn" onClick={() => { setSignatureMode(null); setSignatureUrl(""); }}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Hidden file input */}
+            <input
+              ref={signatureFileRef}
+              type="file"
+              accept="image/*"
+              style={{ display: "none" }}
+              onChange={e => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  setSignatureUrl(URL.createObjectURL(file));
+                  setSignatureMode("image");
+                  setShowSignatureModal(false);
+                }
+                e.target.value = "";
+              }}
+            />
           </div>
         </div>
       </div>
+
+      {/* Signature Picker Modal */}
+      {showSignatureModal && (
+        <div className="aa-cpi-modal-overlay" onClick={() => setShowSignatureModal(false)}>
+          <div className="aa-cpi-sig-modal" onClick={e => e.stopPropagation()}>
+            <div className="aa-cpi-modal-header">
+              <h2>Signature</h2>
+              <button className="aa-cpi-modal-close" onClick={() => setShowSignatureModal(false)}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </div>
+            <div className="aa-cpi-sig-modal-body">
+              {/* Option 1: Upload from Desktop */}
+              <button
+                className="aa-cpi-sig-option-card"
+                onClick={() => { setShowSignatureModal(false); signatureFileRef.current?.click(); }}
+              >
+                <div className="aa-cpi-sig-option-icon">
+                  <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#5b5fc7" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2"/>
+                    <circle cx="8.5" cy="8.5" r="1.5"/>
+                    <polyline points="21 15 16 10 5 21"/>
+                    <path d="M14 2v4h4"/>
+                  </svg>
+                </div>
+                <span className="aa-cpi-sig-option-label">Upload Signature from Desktop</span>
+              </button>
+
+              {/* Option 2: Show empty box */}
+              <button
+                className="aa-cpi-sig-option-card"
+                onClick={() => { setSignatureMode("empty"); setSignatureUrl(""); setShowSignatureModal(false); }}
+              >
+                <div className="aa-cpi-sig-option-icon">
+                  <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#5b5fc7" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="2" y="6" width="20" height="12" rx="2"/>
+                  </svg>
+                </div>
+                <span className="aa-cpi-sig-option-label">Show Empty Signature Box on Invoice</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Modals ── */}
       {showAddParty && (

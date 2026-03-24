@@ -46,6 +46,45 @@ interface Props {
   isEditMode: boolean;
 }
 
+// ─── Invoice Builder Det Type ──────────────────────────────────────────────────
+interface InvoiceBuilderDet {
+  showPO: boolean;
+  showEwayBill: boolean;
+  showVehicle: boolean;
+  showChallan: boolean;
+  showFinancedBy: boolean;
+  showSalesman: boolean;
+  showWarranty: boolean;
+  showDispatchedThrough?: boolean;
+  showTransportName?: boolean;
+  showEmailId?: boolean;
+  customFields: { label: string; value: string }[];
+}
+
+const BUILDER_DET_DEFAULT: InvoiceBuilderDet = {
+  showPO: false, showEwayBill: true, showVehicle: false,
+  showChallan: true, showFinancedBy: true, showSalesman: true,
+  showWarranty: true, showDispatchedThrough: false,
+  showTransportName: false, showEmailId: true,
+  customFields: [],
+};
+
+function loadBuilderDet(): InvoiceBuilderDet {
+  try {
+    const raw = localStorage.getItem("activeInvoiceTemplate");
+    if (!raw) return BUILDER_DET_DEFAULT;
+    const t = JSON.parse(raw);
+    if (!t?.det) return BUILDER_DET_DEFAULT;
+    return {
+      ...BUILDER_DET_DEFAULT,
+      ...t.det,
+      customFields: Array.isArray(t.det.customFields) ? t.det.customFields : [],
+    };
+  } catch {
+    return BUILDER_DET_DEFAULT;
+  }
+}
+
 // ─── Sample Items DB ───────────────────────────────────────────────────────────
 const SAMPLE_ITEMS: ItemData[] = [
   { id: 1, name: "BILLING SOFTWARE MOBILE APP", salesPrice: 256, unit: "PCS" },
@@ -128,8 +167,6 @@ function PartySelector({ parties, onSelect, onCreateParty }: { parties: Party[];
             <span>{p.name}</span>
             <span className="party-balance">
               ₹ {Math.abs(p.balance || 0).toLocaleString()}
-              {(p.balance || 0) < 0 && <span className="bal-up">↑</span>}
-              {(p.balance || 0) > 0 && <span className="bal-down">↓</span>}
             </span>
           </div>
         ))}
@@ -144,18 +181,15 @@ function CreatePartyModal({ onSave, onClose }: { onSave: (p: Party) => void; onC
   const [name, setName] = useState("");
   const [mobile, setMobile] = useState("");
   const [showAddress, setShowAddress] = useState(false);
-  const [showGstin, setShowGstin] = useState(false);
   const [address, setAddress] = useState("");
   const [state, setState] = useState("");
   const [pincode, setPincode] = useState("");
   const [city, setCity] = useState("");
-  const [sameAsBilling, setSameAsBilling] = useState(true);
-  const [gstin, setGstin] = useState("");
   const [nameErr, setNameErr] = useState(false);
 
   const handleSave = () => {
     if (!name.trim()) { setNameErr(true); return; }
-    const newParty: Party = { id: Date.now(), name: name.trim(), mobile, balance: 0, billingAddress: showAddress ? `${address}, ${city}, ${state} - ${pincode}` : "", gstin: showGstin ? gstin : "" };
+    const newParty: Party = { id: Date.now(), name: name.trim(), mobile, balance: 0, billingAddress: showAddress ? `${address}, ${city}, ${state} - ${pincode}` : "" };
     const stored = JSON.parse(localStorage.getItem("parties") || "[]");
     stored.push({ ...newParty, type: "Customer", category: "-" });
     localStorage.setItem("parties", JSON.stringify(stored));
@@ -172,22 +206,14 @@ function CreatePartyModal({ onSave, onClose }: { onSave: (p: Party) => void; onC
           {!showAddress ? <button className="link-btn" onClick={() => setShowAddress(true)}>+ Add Address (Optional)</button> : (
             <div className="optional-section">
               <div className="optional-section-header"><span>Address (Optional)</span><button className="link-btn-sm" onClick={() => setShowAddress(false)}>Remove</button></div>
-              <div className="cdc-field"><label>BILLING ADDRESS <span className="req">*</span></label><textarea className="cdc-textarea" placeholder="Enter billing address" value={address} onChange={e => setAddress(e.target.value)} rows={3} /></div>
+              <div className="cdc-field"><label>BILLING ADDRESS</label><textarea className="cdc-textarea" placeholder="Enter billing address" value={address} onChange={e => setAddress(e.target.value)} rows={3} /></div>
               <div className="cdc-row-2">
                 <div className="cdc-field"><label>STATE</label><input className="cdc-input" placeholder="Enter State" value={state} onChange={e => setState(e.target.value)} /></div>
                 <div className="cdc-field"><label>PINCODE</label><input className="cdc-input" placeholder="Enter Pincode" value={pincode} onChange={e => setPincode(e.target.value)} /></div>
               </div>
               <div className="cdc-field"><label>CITY</label><input className="cdc-input" placeholder="Enter City" value={city} onChange={e => setCity(e.target.value)} /></div>
-              <label className="check-label"><input type="checkbox" checked={sameAsBilling} onChange={e => setSameAsBilling(e.target.checked)} /> Shipping address same as billing address</label>
             </div>
           )}
-          {!showGstin ? <button className="link-btn" onClick={() => setShowGstin(true)}>+ Add GSTIN (Optional)</button> : (
-            <div className="optional-section">
-              <div className="optional-section-header"><span>GSTIN (Optional)</span><button className="link-btn-sm" onClick={() => setShowGstin(false)}>Remove</button></div>
-              <div className="cdc-field"><label>GSTIN</label><input className="cdc-input" placeholder="ex: 29XXXXX9438X1XX" value={gstin} onChange={e => setGstin(e.target.value)} /></div>
-            </div>
-          )}
-          <div className="party-settings-note">You can add Custom Fields from <span className="link-text">Party Settings</span></div>
         </div>
         <div className="cdc-modal-footer"><button className="btn-secondary-sm" onClick={onClose}>Cancel</button><button className="btn-primary-sm" onClick={handleSave}>Save</button></div>
       </div>
@@ -213,7 +239,10 @@ function ChangeShippingModal({ partyName, addresses, onDone, onClose }: { partyN
           <div className="cdc-modal-body">
             <div className="cdc-field"><label>Shipping Name <span className="req">*</span></label><input className="cdc-input" value={newName} onChange={e => setNewName(e.target.value)} /></div>
             <div className="cdc-field"><label>Street Address <span className="req">*</span></label><textarea className="cdc-textarea" placeholder="Enter Street Address" value={newStreet} onChange={e => setNewStreet(e.target.value)} rows={3} /></div>
-            <div className="cdc-row-2"><div className="cdc-field"><label>State</label><input className="cdc-input" placeholder="Enter State" value={newState} onChange={e => setNewState(e.target.value)} /></div><div className="cdc-field"><label>Pincode</label><input className="cdc-input" placeholder="Enter pin code" value={newPin} onChange={e => setNewPin(e.target.value)} /></div></div>
+            <div className="cdc-row-2">
+              <div className="cdc-field"><label>State</label><input className="cdc-input" placeholder="Enter State" value={newState} onChange={e => setNewState(e.target.value)} /></div>
+              <div className="cdc-field"><label>Pincode</label><input className="cdc-input" placeholder="Enter pin code" value={newPin} onChange={e => setNewPin(e.target.value)} /></div>
+            </div>
             <div className="cdc-field"><label>City</label><input className="cdc-input" placeholder="Enter City" value={newCity} onChange={e => setNewCity(e.target.value)} /></div>
           </div>
           <div className="cdc-modal-footer"><button className="btn-secondary-sm" onClick={() => setShowAddForm(false)}>Cancel</button><button className="btn-primary-sm" onClick={() => onDone(`${newName}, ${newStreet}, ${newCity}, ${newState} - ${newPin}`)}>Save</button></div>
@@ -231,7 +260,9 @@ function ChangeShippingModal({ partyName, addresses, onDone, onClose }: { partyN
           {addresses.map((addr, i) => (
             <div key={i} className="ship-addr-row">
               <div><div className="ship-addr-name">{partyName}</div><div className="ship-addr-text">{addr || "No Address"}</div></div>
-              <button className="ship-edit-btn">✏</button>
+              <button className="ship-edit-btn">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              </button>
               <input type="radio" checked={selected === i} onChange={() => setSelected(i)} />
             </div>
           ))}
@@ -244,7 +275,7 @@ function ChangeShippingModal({ partyName, addresses, onDone, onClose }: { partyN
 }
 
 // ─── Add Items Modal ───────────────────────────────────────────────────────────
-function AddItemsModal({ onAddItems, onClose, onCreateItem }: { onAddItems: (items: { item: ItemData; qty: number }[]) => void; onClose: () => void; onCreateItem: () => void }) {
+function AddItemsModal({ onAddItems, onClose }: { onAddItems: (items: { item: ItemData; qty: number }[]) => void; onClose: () => void }) {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [quantities, setQuantities] = useState<Record<number, number>>({});
@@ -266,7 +297,7 @@ function AddItemsModal({ onAddItems, onClose, onCreateItem }: { onAddItems: (ite
           <table className="aim-table">
             <thead><tr><th>Item Name</th><th>Item Code</th><th>Stock</th><th>Sales Price</th><th>Purchase Price</th><th>Quantity</th></tr></thead>
             <tbody>
-              {filtered.length === 0 ? (<tr><td colSpan={6} className="aim-empty">Scan items to add them to your invoice</td></tr>) : filtered.map(item => (
+              {filtered.length === 0 ? (<tr><td colSpan={6} className="aim-empty">No items found</td></tr>) : filtered.map(item => (
                 <tr key={item.id}>
                   <td className="aim-item-name">{item.name}</td>
                   <td>{item.itemCode || "-"}</td>
@@ -291,7 +322,7 @@ function AddItemsModal({ onAddItems, onClose, onCreateItem }: { onAddItems: (ite
           </table>
         </div>
         <div className="aim-footer">
-          <div className="aim-shortcuts"><span>Keyboard Shortcuts :</span><span>Change Quantity <kbd>Enter</kbd></span><span>Move between items <kbd>↑</kbd><kbd>↓</kbd></span></div>
+          <div className="aim-shortcuts"><span>Keyboard Shortcuts:</span><span>Change Quantity <kbd>Enter</kbd></span><span>Move between items <kbd>↑</kbd><kbd>↓</kbd></span></div>
           <div className="aim-footer-right">
             <span className="aim-selected">{totalSelected} Item(s) Selected</span>
             <button className="btn-secondary-sm" onClick={onClose}>Cancel [ESC]</button>
@@ -317,7 +348,7 @@ function ShowHideColumnsModal({ showPrice, showQty, onSave, onClose }: { showPri
           <div className="shc-row"><span>Quantity</span><Toggle value={qty} onChange={setQty} /></div>
           <div className="shc-divider">CUSTOM COLUMN</div>
           <div className="shc-empty-custom"><p>No Custom Columns added</p><p>Any custom column such as Batch # &amp; Expiry Date can be added</p></div>
-          <div className="shc-note">To add Custom Item Columns - Go to <strong >Item settings</strong> from <span className="link-text" onClick={() => { onClose(); navigate("/cashier/create-item/inventory"); }}>Items page (click here)</span></div>
+          <div className="shc-note">To add Custom Item Columns - Go to <strong>Item settings</strong> from <span className="link-text" onClick={() => { onClose(); navigate("/cashier/create-item/inventory"); }}>Items page (click here)</span></div>
         </div>
         <div className="cdc-modal-footer"><button className="btn-secondary-sm" onClick={onClose}>Cancel</button><button className="btn-primary-sm" onClick={() => { onSave(price, qty); onClose(); }}>Save</button></div>
       </div>
@@ -327,7 +358,7 @@ function ShowHideColumnsModal({ showPrice, showQty, onSave, onClose }: { showPri
 
 // ─── Select Bank Account Modal ─────────────────────────────────────────────────
 function SelectBankModal({ onClose, onAdd, onSelect }: { onClose: () => void; onAdd: () => void; onSelect: (b: BankAccount) => void }) {
-  const [banks, setBanks] = useState<BankAccount[]>(() => { try { return JSON.parse(localStorage.getItem("bankAccounts") || "[]"); } catch { return []; } });
+  const [banks] = useState<BankAccount[]>(() => { try { return JSON.parse(localStorage.getItem("bankAccounts") || "[]"); } catch { return []; } });
   const [selected, setSelected] = useState<number | null>(null);
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
@@ -338,20 +369,18 @@ function SelectBankModal({ onClose, onAdd, onSelect }: { onClose: () => void; on
             <p style={{ textAlign: "center", color: "#6b7280", padding: "16px 0" }}>No bank accounts added yet.<br/><button className="link-btn" style={{ marginTop: 8 }} onClick={onAdd}>+ Add Bank Account</button></p>
           ) : banks.map((b, i) => (
             <div key={i} className={`bank-select-row${selected===i?" selected":""}`} onClick={() => setSelected(i)}>
-              <div className="bank-logo-icon">🏦</div>
+              <div className="bank-logo-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="3" y="9" width="18" height="11" rx="2"/><path d="M3 9l9-5 9 5"/><line x1="12" y1="9" x2="12" y2="20"/></svg>
+              </div>
               <div className="bank-info">
                 <div className="bank-name">{b.bankBranchName || "Bank"}</div>
                 <div className="bank-acc">ACC No: {b.accountNumber}</div>
               </div>
-              <div className="bank-right">
-                <div className="bank-ifsc">IFSC: {b.ifscCode || "-"}</div>
-              </div>
+              <div className="bank-right"><div className="bank-ifsc">IFSC: {b.ifscCode || "-"}</div></div>
               <input type="radio" checked={selected === i} onChange={() => setSelected(i)} />
             </div>
           ))}
-          {banks.length > 0 && (
-            <button className="link-btn" style={{ marginTop: 12 }} onClick={onAdd}>+ Add Bank Account</button>
-          )}
+          {banks.length > 0 && <button className="link-btn" style={{ marginTop: 12 }} onClick={onAdd}>+ Add Bank Account</button>}
         </div>
         <div className="cdc-modal-footer">
           <button className="btn-secondary-sm" onClick={onClose}>Cancel</button>
@@ -423,6 +452,149 @@ function QuickSettingsModal({ settings, onSave, onClose }: { settings: SettingsS
   );
 }
 
+// ─── Signature Modal ───────────────────────────────────────────────────────────
+function SignatureModal({
+  onClose,
+  onUpload,
+  onShowEmpty,
+}: {
+  onClose: () => void;
+  onUpload: (dataUrl: string) => void;
+  onShowEmpty: () => void;
+}) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const result = ev.target?.result as string;
+      if (result) { onUpload(result); onClose(); }
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  }
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="cdc-sig-modal" onClick={e => e.stopPropagation()}>
+        {/* Header */}
+        <div className="cdc-sig-modal-header">
+          <h2 className="cdc-sig-modal-title">Signature</h2>
+          <button className="cdc-sig-modal-close" onClick={onClose}>
+            <X size={16} />
+          </button>
+        </div>
+
+        {/* Two option cards */}
+        <div className="cdc-sig-modal-body">
+          {/* Upload from Desktop */}
+          <button className="cdc-sig-option-card" onClick={() => fileInputRef.current?.click()}>
+            <div className="cdc-sig-option-icon">
+              <svg width="40" height="40" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="4" y="10" width="36" height="28" rx="3" stroke="#5b50d6" strokeWidth="2.2" fill="none"/>
+                <path d="M4 32 L15 20 L22 28 L30 18 L44 32" stroke="#5b50d6" strokeWidth="2" fill="none" strokeLinejoin="round"/>
+                <circle cx="13" cy="20" r="3" fill="#5b50d6" opacity="0.45"/>
+                <circle cx="38" cy="12" r="8" fill="#eef2ff"/>
+                <path d="M38 9 L38 15 M35 12 L38 9 L41 12" stroke="#5b50d6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+            <span className="cdc-sig-option-label">Upload Signature from<br/>Desktop</span>
+          </button>
+          <input ref={fileInputRef} type="file" accept="image/*" style={{ display: "none" }} onChange={handleFileChange} />
+
+          {/* Show Empty Box */}
+          <button className="cdc-sig-option-card" onClick={() => { onShowEmpty(); onClose(); }}>
+            <div className="cdc-sig-option-icon">
+              <svg width="44" height="36" viewBox="0 0 44 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="2" y="2" width="40" height="32" rx="3" stroke="#5b50d6" strokeWidth="2.2" fill="none"/>
+              </svg>
+            </div>
+            <span className="cdc-sig-option-label">Show Empty Signature<br/>Box on Invoice</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Signatory Section ─────────────────────────────────────────────────────────
+function SignatorySection({ businessName }: { businessName: string }) {
+  const [sigState, setSigState] = useState<"none" | "empty" | "uploaded">("none");
+  const [sigImage, setSigImage] = useState<string | null>(null);
+  const [showModal, setShowModal] = useState(false);
+
+  function handleUpload(dataUrl: string) {
+    setSigImage(dataUrl);
+    setSigState("uploaded");
+  }
+  function handleShowEmpty() {
+    setSigImage(null);
+    setSigState("empty");
+  }
+  function handleRemove(e: React.MouseEvent) {
+    e.stopPropagation();
+    setSigState("none");
+    setSigImage(null);
+  }
+
+  return (
+    <>
+      <div className="cdc-signatory">
+        <span className="cdc-signatory-label">
+          Authorized signatory
+        </span>
+
+        {sigState === "none" && (
+          <button className="cdc-sig-add-btn" onClick={() => setShowModal(true)} type="button">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            Add Signature
+          </button>
+        )}
+
+        {sigState === "empty" && (
+          <div className="cdc-sig-box-wrap">
+            <div
+              className="cdc-sig-display-box cdc-sig-display-box--empty"
+              onClick={() => setShowModal(true)}
+              title="Click to change signature"
+            />
+            <button className="cdc-sig-remove-btn" onClick={handleRemove} title="Remove signature" type="button">
+              <X size={10} />
+            </button>
+          </div>
+        )}
+
+        {sigState === "uploaded" && sigImage && (
+          <div className="cdc-sig-box-wrap">
+            <div
+              className="cdc-sig-display-box cdc-sig-display-box--uploaded"
+              onClick={() => setShowModal(true)}
+              title="Click to change signature"
+            >
+              <img src={sigImage} alt="Signature" className="cdc-sig-img" />
+            </div>
+            <button className="cdc-sig-remove-btn" onClick={handleRemove} title="Remove signature" type="button">
+              <X size={10} />
+            </button>
+          </div>
+        )}
+      </div>
+
+      {showModal && (
+        <SignatureModal
+          onClose={() => setShowModal(false)}
+          onUpload={handleUpload}
+          onShowEmpty={handleShowEmpty}
+        />
+      )}
+    </>
+  );
+}
+
 // ─── Bill Item Row ─────────────────────────────────────────────────────────────
 function BillItemRow({ item, index, onChange, onDelete, showPrice, showQty }: {
   item: BillItem; index: number;
@@ -445,14 +617,12 @@ function BillItemRow({ item, index, onChange, onDelete, showPrice, showQty }: {
 
   const raw = item.qty * item.pricePerItem;
 
-  // % → auto ₹
   const handleDiscPct = (percent: number) => {
     const amount = parseFloat((raw * percent / 100).toFixed(2));
     const disc = { percent, amount };
     onChange(item.id, { discount: disc, amount: recalcAmount({ discount: disc }, item) });
   };
 
-  // ₹ → auto %
   const handleDiscAmt = (amount: number) => {
     const percent = raw > 0 ? parseFloat(((amount / raw) * 100).toFixed(2)) : 0;
     const disc = { percent, amount };
@@ -484,16 +654,8 @@ function BillItemRow({ item, index, onChange, onDelete, showPrice, showQty }: {
       )}
       <td>
         <div className="discount-inputs">
-          <div className="disc-row">
-            <span className="disc-label">%</span>
-            <input className="bill-mini-input" type="number" min="0" max="100" value={item.discount.percent}
-              onChange={e => handleDiscPct(Number(e.target.value))} />
-          </div>
-          <div className="disc-row">
-            <span className="disc-label">₹</span>
-            <input className="bill-mini-input" type="number" min="0" value={item.discount.amount}
-              onChange={e => handleDiscAmt(Number(e.target.value))} />
-          </div>
+          <div className="disc-row"><span className="disc-label">%</span><input className="bill-mini-input" type="number" min="0" max="100" value={item.discount.percent} onChange={e => handleDiscPct(Number(e.target.value))} /></div>
+          <div className="disc-row"><span className="disc-label">₹</span><input className="bill-mini-input" type="number" min="0" value={item.discount.amount} onChange={e => handleDiscAmt(Number(e.target.value))} /></div>
         </div>
       </td>
       <td>
@@ -513,14 +675,9 @@ function BillItemRow({ item, index, onChange, onDelete, showPrice, showQty }: {
         {editingAmount ? (
           <div className="amount-cell">
             <span className="amount-currency">₹</span>
-            <input
-              className="bill-mini-input amount-edit-input"
-              type="number"
-              autoFocus
-              value={item.amount}
+            <input className="bill-mini-input amount-edit-input" type="number" autoFocus value={item.amount}
               onChange={e => onChange(item.id, { amount: Number(e.target.value) })}
-              onBlur={() => setEditingAmount(false)}
-            />
+              onBlur={() => setEditingAmount(false)} />
           </div>
         ) : (
           <div className="amount-cell amount-cell--clickable">
@@ -529,7 +686,7 @@ function BillItemRow({ item, index, onChange, onDelete, showPrice, showQty }: {
           </div>
         )}
       </td>
-      <td><button className="delete-row-btn" onClick={() => onDelete(item.id)}><Trash2 size={14} /></button></td>
+      <td><button className="delete-row-btn" onClick={() => onDelete(item.id)} type="button"><Trash2 size={14} /></button></td>
     </tr>
   );
 }
@@ -556,12 +713,59 @@ export default function CreateDeliveryChallan({ challan, nextNumber, settings, o
   const [challanNo, setChallanNo] = useState(challan?.challanNumber || nextNumber);
   const [challanDate, setChallanDate] = useState(challan?.date || todayStr());
   const [showDatePicker, setShowDatePicker] = useState(false);
+
+  // ── Invoice Builder controlled field values ────────────────────────────────
+  const [det, setDet] = useState<InvoiceBuilderDet>(loadBuilderDet);
+
+  // Sync det from localStorage periodically (in case InvoiceBuilder saves while challan form is open)
+  useEffect(() => {
+    const sync = () => {
+      const next = loadBuilderDet();
+      setDet(prev => JSON.stringify(prev) !== JSON.stringify(next) ? next : prev);
+    };
+    sync();
+    const timer = setInterval(sync, 500);
+    const onStorage = (e: StorageEvent) => { if (e.key === "activeInvoiceTemplate") sync(); };
+    window.addEventListener("storage", onStorage);
+    return () => { clearInterval(timer); window.removeEventListener("storage", onStorage); };
+  }, []);
+
+  // Standard field values (shown/hidden via det)
   const [eWayBillNo, setEWayBillNo] = useState(challan?.eWayBillNo || "");
   const [challanNoRef, setChallanNoRef] = useState(challan?.challanNoRef || "");
   const [financedBy, setFinancedBy] = useState(challan?.financedBy || "");
   const [salesman, setSalesman] = useState(challan?.salesman || "");
   const [emailId, setEmailId] = useState(challan?.emailId || "");
   const [warrantyPeriod, setWarrantyPeriod] = useState(challan?.warrantyPeriod || "");
+  const [poNumber, setPoNumber] = useState((challan as any)?.poNumber || "");
+  const [vehicleNo, setVehicleNo] = useState((challan as any)?.vehicleNo || "");
+  const [dispatchedThrough, setDispatchedThrough] = useState((challan as any)?.dispatchedThrough || "");
+  const [transportName, setTransportName] = useState((challan as any)?.transportName || "");
+
+  // Custom field values map: label → value (user can edit default)
+  const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>(() => {
+    try {
+      const stored = (challan as any)?.customFieldValues || {};
+      return stored;
+    } catch { return {}; }
+  });
+
+  // Seed default values when det.customFields changes
+  useEffect(() => {
+    if (!det.customFields?.length) return;
+    setCustomFieldValues(prev => {
+      const next = { ...prev };
+      det.customFields.forEach(cf => {
+        if (!cf.label?.trim()) return;
+        // Only seed if not already set AND there's a default value
+        if (!Object.prototype.hasOwnProperty.call(next, cf.label) && cf.value) {
+          next[cf.label] = cf.value;
+        }
+      });
+      return JSON.stringify(next) === JSON.stringify(prev) ? prev : next;
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(det.customFields)]);
 
   const [billItems, setBillItems] = useState<BillItem[]>(challan?.items || []);
   const [showAddItems, setShowAddItems] = useState(false);
@@ -577,7 +781,6 @@ export default function CreateDeliveryChallan({ challan, nextNumber, settings, o
   const [additionalCharges, setAdditionalCharges] = useState<AdditionalCharge[]>(challan?.additionalCharges || []);
   const [showAdditionalCharges, setShowAdditionalCharges] = useState((challan?.additionalCharges?.length || 0) > 0);
 
-  // Discount state: both % and ₹ amount, plus type
   const [discountType, setDiscountType] = useState<"After Tax" | "Before Tax">(challan?.discountType || "After Tax");
   const [discountPct, setDiscountPct] = useState(challan?.discountPct || 0);
   const [discountAmt, setDiscountAmt] = useState(challan?.discountAmt || 0);
@@ -589,14 +792,11 @@ export default function CreateDeliveryChallan({ challan, nextNumber, settings, o
   const [roundOffType, setRoundOffType] = useState<"+ Add" | "Reduce">("+ Add");
   const [showRoundOffMenu, setShowRoundOffMenu] = useState(false);
 
-  // Bank account
   const [selectedBank, setSelectedBank] = useState<BankAccount | null>(null);
   const [showBankModal, setShowBankModal] = useState(false);
   const [showAddBankModal, setShowAddBankModal] = useState(false);
 
   const [showSettings, setShowSettings] = useState(false);
-  const [paymentAmount, setPaymentAmount] = useState("");
-  const [showPaymentInput, setShowPaymentInput] = useState(false);
 
   const dateRef = useRef<HTMLDivElement>(null);
   const partySelectorRef = useRef<HTMLDivElement>(null);
@@ -615,14 +815,10 @@ export default function CreateDeliveryChallan({ challan, nextNumber, settings, o
   const totalDiscountItems = billItems.reduce((s, i) => s + (i.qty * i.pricePerItem * i.discount.percent / 100) + i.discount.amount, 0);
   const taxableBase = subtotal - totalDiscountItems + additionalCharges.reduce((s, c) => s + c.amount, 0);
   const taxableAmount = taxableBase;
-
-  // Discount value
   const discValueFromPct = taxableAmount * discountPct / 100;
   const effectiveDiscount = showDiscount ? (discountPct > 0 ? discValueFromPct : discountAmt) : 0;
-
   const totalAmount = taxableAmount - effectiveDiscount + (autoRoundOff ? (roundOffType === "Reduce" ? -roundOffAmt : roundOffAmt) : 0);
 
-  // Summary discount: % → auto ₹, ₹ → auto %
   const handleDiscountPctChange = (v: number) => {
     setDiscountPct(v);
     setDiscountAmt(v > 0 ? parseFloat((taxableAmount * v / 100).toFixed(2)) : 0);
@@ -662,7 +858,7 @@ export default function CreateDeliveryChallan({ challan, nextNumber, settings, o
 
   const handleSave = () => {
     const newChallan: ChallanItem = {
-      id: isEditMode ? (challan?.id || Date.now()) : (challan?.id || Date.now()),
+      id: challan?.id || Date.now(),
       date: challanDate,
       challanNumber: challanNo,
       partyName: selectedParty?.name || challan?.partyName || "Unknown",
@@ -686,7 +882,13 @@ export default function CreateDeliveryChallan({ challan, nextNumber, settings, o
       warrantyPeriod,
       shippingAddress,
       selectedBankId: selectedBank?.id,
-    };
+      // store extra fields
+      ...(poNumber && { poNumber }),
+      ...(vehicleNo && { vehicleNo }),
+      ...(dispatchedThrough && { dispatchedThrough }),
+      ...(transportName && { transportName }),
+      ...(Object.keys(customFieldValues).length > 0 && { customFieldValues }),
+    } as ChallanItem;
     onSave(newChallan);
   };
 
@@ -702,12 +904,45 @@ export default function CreateDeliveryChallan({ challan, nextNumber, settings, o
     setShowCreateParty(false);
   };
 
+  // Build the dynamic extra fields list from det
+  type ExtraField =
+    | { kind: "standard"; key: string; label: string; value: string; setter: (v: string) => void }
+    | { kind: "custom"; label: string; defaultVal: string };
+
+  const standardFields: ExtraField[] = [
+    ...(det.showEwayBill   ? [{ kind: "standard" as const, key: "eWayBillNo",     label: "E-Way Bill No.", value: eWayBillNo,     setter: setEWayBillNo }] : []),
+    ...(det.showChallan    ? [{ kind: "standard" as const, key: "challanNoRef",   label: "Challan No.",    value: challanNoRef,   setter: setChallanNoRef }] : []),
+    ...(det.showFinancedBy ? [{ kind: "standard" as const, key: "financedBy",     label: "Financed By",    value: financedBy,     setter: setFinancedBy }] : []),
+    ...(det.showSalesman   ? [{ kind: "standard" as const, key: "salesman",       label: "Salesman",       value: salesman,       setter: setSalesman }] : []),
+    ...(det.showEmailId    ? [{ kind: "standard" as const, key: "emailId",        label: "Email ID",       value: emailId,        setter: setEmailId }] : []),
+    ...(det.showWarranty   ? [{ kind: "standard" as const, key: "warrantyPeriod", label: "Warranty Period",value: warrantyPeriod, setter: setWarrantyPeriod }] : []),
+    ...(det.showPO         ? [{ kind: "standard" as const, key: "poNumber",       label: "PO Number",      value: poNumber,       setter: setPoNumber }] : []),
+    ...(det.showVehicle    ? [{ kind: "standard" as const, key: "vehicleNo",      label: "Vehicle No.",    value: vehicleNo,      setter: setVehicleNo }] : []),
+    ...(det.showDispatchedThrough ? [{ kind: "standard" as const, key: "dispatchedThrough", label: "Dispatched Through", value: dispatchedThrough, setter: setDispatchedThrough }] : []),
+    ...(det.showTransportName ? [{ kind: "standard" as const, key: "transportName",  label: "Transport Name", value: transportName, setter: setTransportName }] : []),
+  ];
+
+  const customFields: ExtraField[] = (det.customFields ?? [])
+    .filter(cf => cf.label?.trim() !== "")
+    .map(cf => ({ kind: "custom" as const, label: cf.label, defaultVal: cf.value ?? "" }));
+
+  const allExtraFields: ExtraField[] = [...standardFields, ...customFields];
+
+  // Chunk into rows of 4
+  const extraRows: ExtraField[][] = [];
+  for (let i = 0; i < allExtraFields.length; i += 4) extraRows.push(allExtraFields.slice(i, i + 4));
+
+  // Get business name from localStorage
+  const businessName = (() => {
+    try { return JSON.parse(localStorage.getItem("businessInfo") || "{}").name || "scratchweb.solutions"; } catch { return "scratchweb.solutions"; }
+  })();
+
   return (
     <div className="cdc-page">
       {/* Top Nav */}
       <div className="cdc-topnav">
         <div className="cdc-topnav-left">
-          <button className="back-btn" onClick={onBack}>
+          <button className="back-btn" onClick={onBack} type="button">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="15 18 9 12 15 6"/>
             </svg>
@@ -790,16 +1025,51 @@ export default function CreateDeliveryChallan({ challan, nextNumber, settings, o
                 )}
               </div>
             </div>
-            <div className="meta-row-4">
-              <div className="meta-field"><label>E-Way Bill No: <span className="info-icon">ⓘ</span></label><input className="meta-input" value={eWayBillNo} onChange={e => setEWayBillNo(e.target.value)} /></div>
-              <div className="meta-field"><label>Challan No.:</label><input className="meta-input" value={challanNoRef} onChange={e => setChallanNoRef(e.target.value)} /></div>
-              <div className="meta-field"><label>Financed By:</label><input className="meta-input" value={financedBy} onChange={e => setFinancedBy(e.target.value)} /></div>
-              <div className="meta-field"><label>Salesman:</label><input className="meta-input" value={salesman} onChange={e => setSalesman(e.target.value)} /></div>
-            </div>
-            <div className="meta-row-2">
-              <div className="meta-field"><label>Email ID:</label><input className="meta-input" value={emailId} onChange={e => setEmailId(e.target.value)} /></div>
-              <div className="meta-field"><label>Warranty Period:</label><input className="meta-input" value={warrantyPeriod} onChange={e => setWarrantyPeriod(e.target.value)} /></div>
-            </div>
+
+            {/* ── Dynamic Extra Fields from Invoice Builder ── */}
+            {allExtraFields.length > 0 && (
+              <div className="cdc-extra-fields-wrap">
+                {extraRows.map((row, ri) => (
+                  <div key={ri} className="meta-row-4" style={{ gridTemplateColumns: `repeat(${Math.min(row.length, 4)}, 1fr)` }}>
+                    {row.map(field => (
+                      field.kind === "standard" ? (
+                        <div className="meta-field" key={field.key}>
+                          <label>{field.label}:
+                            {field.key === "eWayBillNo" && (
+                              <span className="info-icon" title="E-Way Bill Number">ⓘ</span>
+                            )}
+                          </label>
+                          <input
+                            className="meta-input"
+                            value={field.value}
+                            onChange={e => field.setter(e.target.value)}
+                            placeholder=""
+                          />
+                        </div>
+                      ) : (
+                        <div className="meta-field" key={`custom_${field.label}`}>
+                          <label>{field.label}:</label>
+                          <input
+                            className="meta-input"
+                            placeholder={field.defaultVal ? `e.g. ${field.defaultVal}` : `Enter ${field.label}`}
+                            value={
+                              customFieldValues[field.label] !== undefined
+                                ? customFieldValues[field.label]
+                                : field.defaultVal
+                            }
+                            onChange={e => setCustomFieldValues(prev => ({ ...prev, [field.label]: e.target.value }))}
+                          />
+                        </div>
+                      )
+                    ))}
+                    {/* Pad incomplete rows */}
+                    {Array.from({ length: (4 - row.length) % 4 }).map((_, i) => (
+                      <div key={`pad-${ri}-${i}`} className="meta-field" />
+                    ))}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
@@ -816,7 +1086,7 @@ export default function CreateDeliveryChallan({ challan, nextNumber, settings, o
                 <th>DISCOUNT</th>
                 <th>TAX</th>
                 <th>AMOUNT (₹)</th>
-                <th><button className="add-col-btn" onClick={() => setShowHideColumns(true)}><Plus size={14} /></button></th>
+                <th><button className="add-col-btn" onClick={() => setShowHideColumns(true)} type="button"><Plus size={14} /></button></th>
               </tr>
             </thead>
             <tbody>
@@ -828,7 +1098,14 @@ export default function CreateDeliveryChallan({ challan, nextNumber, settings, o
 
           <div className="add-item-row">
             <div className="add-item-dashed" onClick={() => setShowAddItems(true)}>+ Add Item</div>
-            <div className="scan-barcode-btn" onClick={() => setShowAddItems(true)}><Barcode size={20} /> Scan Barcode</div>
+            <div className="scan-barcode-btn" onClick={() => setShowAddItems(true)}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="20" height="20">
+                <path d="M3 9V5a2 2 0 0 1 2-2h4M3 15v4a2 2 0 0 0 2 2h4M21 9V5a2 2 0 0 0-2-2h-4M21 15v4a2 2 0 0 1-2 2h-4"/>
+                <line x1="7" y1="8" x2="7" y2="16"/><line x1="10" y1="8" x2="10" y2="16"/>
+                <line x1="14" y1="8" x2="14" y2="16"/><line x1="17" y1="8" x2="17" y2="16"/>
+              </svg>
+              Scan Barcode
+            </div>
           </div>
 
           <div className="subtotal-row">
@@ -880,7 +1157,6 @@ export default function CreateDeliveryChallan({ challan, nextNumber, settings, o
 
           {/* Right: Summary */}
           <div className="cdc-summary">
-            {/* Additional Charges */}
             {showAdditionalCharges && additionalCharges.map((charge, i) => (
               <div key={charge.id} className="charge-row">
                 <input className="charge-label-input" placeholder="Enter charge (ex. Transport Charge)" value={charge.label}
@@ -908,7 +1184,6 @@ export default function CreateDeliveryChallan({ challan, nextNumber, settings, o
 
             <div className="summary-line"><span>Taxable Amount</span><span className="summary-val">₹ {taxableAmount.toFixed(0)}</span></div>
 
-            {/* Discount */}
             {showDiscount ? (
               <div className="discount-row">
                 <div className="discount-type-wrapper">
@@ -924,12 +1199,10 @@ export default function CreateDeliveryChallan({ challan, nextNumber, settings, o
                 </div>
                 <div className="discount-inputs-summary">
                   <span className="disc-pct-label">%</span>
-                  <input type="number" min="0" max="100" className="disc-pct-input" value={discountPct}
-                    onChange={e => handleDiscountPctChange(Number(e.target.value))} />
+                  <input type="number" min="0" max="100" className="disc-pct-input" value={discountPct} onChange={e => handleDiscountPctChange(Number(e.target.value))} />
                   <span className="disc-sep">/</span>
                   <span className="disc-cur">₹</span>
-                  <input type="number" min="0" className="disc-amt-input" value={discountAmt}
-                    onChange={e => handleDiscountAmtChange(Number(e.target.value))} />
+                  <input type="number" min="0" className="disc-amt-input" value={discountAmt} onChange={e => handleDiscountAmtChange(Number(e.target.value))} />
                   <button className="disc-remove" onClick={() => { setShowDiscount(false); setDiscountPct(0); setDiscountAmt(0); }}>⊗</button>
                 </div>
               </div>
@@ -943,7 +1216,6 @@ export default function CreateDeliveryChallan({ challan, nextNumber, settings, o
               <div className="summary-line discount-val"><span></span><span>- ₹ {effectiveDiscount.toFixed(2)}</span></div>
             )}
 
-            {/* Round Off */}
             <div className="roundoff-section">
               <div className="roundoff-row">
                 <label className="check-label">
@@ -968,14 +1240,13 @@ export default function CreateDeliveryChallan({ challan, nextNumber, settings, o
               </div>
             </div>
 
-            {/* Total Amount */}
             <div className="summary-total-row">
               <span className="total-label">Total Amount</span>
               <span className="total-value">₹ {totalAmount.toFixed(2)}</span>
             </div>
 
-            <div className="authorized-sig">Authorized signatory for <strong>scratchweb.solutions</strong></div>
-            <div className="sig-box"></div>
+            {/* ── UPDATED: Signature Section ── */}
+            <SignatorySection businessName={businessName} />
           </div>
         </div>
       </div>
@@ -990,7 +1261,7 @@ export default function CreateDeliveryChallan({ challan, nextNumber, settings, o
           onClose={() => setShowShippingModal(false)}
         />
       )}
-      {showAddItems && <AddItemsModal onAddItems={handleAddItemsFromModal} onClose={() => setShowAddItems(false)} onCreateItem={() => setShowAddItems(false)} />}
+      {showAddItems && <AddItemsModal onAddItems={handleAddItemsFromModal} onClose={() => setShowAddItems(false)} />}
       {showHideColumns && <ShowHideColumnsModal showPrice={showPrice} showQty={showQty} onSave={(p, q) => { setShowPrice(p); setShowQty(q); }} onClose={() => setShowHideColumns(false)} />}
       {showBankModal && (
         <SelectBankModal

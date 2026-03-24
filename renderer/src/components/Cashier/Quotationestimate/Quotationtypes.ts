@@ -68,6 +68,13 @@ export interface QuotationData {
   salesman: string;
   emailId: string;
   warrantyPeriod: string;
+  // ── Extra optional meta fields (controlled by InvoiceBuilder toggles) ───────
+  poNumber?:          string;
+  vehicleNo?:         string;
+  dispatchedThrough?: string;
+  transportName?:     string;
+  /** key→value map for custom fields defined in InvoiceBuilder, e.g. { "Job No": "123" } */
+  customFieldValues?: Record<string, string>;
   validFor: number;
   validityDate: string;
   showDueDate: boolean;
@@ -364,6 +371,11 @@ export function apiToFormData(q: ApiQuotation): QuotationData {
     salesman: q.salesman ?? "",
     emailId: q.emailId ?? "",
     warrantyPeriod: q.warrantyPeriod ?? "",
+    poNumber:          (q as any).poNumber          ?? "",
+    vehicleNo:         (q as any).vehicleNo         ?? "",
+    dispatchedThrough: (q as any).dispatchedThrough ?? "",
+    transportName:     (q as any).transportName     ?? "",
+    customFieldValues: (q as any).customFieldValues ?? {},
 
     validFor: 30,
     validityDate: q.validTill?.split("T")[0] ?? addDays(todayStr(), 30),
@@ -405,6 +417,11 @@ export function formDataToApiPayload(form: QuotationData, settings?: QuotationSe
     salesman: form.salesman,
     emailId: form.emailId,
     warrantyPeriod: form.warrantyPeriod,
+    poNumber:          (form as any).poNumber          ?? "",
+    vehicleNo:         (form as any).vehicleNo         ?? "",
+    dispatchedThrough: (form as any).dispatchedThrough ?? "",
+    transportName:     (form as any).transportName     ?? "",
+    customFieldValues: (form as any).customFieldValues ?? {},
     subTotal: subtotal,
     taxableAmount,
     discountAmount,

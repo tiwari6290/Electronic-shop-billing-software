@@ -853,7 +853,7 @@ export default function SISummary(p: Props) {
 
       {/* ── Authorized Signatory ───────────────────────────── */}
       <div className="si-signatory">
-        <div className="si-signatory-text">Authorized signatory for <strong>Your Business</strong></div>
+        <div className="si-signatory-text">Authorized signatory</div>
         <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }}
           onChange={e => {
             const file = e.target.files?.[0];
