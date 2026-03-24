@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { InvoiceItem, calcItemAmount } from "./Salesreturntypes";
 import "./Createsalesreturn.css";
 
@@ -19,7 +20,6 @@ function getStockItems(): StockItem[] {
     const raw = localStorage.getItem("items");
     if (raw) return JSON.parse(raw);
   } catch {}
-  // fallback sample items matching screenshots
   return [
     { id: "1", name: "BILLING SOFTWARE MOBILE APP", itemCode: "-", stock: "-", salesPrice: 256, purchasePrice: 0, category: "" },
     { id: "2", name: "BILLING SOFTWARE WITH GST", itemCode: "-", stock: "-", salesPrice: 369875, purchasePrice: 0, category: "" },
@@ -30,108 +30,27 @@ function getStockItems(): StockItem[] {
   ];
 }
 
-function saveNewItem(item: StockItem) {
-  const items = getStockItems();
-  items.push(item);
-  localStorage.setItem("items", JSON.stringify(items));
-}
-
-interface CreateNewItemModalProps {
-  onClose: () => void;
-  onSave: (item: StockItem) => void;
-}
-
-function CreateNewItemModal({ onClose, onSave }: CreateNewItemModalProps) {
-  const [name, setName] = useState("");
-  const [salesPrice, setSalesPrice] = useState(0);
-  const [purchasePrice, setPurchasePrice] = useState(0);
-  const [unit, setUnit] = useState("PCS");
-  const [itemCode, setItemCode] = useState("");
-  const [hsn, setHsn] = useState("");
-
-  const handleSave = () => {
-    if (!name.trim()) { alert("Item name is required"); return; }
-    const item: StockItem = {
-      id: `item-${Date.now()}`,
-      name: name.trim(),
-      itemCode: itemCode || "-",
-      stock: "-",
-      salesPrice,
-      purchasePrice,
-      category: "",
-      hsn,
-      unit,
-    };
-    saveNewItem(item);
-    onSave(item);
-  };
-
-  return (
-    <div className="csr-overlay csr-overlay--top2" onClick={onClose}>
-      <div className="csr-modal" onClick={e => e.stopPropagation()}>
-        <div className="csr-modal-hdr">
-          <span>Create New Item</span>
-          <button className="csr-modal-close" onClick={onClose}>×</button>
-        </div>
-        <div className="csr-modal-body">
-          <div className="csr-field">
-            <label>Item Name <span className="csr-req">*</span></label>
-            <input className="csr-input" value={name} onChange={e => setName(e.target.value)} placeholder="Enter item name" />
-          </div>
-          <div className="csr-two-col">
-            <div className="csr-field">
-              <label>Sales Price</label>
-              <input className="csr-input" type="number" value={salesPrice} onChange={e => setSalesPrice(Number(e.target.value))} />
-            </div>
-            <div className="csr-field">
-              <label>Purchase Price</label>
-              <input className="csr-input" type="number" value={purchasePrice} onChange={e => setPurchasePrice(Number(e.target.value))} />
-            </div>
-          </div>
-          <div className="csr-two-col">
-            <div className="csr-field">
-              <label>Unit</label>
-              <select className="csr-input" value={unit} onChange={e => setUnit(e.target.value)}>
-                {["PCS","KG","MTR","LTR","BOX","BAG","SET","PAIR","NOS","UNIT"].map(u => <option key={u}>{u}</option>)}
-              </select>
-            </div>
-            <div className="csr-field">
-              <label>Item Code / SKU</label>
-              <input className="csr-input" value={itemCode} onChange={e => setItemCode(e.target.value)} placeholder="-" />
-            </div>
-          </div>
-          <div className="csr-field">
-            <label>HSN / SAC Code</label>
-            <input className="csr-input" value={hsn} onChange={e => setHsn(e.target.value)} placeholder="Enter HSN code" />
-          </div>
-        </div>
-        <div className="csr-modal-footer">
-          <button className="csr-btn-cancel" onClick={onClose}>Cancel</button>
-          <button className="csr-btn-primary" onClick={handleSave}>Save</button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 interface AddItemsModalProps {
   onClose: () => void;
   onAddToBill: (items: InvoiceItem[]) => void;
 }
 
 export default function SRAddItemsModal({ onClose, onAddToBill }: AddItemsModalProps) {
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [catOpen, setCatOpen] = useState(false);
   const [quantities, setQuantities] = useState<Record<string, number>>({});
-  const [stockItems, setStockItems] = useState<StockItem[]>(() => getStockItems());
-  const [showCreateItem, setShowCreateItem] = useState(false);
+  const [stockItems] = useState<StockItem[]>(() => getStockItems());
 
   const categories = [...new Set(stockItems.map(i => i.category).filter(Boolean))] as string[];
 
   const filtered = stockItems.filter(item => {
     const q = search.toLowerCase();
-    const matchSearch = !search || item.name.toLowerCase().includes(q) || item.itemCode.toLowerCase().includes(q) || (item.hsn || "").includes(q);
+    const matchSearch = !search
+      || item.name.toLowerCase().includes(q)
+      || item.itemCode.toLowerCase().includes(q)
+      || (item.hsn || "").includes(q);
     const matchCat = !categoryFilter || item.category === categoryFilter;
     return matchSearch && matchCat;
   });
@@ -174,52 +93,75 @@ export default function SRAddItemsModal({ onClose, onAddToBill }: AddItemsModalP
     onClose();
   };
 
+  const handleCreateNewItem = () => {
+    // Navigate to the CreateItem page
+    navigate("/cashier/create-item");
+  };
+
   return (
     <div className="csr-overlay" onClick={onClose}>
       <div className="csr-add-items-modal" onClick={e => e.stopPropagation()}>
+
+        {/* Header */}
         <div className="csr-add-items-hdr">
           <span className="csr-add-items-title">Add Items to Bill</span>
           <button className="csr-modal-close" onClick={onClose}>×</button>
         </div>
 
+        {/* Toolbar */}
         <div className="csr-add-items-toolbar">
           <div className="csr-add-items-search">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+            </svg>
             <input
               autoFocus
               className="csr-add-items-search-input"
-              placeholder="Search by Item/ Serial no./ HSN code/ SKU/ Custom Field / Category"
+              placeholder="Search by Item / Serial no. / HSN code / SKU / Custom Field / Category"
               value={search}
               onChange={e => setSearch(e.target.value)}
             />
             <button className="csr-barcode-btn" title="Scan barcode">
               <svg width="20" height="18" viewBox="0 0 30 22" fill="none">
-                <rect x="1" y="1" width="4" height="20" rx="1" fill="#374151"/>
-                <rect x="7" y="1" width="2" height="20" rx="0.5" fill="#374151"/>
-                <rect x="11" y="1" width="3" height="20" rx="0.5" fill="#374151"/>
+                <rect x="1"  y="1" width="4"   height="20" rx="1"   fill="#374151"/>
+                <rect x="7"  y="1" width="2"   height="20" rx="0.5" fill="#374151"/>
+                <rect x="11" y="1" width="3"   height="20" rx="0.5" fill="#374151"/>
                 <rect x="16" y="1" width="1.5" height="20" rx="0.5" fill="#374151"/>
-                <rect x="19" y="1" width="3" height="20" rx="0.5" fill="#374151"/>
-                <rect x="24" y="1" width="2" height="20" rx="0.5" fill="#374151"/>
+                <rect x="19" y="1" width="3"   height="20" rx="0.5" fill="#374151"/>
+                <rect x="24" y="1" width="2"   height="20" rx="0.5" fill="#374151"/>
               </svg>
             </button>
           </div>
+
+          {/* Category filter */}
           <div className="csr-add-items-cat-wrap">
             <button className="csr-add-items-cat-btn" onClick={() => setCatOpen(!catOpen)}>
               {categoryFilter || "Select Category"}
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <polyline points="6 9 12 15 18 9"/>
+              </svg>
             </button>
             {catOpen && (
               <div className="csr-add-items-cat-drop">
-                <button className="csr-cat-opt" onClick={() => { setCategoryFilter(""); setCatOpen(false); }}>All Categories</button>
+                <button className="csr-cat-opt" onClick={() => { setCategoryFilter(""); setCatOpen(false); }}>
+                  All Categories
+                </button>
                 {categories.map(c => (
-                  <button key={c} className="csr-cat-opt" onClick={() => { setCategoryFilter(c); setCatOpen(false); }}>{c}</button>
+                  <button key={c} className="csr-cat-opt" onClick={() => { setCategoryFilter(c); setCatOpen(false); }}>
+                    {c}
+                  </button>
                 ))}
               </div>
             )}
           </div>
-          <button className="csr-create-item-btn" onClick={() => setShowCreateItem(true)}>Create New Item</button>
+
+          {/* Create New Item → navigates to CreateItem page */}
+          <button className="csr-create-item-btn" onClick={handleCreateNewItem}>
+            Create New Item
+          </button>
         </div>
 
+        {/* Table */}
         <div className="csr-add-items-table-wrap">
           <table className="csr-add-items-table">
             <thead>
@@ -271,15 +213,14 @@ export default function SRAddItemsModal({ onClose, onAddToBill }: AddItemsModalP
           </table>
         </div>
 
+        {/* Keyboard shortcuts */}
         <div className="csr-add-items-shortcuts">
           <span className="csr-shortcut-label">Keyboard Shortcuts :</span>
-          <span>Change Quantity</span>
-          <kbd>Enter</kbd>
-          <span>Move between items</span>
-          <kbd>↑</kbd>
-          <kbd>↓</kbd>
+          <span>Change Quantity</span><kbd>Enter</kbd>
+          <span>Move between items</span><kbd>↑</kbd><kbd>↓</kbd>
         </div>
 
+        {/* Footer */}
         <div className="csr-add-items-footer">
           <button className="csr-items-show-selected" onClick={() => {}}>
             {selectedCount > 0 ? `Show ${selectedCount} Item(s) Selected` : "0 Item(s) Selected"}
@@ -290,20 +231,12 @@ export default function SRAddItemsModal({ onClose, onAddToBill }: AddItemsModalP
               className={`csr-btn-primary${selectedCount === 0 ? " csr-btn-primary--disabled" : ""}`}
               onClick={handleAddToBill}
               disabled={selectedCount === 0}
-            >Add to Bill [F7]</button>
+            >
+              Add to Bill [F7]
+            </button>
           </div>
         </div>
       </div>
-
-      {showCreateItem && (
-        <CreateNewItemModal
-          onClose={() => setShowCreateItem(false)}
-          onSave={item => {
-            setStockItems(prev => [...prev, item]);
-            setShowCreateItem(false);
-          }}
-        />
-      )}
     </div>
   );
 }

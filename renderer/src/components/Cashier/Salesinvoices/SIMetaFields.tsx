@@ -49,7 +49,7 @@ function CalPicker({ value, onChange, onClose }: { value: string; onChange:(v:st
 }
 
 interface SIMetaFieldsProps {
-  invoiceNo: number;
+  invoiceNo: string;
   invoiceDate: string;
   showDueDate: boolean;
   paymentTermsDays: number;

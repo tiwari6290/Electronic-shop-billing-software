@@ -4,7 +4,7 @@ import "./Salesreturn.css";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface SalesReturnRecord {
-  id: number;
+  id: string;
   date: string;
   salesReturnNumber: number;
   partyName: string;
@@ -115,8 +115,8 @@ const MONTH_NAMES = [
 
 // ─── Load from localStorage ───────────────────────────────────────────────────
 const FALLBACK_DATA: SalesReturnRecord[] = [
-  { id: 1, date: "03 Mar 2026", salesReturnNumber: 2, partyName: "Ramakant Pandit", invoiceNo: 21, amount: 45000, status: "Unpaid" },
-  { id: 2, date: "03 Mar 2026", salesReturnNumber: 1, partyName: "Ramakant Pandit", invoiceNo: 22, amount: 21000, status: "Unpaid" },
+  { id: "1", date: "03 Mar 2026", salesReturnNumber: 2, partyName: "Ramakant Pandit", invoiceNo: 21, amount: 45000, status: "Unpaid" },
+  { id: "2", date: "03 Mar 2026", salesReturnNumber: 1, partyName: "Ramakant Pandit", invoiceNo: 22, amount: 21000, status: "Unpaid" },
 ];
 
 function loadFromStorage(): SalesReturnRecord[] {
@@ -126,7 +126,7 @@ function loadFromStorage(): SalesReturnRecord[] {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
         return parsed.map((r: any) => ({
-          id: r.id ?? Date.now(),
+          id: String(r.id ?? Date.now()),
           date: r.salesReturnDate
             ? new Date(r.salesReturnDate).toLocaleDateString("en-GB", {
                 day: "2-digit",
@@ -142,6 +142,66 @@ function loadFromStorage(): SalesReturnRecord[] {
         }));
       }
     }
+  } catch {}
+  // No real data in localStorage — seed it with fallback so viewmodel can find records
+  const seeded = [
+    {
+      id: "1",
+      salesReturnNo: 2,
+      salesReturnDate: "2026-03-03",
+      party: { id: 1, name: "Ramakant Pandit", category: "-", mobile: "-", type: "Customer", balance: 0 },
+      shipFrom: null,
+      linkedInvoiceId: "21",
+      billItems: [],
+      additionalCharges: [],
+      discountType: "after-tax",
+      discountPct: 0,
+      discountAmt: 0,
+      autoRoundOff: false,
+      roundOffAmt: 0,
+      amountPaid: 45000,
+      paymentMethod: "Cash",
+      markFullyPaid: false,
+      notes: "",
+      termsConditions: "",
+      eWayBillNo: "",
+      challanNo: "",
+      financedBy: "",
+      salesman: "",
+      emailId: "",
+      warrantyPeriod: "",
+      status: "Unpaid",
+    },
+    {
+      id: "2",
+      salesReturnNo: 1,
+      salesReturnDate: "2026-03-03",
+      party: { id: 1, name: "Ramakant Pandit", category: "-", mobile: "-", type: "Customer", balance: 0 },
+      shipFrom: null,
+      linkedInvoiceId: "22",
+      billItems: [],
+      additionalCharges: [],
+      discountType: "after-tax",
+      discountPct: 0,
+      discountAmt: 0,
+      autoRoundOff: false,
+      roundOffAmt: 0,
+      amountPaid: 21000,
+      paymentMethod: "Cash",
+      markFullyPaid: false,
+      notes: "",
+      termsConditions: "",
+      eWayBillNo: "",
+      challanNo: "",
+      financedBy: "",
+      salesman: "",
+      emailId: "",
+      warrantyPeriod: "",
+      status: "Unpaid",
+    },
+  ];
+  try {
+    localStorage.setItem("salesReturns", JSON.stringify(seeded));
   } catch {}
   return FALLBACK_DATA;
 }
@@ -572,10 +632,10 @@ const SettingsModal = ({ onClose, nextSeqNumber, onSave, initPrefix, initShowIma
 
 // ─── Row Action Menu ──────────────────────────────────────────────────────────
 interface RowMenuProps {
-  onEdit: () => void;
-  onEditHistory: () => void;
-  onDuplicate: () => void;
-  onDelete: () => void;
+  onEdit: (e: React.MouseEvent) => void;
+  onEditHistory: (e: React.MouseEvent) => void;
+  onDuplicate: (e: React.MouseEvent) => void;
+  onDelete: (e: React.MouseEvent) => void;
   onClose: () => void;
 }
 
@@ -608,12 +668,13 @@ export default function SalesReturn() {
   const [customRange, setCustomRange] = useState<DateRange>({ start: null, end: null });
   const [searchQuery, setSearchQuery] = useState("");
   const [showSettings, setShowSettings] = useState(false);
-  const [openMenuId, setOpenMenuId] = useState<number | null>(null);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [sortAmountDir, setSortAmountDir] = useState<"asc" | "desc">("desc");
   const [prefix, setPrefix] = useState("");
   const [showImage, setShowImage] = useState(true);
   const [showSearchTooltip, setShowSearchTooltip] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
 
   // Reload from localStorage whenever the page gains focus
   // (e.g. user comes back from the Create form)
@@ -651,31 +712,44 @@ export default function SalesReturn() {
       );
     });
 
-  const handleDelete = (id: number) => {
+  const handleDelete = (id: string) => {
     const updated = data.filter(r => r.id !== id);
     setData(updated);
-    // Also remove from localStorage
     try {
       const raw = localStorage.getItem("salesReturns");
       if (raw) {
         const all = JSON.parse(raw);
-        const filteredAll = all.filter((r: any) => r.id !== id);
+        const filteredAll = all.filter((r: any) => String(r.id) !== String(id));
         localStorage.setItem("salesReturns", JSON.stringify(filteredAll));
       }
     } catch {}
     setOpenMenuId(null);
+    setDeleteId(null);
   };
 
-  const handleDuplicate = (id: number) => {
-    const rec = data.find(r => r.id === id);
-    if (!rec) return;
-    const newRec: SalesReturnRecord = {
-      ...rec,
-      id: Date.now(),
-      salesReturnNumber: nextSeq,
-    };
-    const updated = [newRec, ...data];
-    setData(updated);
+  const handleDuplicate = (id: string) => {
+    try {
+      const raw = localStorage.getItem("salesReturns");
+      if (raw) {
+        const all = JSON.parse(raw);
+        const found = all.find((r: any) => String(r.id) === String(id));
+        if (found) {
+          const dup = {
+            ...found,
+            id: `sr-dup-${Date.now()}`,
+            salesReturnNo: nextSeq,
+            salesReturnDate: new Date().toISOString().split("T")[0],
+            status: "Unpaid",
+            amountPaid: 0,
+            markFullyPaid: false,
+          };
+          localStorage.setItem("sr-duplicate-draft", JSON.stringify(dup));
+          setOpenMenuId(null);
+          navigate("/cashier/sales-return-create?mode=duplicate");
+          return;
+        }
+      }
+    } catch {}
     setOpenMenuId(null);
   };
 
@@ -794,19 +868,20 @@ export default function SalesReturn() {
                     <div className="sr-action-cell">
                       <button
                         className="sr-dots-btn"
-                        onClick={() => setOpenMenuId(openMenuId === row.id ? null : row.id)}
+                        onClick={(e) => { e.stopPropagation(); setOpenMenuId(openMenuId === row.id ? null : row.id); }}
                       >
                         <IconDotsVertical />
                       </button>
                       {openMenuId === row.id && (
                         <RowMenu
-                          onEdit={() => {
+                          onEdit={(e) => {
+                            e.stopPropagation();
                             navigate(`/cashier/sales-return-edit/${row.id}`);
                             setOpenMenuId(null);
                           }}
-                          onEditHistory={() => setOpenMenuId(null)}
-                          onDuplicate={() => handleDuplicate(row.id)}
-                          onDelete={() => handleDelete(row.id)}
+                          onEditHistory={(e) => { e.stopPropagation(); setOpenMenuId(null); }}
+                          onDuplicate={(e) => { e.stopPropagation(); handleDuplicate(row.id); }}
+                          onDelete={(e) => { e.stopPropagation(); setDeleteId(row.id); setOpenMenuId(null); }}
                           onClose={() => setOpenMenuId(null)}
                         />
                       )}
@@ -818,6 +893,21 @@ export default function SalesReturn() {
           </tbody>
         </table>
       </div>
+
+
+      {/* Delete Confirm Modal */}
+      {deleteId && (
+        <div className="sr-modal-overlay" onClick={() => setDeleteId(null)}>
+          <div className="sr-delete-confirm-modal" onClick={e => e.stopPropagation()}>
+            <div className="sr-delete-confirm-title">Are you sure you want to delete this Sales Return?</div>
+            <div className="sr-delete-confirm-sub">Once deleted, it cannot be recovered</div>
+            <div className="sr-delete-confirm-btns">
+              <button className="sr-delete-cancel-btn" onClick={() => setDeleteId(null)}>Cancel</button>
+              <button className="sr-delete-ok-btn" onClick={() => handleDelete(deleteId)}>Yes, Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Settings Modal */}
       {showSettings && (

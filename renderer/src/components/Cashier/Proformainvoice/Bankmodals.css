@@ -1,35 +1,67 @@
-.bm-overlay { position:fixed;inset:0;background:rgba(20,20,40,0.45);z-index:600;display:flex;align-items:center;justify-content:center; }
-.bm-modal { background:#fff;border-radius:14px;width:540px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.2);animation:bm-slide 0.18s ease; }
-@keyframes bm-slide { from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);} }
-.bm-select-modal { width:520px; }
-.bm-header { display:flex;align-items:center;justify-content:space-between;padding:18px 20px 14px;border-bottom:1px solid #eee; }
-.bm-header h2 { margin:0;font-size:16px;font-weight:700;color:#1a1a2e; }
-.bm-close { width:28px;height:28px;border:none;background:transparent;cursor:pointer;color:#999;border-radius:6px;display:flex;align-items:center;justify-content:center;transition:background 0.1s; }
-.bm-close:hover { background:#f0f0f0; }
-.bm-body { padding:20px; }
-.bm-grid { display:grid;grid-template-columns:1fr 1fr;gap:16px; }
-.bm-field { display:flex;flex-direction:column;gap:5px; }
-.bm-field label { font-size:12.5px;font-weight:600;color:#555; }
-.bm-req { color:#e53e3e; }
-.bm-field input { height:40px;padding:0 12px;border:1.5px solid #dde1e7;border-radius:8px;font-size:13.5px;color:#333;outline:none;transition:border-color 0.15s; }
-.bm-field input:focus { border-color:#5b4fcf;box-shadow:0 0 0 3px rgba(91,79,207,0.1); }
-.bm-footer { display:flex;gap:10px;justify-content:flex-end;padding:16px 20px;border-top:1px solid #eee; }
-.bm-footer-center { justify-content:center; }
-.bm-cancel { height:38px;padding:0 20px;background:#fff;border:1.5px solid #dde1e7;border-radius:8px;font-size:13px;font-weight:600;color:#555;cursor:pointer; }
-.bm-submit { height:38px;padding:0 24px;background:#6c63e8;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;transition:background 0.15s; }
-.bm-submit:hover { background:#4338ca; }
-.bm-submit.disabled { background:#c4c0f0;cursor:not-allowed; }
-.bm-done { height:40px;padding:0 60px;background:#4f46e5;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:0.5px; }
-.bm-done:hover { background:#4338ca; }
-.bm-account-row { display:flex;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid #f0f0f8;cursor:pointer;border-radius:8px;transition:background 0.1s; }
-.bm-account-row:hover { background:#f7f6fd; }
-.bm-account-row.selected { background:#f0ecfd; }
-.bm-acc-icon { flex-shrink:0; }
-.bm-acc-info { flex:1; }
-.bm-acc-name { font-size:13.5px;font-weight:700;color:#1a1a2e; }
-.bm-acc-number { font-size:12px;color:#4f46e5;margin-top:2px; }
-.bm-acc-right { text-align:right; }
-.bm-acc-balance { font-size:13.5px;font-weight:600;color:#333; }
-.bm-acc-ifsc { font-size:12px;color:#4f46e5;margin-top:2px; }
-.bm-radio { width:18px;height:18px;border-radius:50%;border:2px solid #ccc;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:border-color 0.15s; }
-.bm-radio.checked { border-color:#4f46e5;background:#4f46e5;box-shadow:inset 0 0 0 4px #fff; }
+/* ── Bank Modals ─────────────────────────────────────────────────────────── */
+.aa-bm-overlay { position:fixed;inset:0;background:rgba(15,23,42,0.4);z-index:600;display:flex;align-items:center;justify-content:center; }
+.aa-bm-modal { background:#fff;border-radius:10px;width:520px;max-height:90vh;overflow-y:auto;box-shadow:0 16px 48px rgba(0,0,0,0.15);animation:bm-slide 0.18s ease; }
+@keyframes aa-bm-slide { from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);} }
+.aa-bm-select-modal { width:500px; }
+
+.aa-bm-header { display:flex;align-items:center;justify-content:space-between;padding:16px 20px 12px;border-bottom:1px solid #f1f5f9; }
+.aa-bm-header h2 { margin:0;font-size:15px;font-weight:600;color:#1e293b; }
+.aa-bm-close { width:26px;height:26px;border:none;background:transparent;cursor:pointer;color:#94a3b8;border-radius:5px;display:flex;align-items:center;justify-content:center;transition:background 0.1s; }
+.aa-bm-close:hover { background:#f1f5f9;color:#374151; }
+
+.aa-bm-body { padding:16px 20px; }
+.aa-bm-grid { display:grid;grid-template-columns:1fr 1fr;gap:14px; }
+.aa-bm-field { display:flex;flex-direction:column;gap:4px; }
+.aa-bm-field label { font-size:12px;font-weight:600;color:#64748b; }
+.aa-bm-req { color:#ef4444; }
+.aa-bm-field input { height:38px;padding:0 10px;border:1px solid #e2e8f0;border-radius:7px;font-size:13px;color:#374151;outline:none;transition:border-color 0.15s; }
+.aa-bm-field input:focus { border-color:#3b82f6;box-shadow:0 0 0 2px rgba(59,130,246,0.1); }
+.aa-bm-field input::placeholder { color:#cbd5e1; }
+
+.aa-bm-footer { display:flex;gap:8px;justify-content:flex-end;padding:14px 20px;border-top:1px solid #f1f5f9; }
+.aa-bm-footer-center { justify-content:center; }
+.aa-bm-cancel { height:36px;padding:0 18px;background:#fff;border:1px solid #e2e8f0;border-radius:7px;font-size:13px;font-weight:500;color:#64748b;cursor:pointer; }
+.aa-bm-cancel:hover { border-color:#94a3b8; }
+.aa-bm-submit { height:36px;padding:0 22px;background:#3b82f6;color:#fff;border:none;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;transition:background 0.15s; }
+.aa-bm-submit:hover { background:#2563eb; }
+.aa-bm-submit.disabled { background:#bfdbfe;cursor:not-allowed; }
+.aa-bm-done { height:38px;padding:0 48px;background:#3b82f6;color:#fff;border:none;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;letter-spacing:0.4px; }
+.aa-bm-done:hover { background:#2563eb; }
+
+/* Account row in select modal */
+.aa-bm-account-row { display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #f1f5f9;cursor:pointer;border-radius:7px;transition:background 0.1s; }
+.aa-bm-account-row:hover { background:#f8fafc; }
+.aa-bm-account-row.selected { background:#eff6ff; }
+.aa-bm-acc-icon { flex-shrink:0; }
+.aa-bm-acc-info { flex:1; }
+.aa-bm-acc-name { font-size:13px;font-weight:600;color:#1e293b; }
+.aa-bm-acc-number { font-size:11.5px;color:#3b82f6;margin-top:2px; }
+.aa-bm-acc-right { text-align:right; }
+.aa-bm-acc-balance { font-size:13px;font-weight:500;color:#374151; }
+.aa-bm-acc-ifsc { font-size:11.5px;color:#3b82f6;margin-top:2px; }
+.aa-bm-radio { width:17px;height:17px;border-radius:50%;border:2px solid #e2e8f0;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:border-color 0.15s; }
+.aa-bm-radio.checked { border-color:#3b82f6;background:#3b82f6;box-shadow:inset 0 0 0 4px #fff; }
+/* Bank icon in select modal */
+.aa-bm-bank-icon-wrap {
+  width: 40px; height: 40px; border-radius: 8px;
+  background: #eff6ff; border: 1px solid #bfdbfe;
+  display: flex; align-items: center; justify-content: center;
+  color: #3b82f6; flex-shrink: 0;
+}
+
+/* Bank selected details card */
+.aa-bm-selected-card {
+  background: #fff; border: 1px solid #e2e8f0; border-radius: 8px;
+  padding: 12px 16px;
+}
+.aa-bm-selected-card-title {
+  font-size: 13px; font-weight: 600; color: #111827; margin-bottom: 10px;
+}
+.aa-bm-selected-detail-row {
+  font-size: 12.5px; color: #6b7280; margin-bottom: 5px; line-height: 1.5;
+}
+.aa-bm-selected-detail-row strong { color: #111827; font-weight: 600; }
+.aa-bm-selected-actions {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: 10px; padding-top: 10px; border-top: 1px solid #f1f5f9;
+}

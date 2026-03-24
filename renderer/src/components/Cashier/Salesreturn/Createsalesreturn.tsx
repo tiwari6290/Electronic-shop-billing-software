@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import {
   SalesReturn, InvoiceItem, AdditionalCharge, LinkedInvoice,
   newBlankReturn, saveSalesReturn, getNextSalesReturnNo, calcTotal,
@@ -17,7 +18,23 @@ interface Props {
 }
 
 export default function CreateSalesReturn({ editId, onBack }: Props) {
-  const [form, setForm] = useState<SalesReturn>(() => newBlankReturn());
+  const location = useLocation();
+  const isDuplicateMode = new URLSearchParams(location.search).get("mode") === "duplicate";
+
+  const [form, setForm] = useState<SalesReturn>(() => {
+    // Duplicate mode: load the draft
+    if (!editId) {
+      try {
+        const draft = localStorage.getItem("sr-duplicate-draft");
+        if (draft) {
+          const parsed = JSON.parse(draft);
+          localStorage.removeItem("sr-duplicate-draft");
+          return parsed;
+        }
+      } catch {}
+    }
+    return newBlankReturn();
+  });
   const [showAddItems, setShowAddItems] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showDiscount, setShowDiscount] = useState(false);
@@ -108,7 +125,9 @@ export default function CreateSalesReturn({ editId, onBack }: Props) {
     const status: SalesReturn["status"] =
       form.amountPaid >= total && total > 0 ? "Paid"
         : form.amountPaid > 0 ? "Partially Paid" : "Unpaid";
-    const final = { ...form, status };
+    // In duplicate mode, force a new ID so it creates a new record
+    const finalId = isDuplicateMode ? `sr-${Date.now()}` : form.id;
+    const final = { ...form, id: finalId, status };
     saveSalesReturn(final);
     onBack();
   };
