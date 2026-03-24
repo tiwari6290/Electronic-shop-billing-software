@@ -1,5 +1,7 @@
 // ─── Shared Types for Quotation Module ────────────────────────────────────────
 
+import api from "@/lib/axios";
+
 export interface Party {
   id: number;
   name: string;
@@ -50,7 +52,7 @@ export interface AdditionalCharge {
 
 export interface QuotationData {
   id: string;
- quotationNo: string,
+  quotationNo: string;
   quotationDate: string;
   party: Party | null;
   billItems: BillItem[];
@@ -76,12 +78,12 @@ export interface QuotationData {
 }
 
 export const TAX_OPTIONS = [
-  { label: "None", rate: 0 },
-  { label: "GST 5%", rate: 5 },
-  { label: "GST 12%", rate: 12 },
-  { label: "GST 18%", rate: 18 },
-  { label: "GST 28%", rate: 28 },
-  { label: "IGST 5%", rate: 5 },
+  { label: "None",     rate: 0  },
+  { label: "GST 5%",   rate: 5  },
+  { label: "GST 12%",  rate: 12 },
+  { label: "GST 18%",  rate: 18 },
+  { label: "GST 28%",  rate: 28 },
+  { label: "IGST 5%",  rate: 5  },
   { label: "IGST 12%", rate: 12 },
   { label: "IGST 18%", rate: 18 },
   { label: "IGST 28%", rate: 28 },
@@ -95,9 +97,6 @@ export const CHARGE_TAX_OPTIONS = [
   "GST 28%",
 ];
 
-// ─── API Base ──────────────────────────────────────────────────────────────────
-const BASE = "/api";
-
 // ─── API Response Types ────────────────────────────────────────────────────────
 export interface ApiQuotation {
   id: number;
@@ -105,8 +104,8 @@ export interface ApiQuotation {
   partyId: number;
   party?: {
     id: number;
-    name: string;           // may or may not be present
-    partyName: string;      // actual field from Prisma Party model
+    name: string;
+    partyName: string;
     mobileNumber?: string;
     billingAddress?: string;
     shippingAddress?: string;
@@ -118,8 +117,8 @@ export interface ApiQuotation {
   validTill?: string | null;
   notes?: string;
   termsConditions?: string;
-  ewayBillNo?: string;      // Prisma schema field name (lowercase w)
-  eWayBillNo?: string;      // kept for backwards compat
+  ewayBillNo?: string;
+  eWayBillNo?: string;
   challanNo?: string;
   financedBy?: string;
   salesman?: string;
@@ -165,19 +164,6 @@ export interface QuotationSettings {
   branchCode?: string;
 }
 
-// ─── API Helpers ───────────────────────────────────────────────────────────────
-async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
-    headers: { "Content-Type": "application/json" },
-    ...options,
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error((err as any).message || `API error ${res.status}`);
-  }
-  return res.json() as Promise<T>;
-}
-
 // ─── Quotation API ─────────────────────────────────────────────────────────────
 export async function apiGetQuotations(params?: {
   search?: string;
@@ -186,42 +172,42 @@ export async function apiGetQuotations(params?: {
   endDate?: string;
 }): Promise<ApiQuotation[]> {
   const qs = new URLSearchParams();
-  if (params?.search) qs.set("search", params.search);
-  if (params?.status) qs.set("status", params.status);
+  if (params?.search)    qs.set("search",    params.search);
+  if (params?.status)    qs.set("status",    params.status);
   if (params?.startDate) qs.set("startDate", params.startDate);
-  if (params?.endDate) qs.set("endDate", params.endDate);
+  if (params?.endDate)   qs.set("endDate",   params.endDate);
   const query = qs.toString() ? `?${qs}` : "";
-  return apiFetch<ApiQuotation[]>(`/quotations/${query}`);
+  const res = await api.get(`/quotations/${query}`);
+  return res.data;
 }
 
 export async function apiGetQuotationById(id: number): Promise<ApiQuotation> {
-  return apiFetch<ApiQuotation>(`/quotations/${id}`);
+  const res = await api.get(`/quotations/${id}`);
+  return res.data;
 }
 
 export async function apiCreateQuotation(data: object): Promise<ApiQuotation> {
-  return apiFetch<ApiQuotation>("/quotations/", {
-    method: "POST",
-    body: JSON.stringify(data),
-  });
+  const res = await api.post(`/quotations/`, data);
+  return res.data;
 }
 
 export async function apiUpdateQuotation(id: number, data: object): Promise<ApiQuotation> {
-  return apiFetch<ApiQuotation>(`/quotations/${id}`, {
-    method: "PUT",
-    body: JSON.stringify(data),
-  });
+  const res = await api.put(`/quotations/${id}`, data);
+  return res.data;
 }
 
 export async function apiDeleteQuotation(id: number): Promise<void> {
-  return apiFetch<void>(`/quotations/${id}`, { method: "DELETE" });
+  await api.delete(`/quotations/${id}`);
 }
 
 export async function apiDuplicateQuotation(id: number): Promise<ApiQuotation> {
-  return apiFetch<ApiQuotation>(`/quotations/${id}/duplicate`, { method: "POST" });
+  const res = await api.post(`/quotations/${id}/duplicate`);
+  return res.data;
 }
 
 export async function apiConvertQuotationToInvoice(id: number): Promise<unknown> {
-  return apiFetch(`/quotations/${id}/convert`, { method: "POST" });
+  const res = await api.post(`/quotations/${id}/convert`);
+  return res.data;
 }
 
 /**
@@ -229,61 +215,57 @@ export async function apiConvertQuotationToInvoice(id: number): Promise<unknown>
  * Call this after the linked sales invoice has been saved successfully.
  */
 export async function apiCloseQuotation(id: number): Promise<ApiQuotation> {
-  return apiFetch<ApiQuotation>(`/quotations/${id}`, {
-    method: "PUT",
-    body: JSON.stringify({ status: "CONVERTED" }),
-  });
+  const res = await api.put(`/quotations/${id}`, { status: "CONVERTED" });
+  return res.data;
 }
 
 // ─── Settings API ──────────────────────────────────────────────────────────────
 export async function apiGetQuotationSettings(): Promise<QuotationSettings> {
-  return apiFetch<QuotationSettings>("/quotations/settings/");
+  const res = await api.get(`/quotations/settings/`);
+  return res.data;
 }
 
 export async function apiSaveQuotationSettings(data: Partial<QuotationSettings>): Promise<QuotationSettings> {
-  return apiFetch<QuotationSettings>("/quotations/settings/", {
-    method: "PUT",
-    body: JSON.stringify(data),
-  });
+  const res = await api.put(`/quotations/settings/`, data);
+  return res.data;
 }
 
 // ─── Party & Product API ───────────────────────────────────────────────────────
 export async function apiGetParties(): Promise<Party[]> {
-  const res = await apiFetch<{ success: boolean; data: any[] }>("/parties/");
-  const raw = res.data ?? [];
-  return raw.map((p) => ({
-    id: p.id,
-    name: p.partyName ?? p.name,
-    mobile: p.mobileNumber ?? p.mobile ?? "",
-    balance: p.openingBalance ?? p.balance ?? 0,
-    email: p.email,
-    gstin: p.gstin,
-    billingAddress: p.billingAddress,
+  const res = await api.get(`/parties/`);
+  const raw = res.data?.data ?? [];
+  return raw.map((p: any) => ({
+    id:              p.id,
+    name:            p.partyName ?? p.name,
+    mobile:          p.mobileNumber ?? p.mobile ?? "",
+    balance:         p.openingBalance ?? p.balance ?? 0,
+    email:           p.email,
+    gstin:           p.gstin,
+    billingAddress:  p.billingAddress,
     shippingAddress: p.shippingAddress,
-    category: p.partyCategory ?? p.category,
-    type: p.partyType ?? p.type,
+    category:        p.partyCategory ?? p.category,
+    type:            p.partyType ?? p.type,
   }));
 }
 
 export async function apiGetItems(): Promise<Item[]> {
-  const res = await apiFetch<{ success: boolean; data: any[] }>("/items/");
-  const raw = res.data ?? [];
-  return raw.map((p) => {
-    // currentStock is the live balance, sum across all godowns
+  const res = await api.get(`/items/`);
+  const raw = res.data?.data ?? [];
+  return raw.map((p: any) => {
     const totalStock = (p.ProductStock ?? []).reduce(
       (s: number, ps: any) => s + (ps.currentStock ?? ps.openingStock ?? 0),
       0
     );
     return {
-      id: p.id,
-      name: p.name,
-      itemCode: p.itemCode ?? "",
-      stock: totalStock.toString(),
-      salesPrice: p.salesPrice ? Number(p.salesPrice) : 0,
+      id:            p.id,
+      name:          p.name,
+      itemCode:      p.itemCode ?? "",
+      stock:         totalStock.toString(),
+      salesPrice:    p.salesPrice    ? Number(p.salesPrice)    : 0,
       purchasePrice: p.purchasePrice ? Number(p.purchasePrice) : 0,
-      unit: p.unit ?? "",
-      hsn: p.hsnCode ?? "",
-      category: p.category ?? "",
+      unit:          p.unit ?? "",
+      hsn:           p.hsnCode ?? "",
+      category:      p.category ?? "",
     };
   });
 }
@@ -293,141 +275,137 @@ export function apiToFormData(q: ApiQuotation): QuotationData {
   const roundOff = Number(q.roundOff ?? 0);
 
   return {
-    id: String(q.id),
-
-    // keep full quotation number
-    quotationNo: q.quotationNo ?? String(q.id),
-
+    id:           String(q.id),
+    quotationNo:  q.quotationNo ?? String(q.id),
     quotationDate: q.quotationDate?.split("T")[0] ?? todayStr(),
 
     party: q.party
       ? {
-          id: q.party.id,
-          name: q.party.partyName ?? (q.party as any).name ?? "",
-          mobile: q.party.mobileNumber ?? "",
-          balance: Number(q.party.openingBalance ?? 0),
-          email: q.party.email,
-          gstin: q.party.gstin,
-          billingAddress: q.party.billingAddress,
+          id:              q.party.id,
+          name:            q.party.partyName ?? (q.party as any).name ?? "",
+          mobile:          q.party.mobileNumber ?? "",
+          balance:         Number(q.party.openingBalance ?? 0),
+          email:           q.party.email,
+          gstin:           q.party.gstin,
+          billingAddress:  q.party.billingAddress,
           shippingAddress: q.party.shippingAddress,
         }
       : null,
 
     billItems: (q.items ?? []).map((item): BillItem => {
-      const price = Number(item.price ?? 0);
-      const qty = Number(item.quantity ?? 0);
+      const price       = Number(item.price    ?? 0);
+      const qty         = Number(item.quantity ?? 0);
       const discountPct = Number(item.discount ?? 0);
-      const taxRate = Number(item.taxRate ?? 0);
-      const total = Number(item.total ?? 0);
-
-      const amount =
-        total > 0
-          ? total
-          : price * qty * (1 - discountPct / 100) * (1 + taxRate / 100);
+      const taxRate     = Number(item.taxRate  ?? 0);
+      const total       = Number(item.total    ?? 0);
+      const amount      = total > 0
+        ? total
+        : price * qty * (1 - discountPct / 100) * (1 + taxRate / 100);
 
       return {
-        rowId: String(item.id),
-        itemId: item.productId,
-        name: item.product?.name ?? "",
+        rowId:       String(item.id),
+        itemId:      item.productId,
+        name:        item.product?.name ?? "",
         description: "",
-        hsn: item.product?.hsnCode ?? "",
+        hsn:         item.product?.hsnCode ?? "",
         qty,
-        unit: item.product?.unit ?? "",
+        unit:        item.product?.unit ?? "",
         price,
         discountPct,
         discountAmt: 0,
-        taxLabel: taxRate > 0 ? `GST ${taxRate}%` : "None",
+        taxLabel:    taxRate > 0 ? `GST ${taxRate}%` : "None",
         taxRate,
         amount,
       };
     }),
 
     additionalCharges: (q.additionalCharges ?? []).map((c): AdditionalCharge => ({
-      id: String(c.id),
-      label: c.name,
-      amount: Number(c.amount ?? 0),
+      id:       String(c.id),
+      label:    c.name,
+      amount:   Number(c.amount ?? 0),
       taxLabel: "No Tax Applicable",
     })),
 
     discountType: "Discount After Tax",
-    discountPct: 0,
-    discountAmt: Number(q.discountAmount ?? 0),
+    discountPct:  0,
+    discountAmt:  Number(q.discountAmount ?? 0),
 
-    roundOff: roundOff > 0 ? "+Add" : roundOff < 0 ? "-Reduce" : "none",
+    roundOff:    roundOff > 0 ? "+Add" : roundOff < 0 ? "-Reduce" : "none",
     roundOffAmt: Math.abs(roundOff),
 
-    notes: q.notes ?? "",
+    notes:           q.notes           ?? "",
     termsConditions: q.termsConditions ?? "",
-    eWayBillNo: (q as any).ewayBillNo ?? (q as any).eWayBillNo ?? "",
-    challanNo: q.challanNo ?? "",
-    financedBy: q.financedBy ?? "",
-    salesman: q.salesman ?? "",
-    emailId: q.emailId ?? "",
-    warrantyPeriod: q.warrantyPeriod ?? "",
+    eWayBillNo:      (q as any).ewayBillNo ?? (q as any).eWayBillNo ?? "",
+    challanNo:       q.challanNo       ?? "",
+    financedBy:      q.financedBy      ?? "",
+    salesman:        q.salesman        ?? "",
+    emailId:         q.emailId         ?? "",
+    warrantyPeriod:  q.warrantyPeriod  ?? "",
 
-    validFor: 30,
+    validFor:     30,
     validityDate: q.validTill?.split("T")[0] ?? addDays(todayStr(), 30),
-    showDueDate: !!q.validTill,
+    showDueDate:  !!q.validTill,
 
-    status: q.status === "OPEN" ? "Open" : "Closed",
+    status:    q.status === "OPEN" ? "Open" : "Closed",
     createdAt: q.createdAt?.split("T")[0] ?? todayStr(),
   };
 }
 
 // ─── Mapper: QuotationData → API payload ──────────────────────────────────────
 export function formDataToApiPayload(form: QuotationData, settings?: QuotationSettings) {
-  const subtotal = form.billItems.reduce((s, i) => s + i.amount, 0);
-  const chargesTotal = form.additionalCharges.reduce((s, c) => s + c.amount, 0);
-  const taxAmount = form.billItems.reduce((s, i) => s + (i.amount * i.taxRate) / (100 + i.taxRate), 0);
+  const subtotal      = form.billItems.reduce((s, i) => s + i.amount, 0);
+  const chargesTotal  = form.additionalCharges.reduce((s, c) => s + c.amount, 0);
+  const taxAmount     = form.billItems.reduce((s, i) => s + (i.amount * i.taxRate) / (100 + i.taxRate), 0);
   const taxableAmount = subtotal - taxAmount;
   const discountAmount = form.discountPct > 0
     ? (subtotal * form.discountPct) / 100
     : form.discountAmt;
-  const roundOffVal = form.roundOff === "+Add" ? form.roundOffAmt : form.roundOff === "-Reduce" ? -form.roundOffAmt : 0;
+  const roundOffVal = form.roundOff === "+Add"
+    ? form.roundOffAmt
+    : form.roundOff === "-Reduce"
+    ? -form.roundOffAmt
+    : 0;
   const totalAmount = subtotal + chargesTotal - discountAmount + roundOffVal;
-
-  // Use form.quotationNo as the numeric part — backend already bumped the sequence.
-  // Only apply prefix from settings if prefix is enabled and non-empty.
- const quotationNo = form.quotationNo;
-
+  const quotationNo = form.quotationNo;
 
   return {
     quotationNo,
-    partyId: form.party?.id ?? null,
-    branchCode: settings?.branchCode ?? null,
-    quotationDate: form.quotationDate,
-    validTill: form.showDueDate ? form.validityDate : null,
-    notes: form.notes,
-    termsConditions: form.termsConditions,
-    ewayBillNo: form.eWayBillNo,
-    challanNo: form.challanNo,
-    financedBy: form.financedBy,
-    salesman: form.salesman,
-    emailId: form.emailId,
-    warrantyPeriod: form.warrantyPeriod,
-    subTotal: subtotal,
+    partyId:                form.party?.id ?? null,
+    branchCode:             settings?.branchCode ?? null,
+    quotationDate:          form.quotationDate,
+    validTill:              form.showDueDate ? form.validityDate : null,
+    notes:                  form.notes,
+    termsConditions:        form.termsConditions,
+    ewayBillNo:             form.eWayBillNo,
+    challanNo:              form.challanNo,
+    financedBy:             form.financedBy,
+    salesman:               form.salesman,
+    emailId:                form.emailId,
+    warrantyPeriod:         form.warrantyPeriod,
+    subTotal:               subtotal,
     taxableAmount,
     discountAmount,
     additionalChargesTotal: chargesTotal,
     taxAmount,
-    roundOff: roundOffVal,
+    roundOff:               roundOffVal,
     totalAmount,
     items: form.billItems.map((item) => ({
       productId: item.itemId,
-      quantity: item.qty,
-      price: item.price,
-      discount: item.discountPct,
-      taxRate: item.taxRate,
+      quantity:  item.qty,
+      price:     item.price,
+      discount:  item.discountPct,
+      taxRate:   item.taxRate,
       taxAmount: (item.amount * item.taxRate) / (100 + item.taxRate),
-      total: item.amount,
+      total:     item.amount,
     })),
     additionalCharges: form.additionalCharges.map((c) => ({
-      name: c.label,
+      name:   c.label,
       amount: c.amount,
     })),
   };
 }
 
+// ─── Utilities ────────────────────────────────────────────────────────────────
 export function formatCurrency(n: number): string {
   return "₹ " + n.toLocaleString("en-IN");
 }

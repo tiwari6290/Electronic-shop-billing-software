@@ -1,7 +1,7 @@
 // ─── invoiceMapper.ts ─────────────────────────────────────────────────────────
 // Maps raw backend Invoice → frontend SalesInvoice form state
 
-import { SaleInvoice, fromSaleInvoice } from "../api/salesInvoiceApi";
+import { SaleInvoice, fromSaleInvoice } from "@/api/salesInvoiceApi";
 import { SalesInvoice } from "../components/Cashier/Salesinvoices/SalesInvoiceTypes";
 
 export function mapBackendInvoice(inv: SaleInvoice): SalesInvoice {

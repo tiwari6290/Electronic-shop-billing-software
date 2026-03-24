@@ -1,11 +1,4 @@
-import axios from "axios";
-
-const API = axios.create({
-  baseURL: "http://localhost:4000", // your backend port
-  headers: {
-    "Content-Type": "application/json",
-  },
-});
+import api from "../lib/axios";
 
 export const loginApi = async (payload: {
   role: string;
@@ -13,6 +6,6 @@ export const loginApi = async (payload: {
   username: string;
   password: string;
 }) => {
-  const res = await API.post("/api/auth/login", payload);
+  const res = await api.post("/auth/login", payload);
   return res.data;
 };

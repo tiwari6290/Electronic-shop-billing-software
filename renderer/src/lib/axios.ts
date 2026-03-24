@@ -1,14 +1,14 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
-  withCredentials: true, // cookies / auth ke liye
+  baseURL: import.meta.env.VITE_API_URL, // must be Render URL
+  withCredentials: false, // ⚠️ change this
   headers: {
     "Content-Type": "application/json",
   },
 });
 
-// Optional: Request interceptor
+// Request interceptor
 api.interceptors.request.use(
   (config) => {
     return config;
@@ -16,11 +16,14 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Optional: Response interceptor
+// Response interceptor
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    console.error("API Error:", error.response || error.message);
+    console.error(
+      "API Error:",
+      error?.response?.data || error.message
+    );
     return Promise.reject(error);
   }
 );

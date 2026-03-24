@@ -6,7 +6,7 @@ import {
   Link2, MessageSquare, X,
 } from "lucide-react";
 import "./Parties.css";
-import axios from "axios";
+import api from "@/lib/axios";
 
 interface Party {
   id: number;
@@ -66,7 +66,7 @@ const Parties: React.FC = () => {
   const handleDeleteParty = async () => {
     if (!deletePartyId) return;
     try {
-      await axios.delete(`http://localhost:4000/api/parties/${deletePartyId}`);
+      await api.delete(`/parties/${deletePartyId}`);
       setParties((prev) => prev.filter((p) => p.id !== deletePartyId));
       setDeletePartyId(null);
       setShowDeleteModal(false);
@@ -78,7 +78,7 @@ const Parties: React.FC = () => {
   useEffect(() => {
     const fetchParties = async () => {
       try {
-        const res = await axios.get("http://localhost:4000/api/parties");
+        const res = await api.get("/parties");
         const formatted = res.data.data.map((p: any) => ({
           id: p.id,
           name: p.partyName,

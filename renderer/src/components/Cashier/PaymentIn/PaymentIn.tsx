@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import "./PaymentIn.css";
+import api from "@/lib/axios";
 import {
   getPaymentInById,
   getPaymentInSettings,
@@ -9,8 +10,8 @@ import {
   updatePaymentIn,
   type PaymentInRecord,
   type PendingInvoice,
-} from "../../../api/paymentInApi";
-import { getParties }    from "../../../api/salesInvoiceApi";
+} from "@/api/paymentInApi";
+import { getParties } from "@/api/salesInvoiceApi";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface Party { id: number; name: string; partyName: string; balance?: number; }
@@ -52,7 +53,7 @@ interface PRow {
   checked:         boolean;
 }
 
-// ─── Add Bank Account Modal (uses party's bank accounts API) ──────────────────
+// ─── Add Bank Account Modal ───────────────────────────────────────────────────
 function AddBankAccountModal({ partyId, onClose, onSave }: { partyId: number; onClose: () => void; onSave: (acc: BankAccount) => void }) {
   const [form, setForm] = useState({ accountHolder: "", bankName: "", accountNumber: "", confirmAccountNumber: "", ifscCode: "", branchName: "", upiId: "" });
   const [err, setErr] = useState<Record<string, string>>({});
@@ -68,16 +69,18 @@ function AddBankAccountModal({ partyId, onClose, onSave }: { partyId: number; on
     if (Object.keys(e).length) { setErr(e); return; }
     setSaving(true);
     try {
-      const res = await fetch(`/api/parties/${partyId}/bank-accounts`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ accountHolder: form.accountHolder, bankName: form.bankName, accountNumber: form.accountNumber, ifscCode: form.ifscCode.toUpperCase(), branchName: form.branchName || undefined, upiId: form.upiId || undefined }),
+      const res = await api.post(`/parties/${partyId}/bank-accounts`, {
+        accountHolder: form.accountHolder,
+        bankName:      form.bankName,
+        accountNumber: form.accountNumber,
+        ifscCode:      form.ifscCode.toUpperCase(),
+        branchName:    form.branchName || undefined,
+        upiId:         form.upiId     || undefined,
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message ?? "Failed to save");
-      onSave(data);
-    } catch (err: any) { setErr({ accountHolder: err.message }); }
-    finally { setSaving(false); }
+      onSave(res.data);
+    } catch (err: any) {
+      setErr({ accountHolder: err.response?.data?.message ?? err.message });
+    } finally { setSaving(false); }
   }
 
   function ch(name: string) { return (e: React.ChangeEvent<HTMLInputElement>) => { setForm(f => ({ ...f, [name]: e.target.value })); setErr(er => ({ ...er, [name]: "" })); }; }
@@ -112,7 +115,7 @@ function AddBankAccountModal({ partyId, onClose, onSave }: { partyId: number; on
   );
 }
 
-// ─── Quick Settings Modal (backend-driven) ────────────────────────────────────
+// ─── Quick Settings Modal ─────────────────────────────────────────────────────
 function QuickSettingsModal({ nextNo, onClose, onSave }: { nextNo: string; onClose: () => void; onSave: (no: string) => void }) {
   const [val, setVal] = useState(nextNo);
   return (
@@ -185,13 +188,12 @@ function PartyDropdown({ value, partyId, onChange, disabled, openRef }: { value:
   const ref = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Expose open() so parent can trigger it (e.g. from "Select Party" button)
   useEffect(() => {
     if (openRef) openRef.current = () => setOpen(true);
   }, [openRef]);
 
   useEffect(() => {
-    getParties().then(list => setParties(list.map((p: any) => ({ id: p.id, name: p.partyName, partyName: p.partyName }))));
+    getParties().then((list: any[]) => setParties(list.map(p => ({ id: p.id, name: p.partyName, partyName: p.partyName }))));
   }, []);
   useEffect(() => {
     function h(e: MouseEvent) { if (ref.current && !ref.current.contains(e.target as Node)) { setOpen(false); setSearch(""); } }
@@ -226,8 +228,7 @@ function PartyDropdown({ value, partyId, onChange, disabled, openRef }: { value:
   );
 }
 
-// ─── Account Dropdown (business accounts — cash / bank / UPI) ────────────────
-// ─── Add Business Account Modal ──────────────────────────────────────────────
+// ─── Add Business Account Modal ───────────────────────────────────────────────
 function AddBusinessAccountModal({ onClose, onSave }: { onClose: () => void; onSave: (acc: BankAccount) => void }) {
   const [form, setForm] = useState({ accountHolder: "", type: "BANK", bankName: "", accountNumber: "", ifscCode: "", upiId: "" });
   const [err, setErr] = useState<Record<string, string>>({});
@@ -242,23 +243,18 @@ function AddBusinessAccountModal({ onClose, onSave }: { onClose: () => void; onS
     if (Object.keys(e).length) { setErr(e); return; }
     setSaving(true);
     try {
-      const res = await fetch("/api/accounts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          accountHolder: form.accountHolder,
-          type: form.type,
-          bankName: form.bankName || undefined,
-          accountNumber: form.accountNumber || undefined,
-          ifscCode: form.ifscCode || undefined,
-          upiId: form.upiId || undefined,
-        }),
+      const res = await api.post(`/accounts`, {
+        accountHolder: form.accountHolder,
+        type:          form.type,
+        bankName:      form.bankName      || undefined,
+        accountNumber: form.accountNumber || undefined,
+        ifscCode:      form.ifscCode      || undefined,
+        upiId:         form.upiId         || undefined,
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message ?? "Failed to save");
-      onSave({ ...data, balance: 0 });
-    } catch (err: any) { setErr({ accountHolder: err.message }); }
-    finally { setSaving(false); }
+      onSave({ ...res.data, balance: 0 });
+    } catch (err: any) {
+      setErr({ accountHolder: err.response?.data?.message ?? err.message });
+    } finally { setSaving(false); }
   }
 
   function ch(name: string) { return (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => { setForm(f => ({ ...f, [name]: e.target.value })); setErr(er => ({ ...er, [name]: "" })); }; }
@@ -314,7 +310,7 @@ function AddBusinessAccountModal({ onClose, onSave }: { onClose: () => void; onS
   );
 }
 
-// ─── Account Dropdown (business accounts — cash / bank / UPI) ────────────────
+// ─── Account Dropdown ─────────────────────────────────────────────────────────
 function AccountDropdown({ value, accountId, onChange }: { value: string; accountId: number | null; onChange: (label: string, id: number | null) => void }) {
   const [open, setOpen] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
@@ -322,9 +318,8 @@ function AccountDropdown({ value, accountId, onChange }: { value: string; accoun
   const ref = useRef<HTMLDivElement>(null);
 
   function loadAccounts() {
-    fetch("/api/payments-in/accounts")
-      .then(r => r.json())
-      .then(d => setAccounts(d.accounts ?? []))
+    api.get(`/payments-in/accounts`)
+      .then(r => setAccounts(r.data.accounts ?? []))
       .catch(() => {});
   }
 
@@ -414,43 +409,39 @@ export default function PaymentIn() {
   const editId      = params.get("editId") ? parseInt(params.get("editId")!) : null;
   const isEditing   = !!editId;
 
-  // ── State ──────────────────────────────────────────────────────────────────
-  const [loading,    setLoading]    = useState(isEditing);
-  const [saving,     setSaving]     = useState(false);
-  const [error,      setError]      = useState<string | null>(null);
-
-  const [partyName,          setPartyName]          = useState("");
-  const [partyId,            setPartyId]            = useState<number | null>(null);
-  const [amountReceived,     setAmountReceived]      = useState("0");
-  const [discount,           setDiscount]            = useState("0");
-  const [date,               setDate]                = useState(todayIso());
-  const [paymentMode,        setPaymentMode]         = useState("Cash");
-  const [paymentReceivedIn,  setPaymentReceivedIn]   = useState("");
+  const [loading,             setLoading]             = useState(isEditing);
+  const [saving,              setSaving]              = useState(false);
+  const [error,               setError]               = useState<string | null>(null);
+  const [partyName,           setPartyName]           = useState("");
+  const [partyId,             setPartyId]             = useState<number | null>(null);
+  const [amountReceived,      setAmountReceived]      = useState("0");
+  const [discount,            setDiscount]            = useState("0");
+  const [date,                setDate]                = useState(todayIso());
+  const [paymentMode,         setPaymentMode]         = useState("Cash");
+  const [paymentReceivedIn,   setPaymentReceivedIn]   = useState("");
   const [paymentReceivedInId, setPaymentReceivedInId] = useState<number | null>(null);
-  const [paymentNumber,      setPaymentNumber]       = useState("");
-  const [notes,              setNotes]               = useState("");
-  const [showSettings,       setShowSettings]        = useState(false);
-  const [invoiceSearch,      setInvoiceSearch]       = useState("");
-  const [rows,               setRows]                = useState<PRow[]>([]);
-  const [loadingInvoices,    setLoadingInvoices]     = useState(false);
-  const [tdsModal,           setTdsModal]            = useState<{ invoiceId: number; invoiceNo: string; pending: number } | null>(null);
-  const [discModal,          setDiscModal]           = useState<{ invoiceId: number; invoiceNo: string; pending: number } | null>(null);
-  const [nextPaymentNo,      setNextPaymentNo]       = useState("PI-1");
+  const [paymentNumber,       setPaymentNumber]       = useState("");
+  const [notes,               setNotes]               = useState("");
+  const [showSettings,        setShowSettings]        = useState(false);
+  const [invoiceSearch,       setInvoiceSearch]       = useState("");
+  const [rows,                setRows]                = useState<PRow[]>([]);
+  const [loadingInvoices,     setLoadingInvoices]     = useState(false);
+  const [tdsModal,            setTdsModal]            = useState<{ invoiceId: number; invoiceNo: string; pending: number } | null>(null);
+  const [discModal,           setDiscModal]           = useState<{ invoiceId: number; invoiceNo: string; pending: number } | null>(null);
+  const [nextPaymentNo,       setNextPaymentNo]       = useState("PI-1");
   const partyDropdownOpenRef = useRef<(() => void) | null>(null);
 
-  // ── Load next payment number ───────────────────────────────────────────────
   useEffect(() => {
-    getPaymentInSettings().then(s => {
+    getPaymentInSettings().then((s: any) => {
       setNextPaymentNo(s.nextPaymentNo);
       if (!isEditing) setPaymentNumber(s.nextPaymentNo);
     }).catch(() => {});
   }, [isEditing]);
 
-  // ── Load edit data ─────────────────────────────────────────────────────────
   useEffect(() => {
     if (!editId) return;
     setLoading(true);
-    getPaymentInById(editId).then(rec => {
+    getPaymentInById(editId).then((rec: any) => {
       setPartyName(rec.partyName);
       setPartyId(rec.partyId);
       setAmountReceived(String(rec.amount));
@@ -462,8 +453,7 @@ export default function PaymentIn() {
         setPaymentReceivedInId(rec.accountId);
         setPaymentReceivedIn(rec.accountName ?? "");
       }
-      // Restore settled rows
-      const restoredRows: PRow[] = rec.allocations.map(a => ({
+      const restoredRows: PRow[] = rec.allocations.map((a: any) => ({
         invoiceId:       a.invoiceId,
         invoiceNo:       String(a.invoiceNo),
         invoiceDate:     a.invoiceDate,
@@ -477,18 +467,17 @@ export default function PaymentIn() {
       }));
       setRows(restoredRows);
       setLoading(false);
-    }).catch(err => {
+    }).catch((err: any) => {
       setError(err.message);
       setLoading(false);
     });
   }, [editId]);
 
-  // ── Load pending invoices when party changes (new mode) ────────────────────
   useEffect(() => {
     if (isEditing || !partyId) { if (!partyId) setRows([]); return; }
     setLoadingInvoices(true);
-    getPendingInvoicesForParty(partyId).then(invoices => {
-      const newRows: PRow[] = invoices.map(inv => ({
+    getPendingInvoicesForParty(partyId).then((invoices: any[]) => {
+      const newRows: PRow[] = invoices.map((inv: any) => ({
         invoiceId:       inv.id,
         invoiceNo:       String(inv.invoiceNo),
         invoiceDate:     inv.invoiceDate,
@@ -505,7 +494,6 @@ export default function PaymentIn() {
     }).catch(() => setLoadingInvoices(false));
   }, [partyId, isEditing]);
 
-  // ── Auto-distribute amount across checked rows ─────────────────────────────
   useEffect(() => {
     const total = parseFloat(amountReceived) || 0;
     if (total <= 0) { setRows(prev => prev.map(r => ({ ...r, amountReceived: 0 }))); return; }
@@ -566,20 +554,18 @@ export default function PaymentIn() {
     });
   }
 
-  function applyTds(invoiceId: number, tds: number)  { setRows(prev => prev.map(r => r.invoiceId === invoiceId ? { ...r, tds }      : r)); }
+  function applyTds(invoiceId: number, tds: number)       { setRows(prev => prev.map(r => r.invoiceId === invoiceId ? { ...r, tds }        : r)); }
   function applyDiscount(invoiceId: number, disc: number) { setRows(prev => prev.map(r => r.invoiceId === invoiceId ? { ...r, discount: disc } : r)); }
 
-  // ── Totals ─────────────────────────────────────────────────────────────────
-  const checkedRows         = rows.filter(r => r.checked);
-  const totalInvoiceAmount  = checkedRows.reduce((s, r) => s + r.totalAmount, 0);
-  const totalTds            = checkedRows.reduce((s, r) => s + r.tds, 0);
-  const totalDiscount       = checkedRows.reduce((s, r) => s + r.discount, 0);
-  const totalAmtReceived    = checkedRows.reduce((s, r) => s + r.amountReceived, 0);
-  const allChecked          = rows.length > 0 && rows.every(r => r.checked);
-  const someChecked         = rows.some(r => r.checked);
-  const displayRows         = invoiceSearch ? rows.filter(r => r.invoiceNo.includes(invoiceSearch)) : rows;
+  const checkedRows        = rows.filter(r => r.checked);
+  const totalInvoiceAmount = checkedRows.reduce((s, r) => s + r.totalAmount, 0);
+  const totalTds           = checkedRows.reduce((s, r) => s + r.tds, 0);
+  const totalDiscount      = checkedRows.reduce((s, r) => s + r.discount, 0);
+  const totalAmtReceived   = checkedRows.reduce((s, r) => s + r.amountReceived, 0);
+  const allChecked         = rows.length > 0 && rows.every(r => r.checked);
+  const someChecked        = rows.some(r => r.checked);
+  const displayRows        = invoiceSearch ? rows.filter(r => r.invoiceNo.includes(invoiceSearch)) : rows;
 
-  // ── Save ───────────────────────────────────────────────────────────────────
   async function handleSave() {
     if (!partyId || !amountReceived) { alert("Please fill required fields"); return; }
     setSaving(true);
@@ -592,10 +578,10 @@ export default function PaymentIn() {
       const payload = {
         partyId,
         date,
-        mode:        paymentMode,
-        amount:      parseFloat(amountReceived),
-        notes:       notes || undefined,
-        accountId:   paymentReceivedInId ?? undefined,
+        mode:      paymentMode,
+        amount:    parseFloat(amountReceived),
+        notes:     notes || undefined,
+        accountId: paymentReceivedInId ?? undefined,
         allocations,
       };
 
@@ -619,7 +605,6 @@ export default function PaymentIn() {
 
   return (
     <>
-      {/* ── Navbar ─────────────────────────────────────────────────────── */}
       <div className="pi-navbar">
         <div className="pi-navbar-left">
           <button className="pi-back-btn" onClick={() => navigate(-1)}>
@@ -647,10 +632,8 @@ export default function PaymentIn() {
         </div>
       )}
 
-      {/* ── Page ─────────────────────────────────────────────────────────── */}
       <div className="pi-page">
         <div className="pi-top-grid">
-          {/* Left card */}
           <div className="pi-card">
             <div className="pi-form-field">
               <label className="pi-form-label">Party Name</label>
@@ -668,7 +651,6 @@ export default function PaymentIn() {
             </div>
           </div>
 
-          {/* Right card */}
           <div className="pi-card">
             <div className={paymentMode !== "Cash" ? "pi-row-3" : "pi-row-2"}>
               <div className="pi-form-field">
@@ -699,7 +681,6 @@ export default function PaymentIn() {
           </div>
         </div>
 
-        {/* ── Settle Invoices ────────────────────────────────────────────── */}
         {!partyId ? (
           <div className="pi-empty-card">
             <div className="pi-empty">
@@ -713,12 +694,7 @@ export default function PaymentIn() {
               </svg>
               <div className="pi-empty-title">No party selected!</div>
               <div className="pi-empty-sub">Select Party Name to view transactions</div>
-              <button
-                className="pi-empty-btn"
-                onClick={() => partyDropdownOpenRef.current?.()}
-              >
-                Select Party
-              </button>
+              <button className="pi-empty-btn" onClick={() => partyDropdownOpenRef.current?.()}>Select Party</button>
             </div>
           </div>
         ) : (
@@ -796,7 +772,6 @@ export default function PaymentIn() {
         )}
       </div>
 
-      {/* Modals */}
       {showSettings && <QuickSettingsModal nextNo={nextPaymentNo} onClose={() => setShowSettings(false)} onSave={setPaymentNumber} />}
       {tdsModal && <ApplyTDSModal invoiceNo={tdsModal.invoiceNo} pending={tdsModal.pending} onApply={tds => applyTds(tdsModal.invoiceId, tds)} onClose={() => setTdsModal(null)} />}
       {discModal && <ApplyDiscountModal invoiceNo={discModal.invoiceNo} pending={discModal.pending} onApply={disc => applyDiscount(discModal.invoiceId, disc)} onClose={() => setDiscModal(null)} />}

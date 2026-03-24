@@ -1,29 +1,54 @@
-import { BrowserWindow } from "electron"
-import path from "path"
-import { fileURLToPath } from "url"
+// import { BrowserWindow, app } from "electron";
+// import path from "path";
 
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = path.dirname(__filename)
+// export function createMainWindow() {
+//   const win = new BrowserWindow({
+//     width: 1200,
+//     height: 800,
+//     show: true,
+//     webPreferences: {
+//       contextIsolation: true,
+//       nodeIntegration: false,
+//       preload: path.join(__dirname, "../../preload/index.js"),
+//     },
+//   });
 
-const isDev = !process.env.APP_PACKAGED
+//   const isDev = !app.isPackaged;
+
+//   if (isDev) {
+//     // ✅ DEV
+//     win.loadURL("http://localhost:5173");
+//     win.webContents.openDevTools();
+//   } else {
+//     // ✅ FIXED PRODUCTION PATH
+//     win.loadFile(
+//       path.join(app.getAppPath(), "dist/renderer/index.html")
+//     );
+//   }
+// }
+import { BrowserWindow, app } from "electron";
+import path from "path";
 
 export function createMainWindow() {
   const win = new BrowserWindow({
     width: 1200,
     height: 800,
+    show: true,
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
-      preload: path.join(__dirname, "../../preload/index.js")
-    }
-  })
+      preload: path.join(__dirname, "../../preload/index.js"),
+    },
+  });
+
+  const isDev = !app.isPackaged;
 
   if (isDev) {
-    win.loadURL("http://localhost:5173")
-    win.webContents.openDevTools()
+    win.loadURL("http://localhost:5173");
+    win.webContents.openDevTools();
   } else {
     win.loadFile(
-      path.join(__dirname, "../../../dist/renderer/index.html")
-    )
+      path.join(__dirname, "../../../renderer/index.html")
+    );
   }
 }

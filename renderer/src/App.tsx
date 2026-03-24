@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate, Outlet, useNavigate, useParams, useLocation } from "react-router-dom";
+import {HashRouter, Routes, Route, Navigate, Outlet, useNavigate, useParams, useLocation } from "react-router-dom";
 import Login from "@/components/Login/Login";
 import Sidebar from "./components/Cashier/Sidebar";
 import AdminSidebar from "./components/Admin/AdminSidebar/AdminSidebar";
@@ -42,6 +42,9 @@ import Parties from "./components/Cashier/Parties/Parties";
 import PartyDetails from "./components/Cashier/Parties/PartyDetails";
 import PartyLedger from "./components/Cashier/Parties/PartyLedger";
 import QuotationEstimate from "./components/Cashier/Quotationestimate/Quotationestimate";
+
+
+
 
 
 // Sales Return list + form + view
@@ -163,7 +166,7 @@ const AccountantLayout = () => (
 
 function App() {
   return (
-    <BrowserRouter>
+    <HashRouter>
       <Routes>
 
         <Route path="/" element={<Navigate to="/login" replace />} />
@@ -289,7 +292,7 @@ function App() {
         <Route path="*" element={<Navigate to="/login" replace />} />
 
       </Routes>
-    </BrowserRouter>
+  </HashRouter>
   );
 }
 

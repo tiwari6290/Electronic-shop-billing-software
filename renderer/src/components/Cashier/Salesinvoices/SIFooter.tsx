@@ -3,7 +3,7 @@ import {
   getPartyBankAccounts,
   createPartyBankAccount,
   BackendBankAccount,
-} from "../../../api/salesInvoiceApi";
+} from "@/api/salesInvoiceApi";
 import "./SIFooter.css";
 
 interface Props {

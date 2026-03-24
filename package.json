@@ -4,15 +4,14 @@
   "main": "dist/electron/main/index.js",
   "scripts": {
     "dev": "concurrently \"vite\" \"npm:electron\"",
-    "electron": "tsc -p . && electron .",
-    "build:renderer": "vite build",
-    "build": "npm run build:renderer && tsc -p . && electron-builder",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "electron": "tsc -p tsconfig.electron.json && electron .",
+    "build": "vite build && tsc -p tsconfig.electron.json",
+    "dist": "npm run build && electron-builder --win"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "",
+  "description": "Electronic shop billing desktop app",
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.4",
     "@tailwindcss/vite": "^4.1.18",
@@ -20,7 +19,6 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "dotenv": "^17.2.4",
-    "electron": "^40.2.1",
     "lucide-react": "^0.563.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
@@ -32,6 +30,7 @@
   "devDependencies": {
     "@types/react": "^18.0.0",
     "@types/react-dom": "^18.0.0",
+    "electron": "^40.2.1",
     "@vitejs/plugin-react": "^4.0.0",
     "concurrently": "^8.0.0",
     "electron-builder": "^26.7.0",

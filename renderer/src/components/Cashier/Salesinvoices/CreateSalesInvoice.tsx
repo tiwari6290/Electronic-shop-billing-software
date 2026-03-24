@@ -14,7 +14,7 @@ import {
   saveInvoiceSettings,
   buildInvoiceNo,
   type InvoiceSettings,
-} from "../../../api/salesInvoiceApi";
+} from "@/api/salesInvoiceApi";
 
 import { mapBackendInvoice } from "../../../utils/invoiceMapper";
 

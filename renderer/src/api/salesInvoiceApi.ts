@@ -1,7 +1,7 @@
 // ─── salesInvoiceApi.ts ───────────────────────────────────────────────────────
 // Full API layer for Sales Invoice module. No localStorage used anywhere.
 
-const BASE = "/api";
+import api from "@/lib/axios";
 
 // ─── Raw backend shape (as returned by the server) ───────────────────────────
 
@@ -155,23 +155,23 @@ export function fromSaleInvoice(inv: SaleInvoice): FeSalesInvoice {
     dueDate:          inv.dueDate?.split("T")[0] ?? "",
     showDueDate:      !!inv.dueDate,
     paymentTermsDays: 30,
-    eWayBillNo:       inv.ewayBillNo    ?? "",
-    challanNo:        inv.challanNo     ?? "",
-    financedBy:       inv.financedBy    ?? "",
-    salesman:         inv.salesman      ?? "",
-    emailId:          inv.emailId       ?? "",
+    eWayBillNo:       inv.ewayBillNo     ?? "",
+    challanNo:        inv.challanNo      ?? "",
+    financedBy:       inv.financedBy     ?? "",
+    salesman:         inv.salesman       ?? "",
+    emailId:          inv.emailId        ?? "",
     warrantyPeriod:   inv.warrantyPeriod ?? "",
-    notes:            inv.notes         ?? "",
+    notes:            inv.notes          ?? "",
     termsConditions:  inv.termsConditions ?? "",
     party: inv.party
       ? {
-          id:             inv.party.id,
-          name:           inv.party.partyName || inv.party.name,
-          mobile:         inv.party.mobileNumber ?? "",
-          balance:        0,
-          email:          inv.party.email          ?? undefined,
-          gstin:          inv.party.gstin          ?? undefined,
-          billingAddress: inv.party.billingAddress ?? undefined,
+          id:              inv.party.id,
+          name:            inv.party.partyName || inv.party.name,
+          mobile:          inv.party.mobileNumber ?? "",
+          balance:         0,
+          email:           inv.party.email           ?? undefined,
+          gstin:           inv.party.gstin           ?? undefined,
+          billingAddress:  inv.party.billingAddress  ?? undefined,
           shippingAddress: inv.party.shippingAddress ?? undefined,
         }
       : null,
@@ -183,16 +183,12 @@ export function fromSaleInvoice(inv: SaleInvoice): FeSalesInvoice {
         }
       : null,
     billItems: (inv.items ?? []).map((item, idx) => {
-      // FIX: resolve taxRate from line item first, then fall back to product.gstRate
-      // This ensures the TAX column in InvoiceViewModal always shows the correct rate
       const resolvedTaxRate = Number(
         item.taxRate != null && item.taxRate !== 0
           ? item.taxRate
           : item.product?.gstRate ?? 0
       ) || 0;
 
-      // FIX: taxLabel must never be "None" — leave empty so InvoiceViewModal
-      // derives it from resolvedTaxRate (shows "GST 18%" or "-" automatically)
       const resolvedTaxLabel = resolvedTaxRate > 0
         ? `GST ${resolvedTaxRate}%`
         : "";
@@ -208,8 +204,8 @@ export function fromSaleInvoice(inv: SaleInvoice): FeSalesInvoice {
         price:       Number(item.price),
         discountPct: Number(item.discountPct ?? 0),
         discountAmt: Number(item.discount ?? 0),
-        taxRate:     resolvedTaxRate,     // ← line item taxRate OR product gstRate
-        taxLabel:    resolvedTaxLabel,    // ← "GST 18%" or "" (never "None")
+        taxRate:     resolvedTaxRate,
+        taxLabel:    resolvedTaxLabel,
         amount:      Number(item.total),
       };
     }),
@@ -219,22 +215,22 @@ export function fromSaleInvoice(inv: SaleInvoice): FeSalesInvoice {
       amount:   Number(c.amount),
       taxLabel: "No Tax Applicable",
     })),
-    discountType:    "Discount After Tax",
-    discountPct:     0,
-    discountAmt:     Number(inv.discountAmount ?? 0),
-    applyTCS:        inv.applyTcs,
-    tcsRate:         0,
-    tcsLabel:        "",
-    tcsBase:         "Taxable Amount",
-    roundOff:        inv.autoRoundOff ? "+Add" : "none",
-    roundOffAmt:     Number(inv.roundOff ?? 0),
-    amountReceived:  Number(inv.receivedAmount ?? 0),
-    paymentMethod:   inv.paymentMode ?? "Cash",
-    showColumns:     { pricePerItem: true, quantity: true },
-    signatureUrl:    inv.signatureUrl ?? "",
+    discountType:          "Discount After Tax",
+    discountPct:           0,
+    discountAmt:           Number(inv.discountAmount ?? 0),
+    applyTCS:              inv.applyTcs,
+    tcsRate:               0,
+    tcsLabel:              "",
+    tcsBase:               "Taxable Amount",
+    roundOff:              inv.autoRoundOff ? "+Add" : "none",
+    roundOffAmt:           Number(inv.roundOff ?? 0),
+    amountReceived:        Number(inv.receivedAmount ?? 0),
+    paymentMethod:         inv.paymentMode ?? "Cash",
+    showColumns:           { pricePerItem: true, quantity: true },
+    signatureUrl:          inv.signatureUrl ?? "",
     showEmptySignatureBox: inv.showEmptySignatureBox ?? false,
-    status:          statusMap[inv.status] ?? "Unpaid",
-    createdAt:       inv.createdAt?.split("T")[0] ?? "",
+    status:                statusMap[inv.status] ?? "Unpaid",
+    createdAt:             inv.createdAt?.split("T")[0] ?? "",
   };
 }
 
@@ -280,24 +276,24 @@ export interface CreateInvoicePayload {
 
 export function toCreatePayload(form: FeSalesInvoice): CreateInvoicePayload {
   return {
-    partyId:        form.party!.id,
-    invoiceDate:    form.invoiceDate,
-    dueDate:        form.showDueDate ? form.dueDate : undefined,
-    ewayBillNo:     form.eWayBillNo    || undefined,
-    challanNo:      form.challanNo     || undefined,
-    financedBy:     form.financedBy    || undefined,
-    salesman:       form.salesman      || undefined,
-    emailId:        form.emailId       || undefined,
-    warrantyPeriod: form.warrantyPeriod || undefined,
-    notes:          form.notes         || undefined,
+    partyId:         form.party!.id,
+    invoiceDate:     form.invoiceDate,
+    dueDate:         form.showDueDate ? form.dueDate : undefined,
+    ewayBillNo:      form.eWayBillNo      || undefined,
+    challanNo:       form.challanNo       || undefined,
+    financedBy:      form.financedBy      || undefined,
+    salesman:        form.salesman        || undefined,
+    emailId:         form.emailId         || undefined,
+    warrantyPeriod:  form.warrantyPeriod  || undefined,
+    notes:           form.notes           || undefined,
     termsConditions: form.termsConditions || undefined,
-    paymentMode:    form.paymentMethod || undefined,
-    receivedAmount: Number(form.amountReceived) || 0,
-    discountAmount: Number(form.discountAmt)    || 0,
-    roundOff:       Number(form.roundOffAmt)    || 0,
-    applyTcs:       form.applyTCS,
-    tcsRate:        form.tcsRate,
-    autoRoundOff:   form.roundOff !== "none",
+    paymentMode:     form.paymentMethod   || undefined,
+    receivedAmount:  Number(form.amountReceived) || 0,
+    discountAmount:  Number(form.discountAmt)    || 0,
+    roundOff:        Number(form.roundOffAmt)    || 0,
+    applyTcs:        form.applyTCS,
+    tcsRate:         form.tcsRate,
+    autoRoundOff:    form.roundOff !== "none",
     items: form.billItems.map((i) => ({
       productId:   i.itemId,
       quantity:    Number(i.qty)         || 0,
@@ -328,20 +324,6 @@ export interface GetInvoicesParams {
   sortDir?:   "asc" | "desc";
 }
 
-// ─── Generic fetch helper ─────────────────────────────────────────────────────
-
-async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
-    headers: { "Content-Type": "application/json" },
-    ...options,
-  });
-  const json = await res.json();
-  if (!res.ok || !json.success) {
-    throw new Error(json.message ?? `Request failed: ${res.status}`);
-  }
-  return json;
-}
-
 // ─── Invoice endpoints ────────────────────────────────────────────────────────
 
 /** GET /api/invoices  (with pagination / filters) */
@@ -361,7 +343,8 @@ export async function getInvoices(params: GetInvoicesParams = {}): Promise<{
   if (params.sortField) qs.set("sortField", params.sortField);
   if (params.sortDir)   qs.set("sortDir",   params.sortDir);
 
-  const json = await apiFetch<{ success: boolean; data: any }>(`/invoices?${qs}`);
+  const res = await api.get(`/invoices?${qs}`);
+  const json = res.data;
   if (Array.isArray(json.data)) {
     return { invoices: json.data, total: json.data.length, page: 1, pages: 1 };
   }
@@ -370,39 +353,33 @@ export async function getInvoices(params: GetInvoicesParams = {}): Promise<{
 
 /** GET /api/invoices/:id */
 export async function getInvoiceById(id: string | number): Promise<SaleInvoice> {
-  const json = await apiFetch<{ success: boolean; data: SaleInvoice }>(`/invoices/${id}`);
-  return json.data;
+  const res = await api.get(`/invoices/${id}`);
+  return res.data.data;
 }
 
 /** POST /api/invoices */
 export async function createInvoice(payload: CreateInvoicePayload): Promise<SaleInvoice> {
-  const json = await apiFetch<{ success: boolean; data: SaleInvoice }>("/invoices", {
-    method: "POST",
-    body:   JSON.stringify(payload),
-  });
-  return json.data;
+  const res = await api.post(`/invoices`, payload);
+  return res.data.data;
 }
 
-/** PUT /api/invoices/:id  (meta-field update) */
+/** PUT /api/invoices/:id */
 export async function updateInvoice(
   id: string | number,
   payload: Partial<CreateInvoicePayload>
 ): Promise<SaleInvoice> {
-  const json = await apiFetch<{ success: boolean; data: SaleInvoice }>(`/invoices/${id}`, {
-    method: "PUT",
-    body:   JSON.stringify(payload),
-  });
-  return json.data;
+  const res = await api.put(`/invoices/${id}`, payload);
+  return res.data.data;
 }
 
 /** PATCH /api/invoices/:id/cancel */
 export async function cancelInvoice(id: string | number): Promise<void> {
-  await apiFetch(`/invoices/${id}/cancel`, { method: "PATCH" });
+  await api.patch(`/invoices/${id}/cancel`);
 }
 
 /** DELETE /api/invoices/:id */
 export async function deleteInvoice(id: string | number): Promise<void> {
-  await apiFetch(`/invoices/${id}`, { method: "DELETE" });
+  await api.delete(`/invoices/${id}`);
 }
 
 /** PATCH /api/invoices/:id/payment */
@@ -419,11 +396,8 @@ export async function recordPayment(
   }
 ): Promise<SaleInvoice> {
   const numericId = typeof id === "string" ? id.replace(/\D/g, "") || id : id;
-  const json = await apiFetch<{ success: boolean; data: SaleInvoice }>(
-    `/invoices/${numericId}/payment`,
-    { method: "PATCH", body: JSON.stringify(payload) }
-  );
-  return json.data;
+  const res = await api.patch(`/invoices/${numericId}/payment`, payload);
+  return res.data.data;
 }
 
 /** GET /api/invoices/summary */
@@ -437,16 +411,17 @@ export async function getInvoiceSummary(): Promise<{
   paidCount:        number;
   cancelledCount:   number;
 }> {
-  const json = await apiFetch<{ success: boolean; data: any }>("/invoices/summary");
+  const res = await api.get(`/invoices/summary`);
+  const data = res.data.data;
   return {
-    totalSales:       Number(json.data.totalInvoiced    ?? json.data.totalSales    ?? 0),
-    totalReceived:    Number(json.data.totalReceived    ?? json.data.totalPaid     ?? 0),
-    totalOutstanding: Number(json.data.totalOutstanding ?? json.data.totalUnpaid   ?? 0),
-    totalCancelled:   Number(json.data.totalCancelled   ?? 0),
-    openCount:        json.data.openCount      ?? 0,
-    partialCount:     json.data.partialCount   ?? 0,
-    paidCount:        json.data.paidCount      ?? 0,
-    cancelledCount:   json.data.cancelledCount ?? 0,
+    totalSales:       Number(data.totalInvoiced    ?? data.totalSales    ?? 0),
+    totalReceived:    Number(data.totalReceived    ?? data.totalPaid     ?? 0),
+    totalOutstanding: Number(data.totalOutstanding ?? data.totalUnpaid   ?? 0),
+    totalCancelled:   Number(data.totalCancelled   ?? 0),
+    openCount:        data.openCount      ?? 0,
+    partialCount:     data.partialCount   ?? 0,
+    paidCount:        data.paidCount      ?? 0,
+    cancelledCount:   data.cancelledCount ?? 0,
   };
 }
 
@@ -466,8 +441,8 @@ export interface BackendParty {
 }
 
 export async function getParties(): Promise<BackendParty[]> {
-  const json = await apiFetch<{ success: boolean; data: BackendParty[] }>("/parties");
-  return json.data;
+  const res = await api.get(`/parties`);
+  return res.data.data;
 }
 
 export async function createParty(payload: {
@@ -478,11 +453,8 @@ export async function createParty(payload: {
   gstin?: string;
   partyType: "Customer" | "Supplier";
 }): Promise<BackendParty> {
-  const json = await apiFetch<{ success: boolean; data: BackendParty }>("/parties", {
-    method: "POST",
-    body:   JSON.stringify(payload),
-  });
-  return json.data;
+  const res = await api.post(`/parties`, payload);
+  return res.data.data;
 }
 
 // ─── Item / Product endpoints ─────────────────────────────────────────────────
@@ -505,8 +477,8 @@ export interface BackendItem {
 }
 
 export async function getItems(): Promise<BackendItem[]> {
-  const json = await apiFetch<{ success: boolean; data: BackendItem[] }>("/items");
-  return json.data;
+  const res = await api.get(`/items`);
+  return res.data.data;
 }
 
 // ─── Party Shipping Addresses ─────────────────────────────────────────────────
@@ -533,21 +505,16 @@ export interface BackendShippingAddress {
 }
 
 export async function getPartyAddresses(partyId: number): Promise<BackendShippingAddress[]> {
-  const json = await apiFetch<{ success: boolean; data: BackendShippingAddress[] }>(
-    `/parties/${partyId}/addresses`
-  );
-  return json.data;
+  const res = await api.get(`/parties/${partyId}/addresses`);
+  return res.data.data;
 }
 
 export async function createPartyAddress(
   partyId: number,
   payload: { addressType: string; addressLine: string; city: string; state: string; pincode: string }
 ): Promise<BackendShippingAddress> {
-  const json = await apiFetch<{ success: boolean; data: BackendShippingAddress }>(
-    `/parties/${partyId}/addresses`,
-    { method: "POST", body: JSON.stringify(payload) }
-  );
-  return json.data;
+  const res = await api.post(`/parties/${partyId}/addresses`, payload);
+  return res.data.data;
 }
 
 // ─── Party Bank Accounts ──────────────────────────────────────────────────────
@@ -564,10 +531,8 @@ export interface BackendBankAccount {
 }
 
 export async function getPartyBankAccounts(partyId: number): Promise<BackendBankAccount[]> {
-  const json = await apiFetch<{ success: boolean; data: BackendBankAccount[] }>(
-    `/parties/${partyId}/bank-accounts`
-  );
-  return json.data;
+  const res = await api.get(`/parties/${partyId}/bank-accounts`);
+  return res.data.data;
 }
 
 export async function createPartyBankAccount(
@@ -581,11 +546,8 @@ export async function createPartyBankAccount(
     upiId?: string;
   }
 ): Promise<BackendBankAccount> {
-  const json = await apiFetch<{ success: boolean; data: BackendBankAccount }>(
-    `/parties/${partyId}/bank-accounts`,
-    { method: "POST", body: JSON.stringify(payload) }
-  );
-  return json.data;
+  const res = await api.post(`/parties/${partyId}/bank-accounts`, payload);
+  return res.data.data;
 }
 
 // ─── Invoice Settings ─────────────────────────────────────────────────────────
@@ -614,9 +576,8 @@ const SETTINGS_DEFAULTS: InvoiceSettings = {
 
 export async function getInvoiceSettings(): Promise<InvoiceSettings> {
   try {
-    const res  = await fetch("/api/invoice-settings");
-    const body = await res.json().catch(() => ({}));
-    return { ...SETTINGS_DEFAULTS, ...(body.data ?? {}) };
+    const res = await api.get(`/invoice-settings`);
+    return { ...SETTINGS_DEFAULTS, ...(res.data.data ?? {}) };
   } catch {
     return SETTINGS_DEFAULTS;
   }
@@ -625,14 +586,9 @@ export async function getInvoiceSettings(): Promise<InvoiceSettings> {
 export async function saveInvoiceSettings(
   payload: Omit<InvoiceSettings, "id">
 ): Promise<InvoiceSettings> {
-  const res  = await fetch("/api/invoice-settings", {
-    method:  "POST",
-    headers: { "Content-Type": "application/json" },
-    body:    JSON.stringify(payload),
-  });
-  const body = await res.json().catch(() => ({}));
-  if (!body.success) throw new Error(body.message ?? "Failed to save settings");
-  return { ...SETTINGS_DEFAULTS, ...(body.data ?? {}) };
+  const res = await api.post(`/invoice-settings`, payload);
+  if (!res.data.success) throw new Error(res.data.message ?? "Failed to save settings");
+  return { ...SETTINGS_DEFAULTS, ...(res.data.data ?? {}) };
 }
 
 /**

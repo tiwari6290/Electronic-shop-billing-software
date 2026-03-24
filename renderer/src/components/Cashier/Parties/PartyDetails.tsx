@@ -8,7 +8,7 @@ import "./PartyDetails.css";
 import PartyProfile from "./PartyProfile";
 import PartyItemWiseReport from "./PartyItemWiseReport";
 import PartyLedger from "./PartyLedger";
-import axios from "axios";
+import api from "@/lib/axios";
 
 interface Party {
   id: number;
@@ -155,7 +155,7 @@ const PartyDetails: React.FC = () => {
   useEffect(() => {
     const fetchParties = async () => {
       try {
-        const res = await axios.get("http://localhost:4000/api/parties");
+        const res = await api.get("/parties");
         const formatted = res.data.data.map((p: any) => ({
           id: p.id,
           name: p.partyName,
@@ -180,7 +180,7 @@ const PartyDetails: React.FC = () => {
   useEffect(() => {
     const fetchTransactions = async () => {
       try {
-        const res = await axios.get(`http://localhost:4000/api/transactions/party/${id}`);
+        const res = await api.get(`/transactions/party/${id}`);
         const formatted = res.data.data?.map((t: any) => ({
           id: t.id,
           date: t.date,
