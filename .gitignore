@@ -137,4 +137,8 @@ dist
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
-release/win-unpacked/resources/app.asar
+
+
+dist/
+release/
+*.asar

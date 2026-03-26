@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import "./PaymentInList.css";
-import { getPaymentsIn, deletePaymentIn, getPartiesBasic, getPartyLedgerBalance, type PaymentInRecord, type PartyBasic } from "../../../api/paymentInApi";
+import { getPaymentsIn, deletePaymentIn, getPartiesBasic, getPartyLedgerBalance, type PaymentInRecord, type PartyBasic } from "@/api/paymentInApi";
 
 // ─── Date helpers ─────────────────────────────────────────────────────────────
 type DateOption =

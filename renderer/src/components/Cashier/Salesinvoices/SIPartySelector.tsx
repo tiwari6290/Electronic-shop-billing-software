@@ -6,7 +6,7 @@ import {
   getPartyAddresses,
   createPartyAddress,
   BackendParty,
-} from "../../../api/salesInvoiceApi";
+} from "@/api/salesInvoiceApi";
 import "./SIPartySelector.css";
 
 interface Props {

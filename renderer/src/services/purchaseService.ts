@@ -50,3 +50,8 @@ export const getPurchaseSummary = async () => {
   const res = await api.get("/purchase-invoices/summary");
   return res.data;
 };
+/* ================= UPDATE SIGNATURE ================= */
+export const updatePurchaseInvoiceSignature = async (id: number, signatureUrl: string) => {
+  const res = await api.patch(`/purchase-invoices/${id}/signature`, { signatureUrl });
+  return res.data;
+};

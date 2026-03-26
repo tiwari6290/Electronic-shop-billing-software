@@ -3,7 +3,7 @@ import Navbar from './Navbar';
 import { X, MessageSquare, FileText, Building2, Trash2, Edit2 } from 'lucide-react';
 import { useNavigate } from "react-router-dom";
 import { useParams } from "react-router-dom";
-import axios from "axios";
+import api from "@/lib/axios";
 import { createParty } from "../../services/partyService";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -25,9 +25,6 @@ interface CustomField {
   fieldName: string;
   fieldValue: string;  // backend field name (was 'value')
 }
-
-// ── API base ─────────────────────────────────────────────────────────────────
-const API = 'http://localhost:4000/api';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 const maskAccount = (acc: string) => acc.length > 4 ? `x${acc.slice(-4)}` : acc;
@@ -92,7 +89,7 @@ const CreateParty: React.FC = () => {
     if (!id) return;
     const fetchParty = async () => {
       try {
-        const res = await axios.get(`http://localhost:4000/api/parties/${id}`);
+        const res = await api.get(`/parties/${id}`);
         const p   = res.data.data;
         setFormData(prev => ({
           ...prev,
@@ -116,14 +113,14 @@ const CreateParty: React.FC = () => {
     };
     fetchParty();
     // Load bank accounts and custom fields from backend
-    axios.get(`${API}/parties/${id}/bank-accounts`).then(r => {
+    api.get(`/parties/${id}/bank-accounts`).then(r => {
       setBankAccounts((r.data.data || []).map((b: any) => ({
         id: b.id, accountNumber: b.accountNumber, reEnterAccountNumber: b.accountNumber,
         accountHolder: b.accountHolder, bankName: b.bankName, ifscCode: b.ifscCode,
         branchName: b.branchName || '', accountType: b.accountType, isPrimary: b.isPrimary,
       })));
     }).catch(() => setBankAccounts([]));
-    axios.get(`${API}/parties/${id}/custom-fields`).then(r => {
+    api.get(`/parties/${id}/custom-fields`).then(r => {
       setCustomFields((r.data.data || []).map((f: any) => ({
         id: f.id, fieldName: f.fieldName, fieldValue: f.fieldValue || '',
       })));
@@ -159,7 +156,7 @@ const CreateParty: React.FC = () => {
     try {
       if (id) {
         // ── UPDATE existing party ───────────────────────────────
-        await axios.put(`${API}/parties/${id}`, payload);
+        await api.put(`/parties/${id}`, payload);
         alert('Party updated successfully');
       } else {
         // ── CREATE new party ────────────────────────────────────
@@ -170,7 +167,7 @@ const CreateParty: React.FC = () => {
           // Save bank accounts one by one (skip invalid ones silently)
           for (const b of bankAccounts) {
             try {
-              await axios.post(`${API}/parties/${newId}/bank-accounts`, {
+              await api.post(`/parties/${newId}/bank-accounts`, {
                 accountHolder: b.accountHolder || 'N/A',
                 accountNumber: b.accountNumber,
                 bankName:      b.bankName      || 'N/A',
@@ -184,7 +181,7 @@ const CreateParty: React.FC = () => {
           // Save custom fields one by one
           for (const f of customFields) {
             try {
-              await axios.post(`${API}/parties/${newId}/custom-fields`, {
+              await api.post(`/parties/${newId}/custom-fields`, {
                 fieldName:  f.fieldName,
                 fieldValue: f.fieldValue || '',
               });
@@ -230,11 +227,11 @@ const CreateParty: React.FC = () => {
     try {
       if (editingBank && id) {
         // Update existing
-        const res = await axios.put(`${API}/parties/${id}/bank-accounts/${editingBank.id}`, payload);
+        const res = await api.put(`/parties/${id}/bank-accounts/${editingBank.id}`, payload);
         setBankAccounts(prev => prev.map(b => b.id === editingBank.id ? { ...b, ...res.data.data } : b));
       } else if (id) {
         // Add to existing party
-        const res = await axios.post(`${API}/parties/${id}/bank-accounts`, payload);
+        const res = await api.post(`/parties/${id}/bank-accounts`, payload);
         setBankAccounts(prev => [...prev, { ...res.data.data, reEnterAccountNumber: res.data.data.accountNumber, branchName: res.data.data.branchName || '' }]);
       } else {
         // New party — keep in state, will be sent on Save
@@ -253,7 +250,7 @@ const CreateParty: React.FC = () => {
   const handleDeleteBank = async (bankId: number) => {
     if (!window.confirm('Delete this bank account?')) return;
     try {
-      if (id) await axios.delete(`${API}/parties/${id}/bank-accounts/${bankId}`);
+      if (id) await api.delete(`/parties/${id}/bank-accounts/${bankId}`);
     } catch {}
     setBankAccounts(prev => prev.filter(b => b.id !== bankId));
   };
@@ -264,7 +261,7 @@ const CreateParty: React.FC = () => {
     const payload = { fieldName: cfName, fieldValue: '' };
     try {
       if (id) {
-        const res = await axios.post(`${API}/parties/${id}/custom-fields`, payload);
+        const res = await api.post(`/parties/${id}/custom-fields`, payload);
         const created = Array.isArray(res.data.data) ? res.data.data[0] : res.data.data;
         setCustomFields(prev => [...prev, { id: created.id, fieldName: created.fieldName, fieldValue: created.fieldValue || '' }]);
       } else {
@@ -282,7 +279,7 @@ const CreateParty: React.FC = () => {
   const handleDeleteCf = async (cfId: number) => {
     if (!window.confirm('Delete this custom field?')) return;
     try {
-      if (id) await axios.delete(`${API}/parties/${id}/custom-fields/${cfId}`);
+      if (id) await api.delete(`/parties/${id}/custom-fields/${cfId}`);
     } catch {}
     setCustomFields(prev => prev.filter(f => f.id !== cfId));
   };
@@ -525,7 +522,7 @@ const CreateParty: React.FC = () => {
                           const newVal = e.target.value;
                           setCustomFields(prev => prev.map(f => f.id === cf.id ? { ...f, fieldValue: newVal } : f));
                           if (id) {
-                            try { await axios.put(`${API}/parties/${id}/custom-fields/${cf.id}`, { fieldName: cf.fieldName, fieldValue: newVal }); } catch {}
+                            try { await api.put(`/parties/${id}/custom-fields/${cf.id}`, { fieldName: cf.fieldName, fieldValue: newVal }); } catch {}
                           }
                         }}
                         style={INP_STYLE}

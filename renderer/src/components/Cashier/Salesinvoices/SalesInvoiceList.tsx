@@ -7,7 +7,7 @@ import {
   createInvoice, getInvoiceSummary,
   fromSaleInvoice, toCreatePayload,
   type SaleInvoice, type GetInvoicesParams,
-} from "../../../api/salesInvoiceApi";
+} from "@/api/salesInvoiceApi";
 function todayStr() { return new Date().toISOString().split("T")[0]; }
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -232,7 +232,7 @@ export default function SalesInvoiceList() {
   const [page, setPage]               = useState(1);
   const PAGE_SIZE = 50;
 
-  // Summary stats (from /api/invoices/summary)
+  // Summary stats (from /invoices/summary)
   const [summaryStats, setSummaryStats] = useState({
     totalSales: 0, totalPaid: 0, totalUnpaid: 0, totalCancelled: 0,
   });

@@ -253,7 +253,7 @@ export default function PaymentOut() {
       month: "short",
       year: "numeric",
     }),
-    paymentMode: "Cash",
+    paymentMode: "CASH",
     prefix: "",
     number: "",
     notes: "",
@@ -391,7 +391,7 @@ export default function PaymentOut() {
         date: new Date(formData.paymentDate),
         amountPaid: Number(formData.amountPaid),
         discount: Number(formData.discount || 0),
-        paymentMode: formData.paymentMode,
+        paymentMode: formData.paymentMode?.toLowerCase(),
         notes: formData.notes || null,
       };
 
@@ -568,11 +568,12 @@ export default function PaymentOut() {
                   value={formData.paymentMode}
                   onChange={handleChange}
                 >
-                  <option value="Cash">Cash</option>
-                  <option value="UPI">UPI</option>
-                  <option value="Card">Card</option>
-                  <option value="Bank">Bank</option>
-                  <option value="EMI">EMI</option>
+                  <option value="CASH">Cash</option>
+<option value="UPI">UPI</option>
+<option value="CARD">Card</option>
+<option value="NETBANKING">Net Banking</option>
+<option value="BANK_TRANSFER">Bank Transfer</option>
+<option value="CHEQUE">Cheque</option>
                 </select>
               </div>
             </div>

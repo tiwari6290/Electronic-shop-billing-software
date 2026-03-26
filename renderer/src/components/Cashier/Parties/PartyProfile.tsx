@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import "./PartyProfile.css";
-import axios from "axios";
+import api from "@/lib/axios";
 import {
   FileText, CreditCard, Building2, User, AlignJustify,
   Plus, Trash2, Edit2, X, Landmark, MapPin, Check,
@@ -51,7 +51,6 @@ interface ShippingAddress {
   isDefault: boolean;
 }
 
-const API = 'http://localhost:4000/api';
 const maskAccount = (acc: string) => acc.length > 4 ? `x${acc.slice(-4)}` : acc;
 
 // ── Bank Add/Edit Modal ────────────────────────────────────────────────────────
@@ -443,7 +442,7 @@ const PartyProfile: React.FC = () => {
   // ── fetch party data
   useEffect(() => {
     if (!id) return;
-    axios.get(`http://localhost:4000/api/parties/${id}`)
+    api.get(`/parties/${id}`)
       .then(res => {
         const p = res.data.data;
         setParty({
@@ -481,10 +480,10 @@ const PartyProfile: React.FC = () => {
   // ── load banks + custom fields from API
   useEffect(() => {
     if (!id) return;
-    axios.get(`${API}/parties/${id}/bank-accounts`)
+    api.get(`/parties/${id}/bank-accounts`)
       .then(r => setBankAccounts(r.data.data || []))
       .catch(() => setBankAccounts([]));
-    axios.get(`${API}/parties/${id}/custom-fields`)
+    api.get(`/parties/${id}/custom-fields`)
       .then(r => setCustomFields(r.data.data || []))
       .catch(() => setCustomFields([]));
   }, [id]);
@@ -502,7 +501,7 @@ const PartyProfile: React.FC = () => {
         upiId: bank.upiId || '',
         isPrimary: bank.isPrimary,
       };
-      const res = await axios.post(`${API}/parties/${id}/bank-accounts`, payload);
+      const res = await api.post(`/parties/${id}/bank-accounts`, payload);
       setBankAccounts(prev => [...prev, res.data.data]);
     } catch (err: any) {
       alert(err.response?.data?.message || 'Failed to add bank account');
@@ -523,7 +522,7 @@ const PartyProfile: React.FC = () => {
         upiId: updated.upiId || '',
         isPrimary: updated.isPrimary,
       };
-      await axios.put(`${API}/parties/${id}/bank-accounts/${updated.id}`, payload);
+      await api.put(`/parties/${id}/bank-accounts/${updated.id}`, payload);
       setBankAccounts(prev => prev.map(b => b.id === updated.id ? updated : b));
     } catch (err: any) {
       alert(err.response?.data?.message || 'Failed to update bank account');
@@ -534,7 +533,7 @@ const PartyProfile: React.FC = () => {
   const handleDeleteBank = async (bankId: number) => {
     if (!window.confirm("Delete this bank account?")) return;
     try {
-      await axios.delete(`${API}/parties/${id}/bank-accounts/${bankId}`);
+      await api.delete(`/parties/${id}/bank-accounts/${bankId}`);
       setBankAccounts(prev => prev.filter(b => b.id !== bankId));
     } catch (err: any) {
       alert(err.response?.data?.message || 'Failed to delete bank account');
@@ -544,7 +543,7 @@ const PartyProfile: React.FC = () => {
   // ── custom field: create via API POST
   const handleCreateCf = async (fieldName: string) => {
     try {
-      const res = await axios.post(`${API}/parties/${id}/custom-fields`, { fieldName, fieldValue: '' });
+      const res = await api.post(`/parties/${id}/custom-fields`, { fieldName, fieldValue: '' });
       const created = Array.isArray(res.data.data) ? res.data.data[0] : res.data.data;
       setCustomFields(prev => [...prev, { id: created.id, fieldName: created.fieldName, fieldValue: created.fieldValue || '' }]);
     } catch (err: any) {
@@ -556,7 +555,7 @@ const PartyProfile: React.FC = () => {
   const handleDeleteCf = async (cfId: number) => {
     if (!window.confirm("Delete this custom field?")) return;
     try {
-      await axios.delete(`${API}/parties/${id}/custom-fields/${cfId}`);
+      await api.delete(`/parties/${id}/custom-fields/${cfId}`);
       setCustomFields(prev => prev.filter(f => f.id !== cfId));
     } catch (err: any) {
       alert(err.response?.data?.message || 'Failed to delete custom field');

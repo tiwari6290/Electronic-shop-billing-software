@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { ChevronDown, Download, Printer, Calendar } from "lucide-react";
 import "./PartyItemWiseReport.css";
-import axios from "axios";
+import api from "@/lib/axios";
 
 interface TransactionItem {
   partyId:  number;
@@ -49,9 +49,9 @@ const PartyItemWiseReport: React.FC = () => {
 
   useEffect(() => {
     if (!id) return;
-    const fetch = async () => {
+    const fetchData = async () => {
       try {
-        const res = await axios.get(`http://localhost:4000/api/invoices/party-item-wise/${id}`);
+        const res = await api.get(`/invoices/party-item-wise/${id}`);
         const formatted = res.data.data.map((t: any) => ({
           partyId:  t.partyId,
           itemName: t.itemName,
@@ -68,7 +68,7 @@ const PartyItemWiseReport: React.FC = () => {
         console.error("Error fetching item-wise report:", error);
       }
     };
-    fetch();
+    fetchData();
   }, [id]);
 
   // ── Date filtering ────────────────────────────────────────────────────────

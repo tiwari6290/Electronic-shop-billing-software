@@ -4,6 +4,7 @@ import path from "path"
 import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
+  base: "./",
   root: "renderer",
   plugins: [react(), tailwindcss()],
   resolve: {
@@ -14,13 +15,5 @@ export default defineConfig({
   build: {
     outDir: "../dist/renderer",
     emptyOutDir: true
-  },
-  server: {
-    proxy: {
-      "/api": {
-        target: "http://localhost:4000",
-        changeOrigin: true,
-      }
-    }
   }
 })

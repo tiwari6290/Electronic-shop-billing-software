@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import "./PartyLedger.css";
-import axios from "axios";
+import api from "@/lib/axios";
 
 interface LedgerEntry {
   id: number;
@@ -54,13 +54,13 @@ const PartyLedger: React.FC = () => {
     if (!id) return;
     (async () => {
       try {
-        const res = await axios.get(`http://localhost:4000/api/party-ledger/party/${id}/ledger`);
+        const res = await api.get(`/party-ledger/party/${id}/ledger`);
         setLedgerData(res.data.data || []);
         setOpeningBalance(res.data.openingBalance ?? 0);
       } catch { setLedgerData([]); }
 
       try {
-        const r = await axios.get(`http://localhost:4000/api/parties/${id}`);
+        const r = await api.get(`/parties/${id}`);
         const p = r.data.data;
         if (p) { setPartyName(p.partyName || ""); setPartyPhone(p.mobileNumber || ""); }
       } catch {}

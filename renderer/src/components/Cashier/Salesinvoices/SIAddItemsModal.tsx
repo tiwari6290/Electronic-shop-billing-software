@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { BillItem } from "./SalesInvoiceTypes";
-import { getItems, BackendItem } from "../../../api/salesInvoiceApi";
+import { getItems, BackendItem } from "@/api/salesInvoiceApi";
 import "./SIAddItemsModal.css";
 
 interface Props {
