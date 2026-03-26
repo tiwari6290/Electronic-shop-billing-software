@@ -4,6 +4,29 @@ import {
 } from "./Creditnotetypes";
 import "./Createcreditnote.css";
 
+// ─── Read signature / company from InvoiceBuilder localStorage ───────────────
+function getBuilderSignature(): string {
+  try {
+    const raw = localStorage.getItem("activeInvoiceTemplate");
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed?.misc?.signatureUrl) return parsed.misc.signatureUrl;
+    }
+  } catch {}
+  return "";
+}
+
+function getBuilderCompanyName(): string {
+  try {
+    const raw = localStorage.getItem("activeInvoiceTemplate");
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed?.inv?.companyName) return parsed.inv.companyName;
+    }
+  } catch {}
+  return "Your Business";
+}
+
 // ─── TCS Rate Data ─────────────────────────────────────────────────────────────
 interface TcsRate {
   label: string;
@@ -25,6 +48,70 @@ const DEFAULT_TCS_RATES: TcsRate[] = [
   { label: "0.1% - 206C(IH) turnover > 1Cr",                             rate: 0.1 },
   { label: "1.0% - 206C(IH) turnover > 1Cr (Without PAN)",               rate: 1.0 },
 ];
+
+// ─── Signature Modal ──────────────────────────────────────────────────────────
+interface SignatureModalProps {
+  onClose: () => void;
+  onUpload: (url: string) => void;
+  onShowEmpty: () => void;
+}
+
+function SignatureModal({ onClose, onUpload, onShowEmpty }: SignatureModalProps) {
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    onUpload(url);
+    onClose();
+  };
+
+  return (
+    <div className="cn-overlay" onClick={onClose}>
+      <div className="cn-sig-modal" onClick={e => e.stopPropagation()}>
+        <div className="cn-sig-modal-hdr">
+          <span className="cn-sig-modal-title">Signature</span>
+          <button className="cn-modal-close" onClick={onClose}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+        <div className="cn-sig-modal-body">
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            style={{ display: "none" }}
+            onChange={handleFile}
+          />
+          <button className="cn-sig-option-card" onClick={() => fileRef.current?.click()}>
+            <div className="cn-sig-option-icon">
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                <circle cx="8.5" cy="8.5" r="1.5"/>
+                <polyline points="21 15 16 10 5 21"/>
+                <line x1="12" y1="5" x2="12" y2="1"/>
+                <polyline points="9 4 12 1 15 4"/>
+              </svg>
+            </div>
+            <span className="cn-sig-option-label">Upload Signature from Desktop</span>
+          </button>
+
+          <button className="cn-sig-option-card" onClick={() => { onShowEmpty(); onClose(); }}>
+            <div className="cn-sig-option-icon">
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="5" width="18" height="14" rx="2"/>
+              </svg>
+            </div>
+            <span className="cn-sig-option-label">Show Empty Signature Box on Invoice</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // ─── Add TCS Rate Modal ───────────────────────────────────────────────────────
 function AddTcsRateModal({ onClose, onSave }: {
@@ -119,6 +206,18 @@ export function CNSummary({
   const [tcsOpen, setTcsOpen] = useState(false);
   const [showAddTcs, setShowAddTcs] = useState(false);
 
+  // Signature state
+  const [showSigModal, setShowSigModal] = useState(false);
+  const [signatureUrl, setSignatureUrl] = useState<string>(() => getBuilderSignature());
+  const [showEmptyBox, setShowEmptyBox] = useState(false);
+  const companyName = getBuilderCompanyName();
+
+  // Re-read from builder on mount
+  useEffect(() => {
+    const url = getBuilderSignature();
+    if (url) { setSignatureUrl(url); setShowEmptyBox(false); }
+  }, []);
+
   const discTypeRef = useRef<HTMLDivElement>(null);
   const roundOffRef = useRef<HTMLDivElement>(null);
   const tcsRef = useRef<HTMLDivElement>(null);
@@ -169,6 +268,8 @@ export function CNSummary({
   );
 
   const recentTcsRates = DEFAULT_TCS_RATES.slice(0, 2);
+
+  const hasSignature = signatureUrl || showEmptyBox;
 
   return (
     <div className="cn-summary">
@@ -446,10 +547,50 @@ export function CNSummary({
       {/* ── Authorized Signatory ── */}
       <div className="cn-signatory">
         <div className="cn-signatory-text">
-          Authorized signatory for <strong>scratchweb.solutions</strong>
+          Authorized signatory for <strong>{companyName}</strong>
         </div>
-        <div className="cn-signatory-box" />
+
+        {!hasSignature ? (
+          /* ── Add Signature button ── */
+          <button className="cn-add-signature-btn" onClick={() => setShowSigModal(true)}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            Add Signature
+          </button>
+        ) : signatureUrl ? (
+          /* ── Uploaded signature preview ── */
+          <div className="cn-signature-preview-wrap">
+            <img src={signatureUrl} alt="Signature" className="cn-signature-preview-img" />
+            <button
+              className="cn-sig-change-btn"
+              onClick={() => setShowSigModal(true)}
+              title="Change signature"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              </svg>
+              Change
+            </button>
+          </div>
+        ) : (
+          /* ── Empty signature box ── */
+          <div className="cn-signatory-empty-box" onClick={() => setShowSigModal(true)} title="Click to change">
+            <span className="cn-signatory-empty-hint">Signature</span>
+          </div>
+        )}
       </div>
+
+      {/* ── Modals ── */}
+      {showSigModal && (
+        <SignatureModal
+          onClose={() => setShowSigModal(false)}
+          onUpload={url => { setSignatureUrl(url); setShowEmptyBox(false); }}
+          onShowEmpty={() => { setShowEmptyBox(true); setSignatureUrl(""); }}
+        />
+      )}
 
       {showAddTcs && (
         <AddTcsRateModal

@@ -5,6 +5,60 @@ import {
 } from "./Creditnotetypes";
 import "./Createcreditnote.css";
 
+// ─── Read field visibility + custom fields from InvoiceBuilder localStorage ───
+interface BuilderDetSettings {
+  showEwayBill:          boolean;
+  showChallan:           boolean;
+  showFinancedBy:        boolean;
+  showSalesman:          boolean;
+  showEmailId:           boolean;
+  showWarranty:          boolean;
+  showVehicle:           boolean;
+  showPO:                boolean;
+  showDispatchedThrough: boolean;
+  showTransportName:     boolean;
+  customFields:          { label: string; value: string }[];
+}
+
+function getBuilderDetSettings(): BuilderDetSettings {
+  const defaults: BuilderDetSettings = {
+    showEwayBill:          true,
+    showChallan:           true,
+    showFinancedBy:        true,
+    showSalesman:          true,
+    showEmailId:           true,
+    showWarranty:          true,
+    showVehicle:           false,
+    showPO:                false,
+    showDispatchedThrough: false,
+    showTransportName:     false,
+    customFields:          [],
+  };
+  try {
+    const raw = localStorage.getItem("activeInvoiceTemplate");
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      const d = parsed?.det;
+      if (d) {
+        return {
+          showEwayBill:          d.showEwayBill          ?? defaults.showEwayBill,
+          showChallan:           d.showChallan           ?? defaults.showChallan,
+          showFinancedBy:        d.showFinancedBy        ?? defaults.showFinancedBy,
+          showSalesman:          d.showSalesman          ?? defaults.showSalesman,
+          showEmailId:           d.showEmailId           ?? defaults.showEmailId,
+          showWarranty:          d.showWarranty          ?? defaults.showWarranty,
+          showVehicle:           d.showVehicle           ?? defaults.showVehicle,
+          showPO:                d.showPO                ?? defaults.showPO,
+          showDispatchedThrough: d.showDispatchedThrough ?? defaults.showDispatchedThrough,
+          showTransportName:     d.showTransportName     ?? defaults.showTransportName,
+          customFields:          Array.isArray(d.customFields) ? d.customFields : [],
+        };
+      }
+    }
+  } catch {}
+  return defaults;
+}
+
 // ─── Date Picker ──────────────────────────────────────────────────────────────
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 const DAYS = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
@@ -110,6 +164,22 @@ export default function CNMetaFields({
   const [tempNo, setTempNo] = useState(String(creditNoteNo));
   const invoiceRef = useRef<HTMLDivElement>(null);
 
+  // Custom field values — keyed by label
+  const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
+
+  // Read builder settings on mount + whenever they might change
+  const [builderDet, setBuilderDet] = useState<BuilderDetSettings>(() => getBuilderDetSettings());
+
+  useEffect(() => {
+    // Re-read on mount in case localStorage was written after component mounted
+    setBuilderDet(getBuilderDetSettings());
+    // Seed custom field default values
+    const det = getBuilderDetSettings();
+    const initial: Record<string, string> = {};
+    det.customFields.forEach(f => { if (f.label) initial[f.label] = f.value || ""; });
+    setCustomFieldValues(initial);
+  }, []);
+
   useEffect(() => {
     const h = (e: MouseEvent) => { if (invoiceRef.current && !invoiceRef.current.contains(e.target as Node)) setInvoiceOpen(false); };
     document.addEventListener("mousedown", h);
@@ -150,6 +220,16 @@ export default function CNMetaFields({
     const dt = new Date(d);
     return `${String(dt.getDate()).padStart(2,"0")}/${String(dt.getMonth()+1).padStart(2,"0")}/${String(dt.getFullYear()).slice(-2)}`;
   };
+
+  // Build the list of visible extra fields from builder settings
+  const extraFields: { key: string; label: string; value: string; fieldProp: string }[] = [];
+
+  if (builderDet.showEwayBill) extraFields.push({ key: "eWayBillNo", label: "E-Way Bill No:", value: eWayBillNo, fieldProp: "eWayBillNo" });
+  if (builderDet.showChallan)   extraFields.push({ key: "challanNo",  label: "Challan No.:", value: challanNo,  fieldProp: "challanNo" });
+  if (builderDet.showFinancedBy) extraFields.push({ key: "financedBy", label: "Financed By:", value: financedBy, fieldProp: "financedBy" });
+  if (builderDet.showSalesman)  extraFields.push({ key: "salesman",   label: "Salesman:",    value: salesman,   fieldProp: "salesman" });
+  if (builderDet.showEmailId)   extraFields.push({ key: "emailId",    label: "Email ID:",    value: emailId,    fieldProp: "emailId" });
+  if (builderDet.showWarranty)  extraFields.push({ key: "warrantyPeriod", label: "Warranty Period:", value: warrantyPeriod, fieldProp: "warrantyPeriod" });
 
   return (
     <div className="cn-meta-panel">
@@ -241,36 +321,56 @@ export default function CNMetaFields({
         )}
       </div>
 
-      {/* Extra fields grid */}
-      <div className="cn-meta-extras">
-        <div className="cn-meta-extra-field">
-          <label>
-            E-Way Bill No:
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{marginLeft:3,verticalAlign:"middle"}}><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
-          </label>
-          <input className="cn-meta-extra-input" value={eWayBillNo} onChange={e => onChange("eWayBillNo", e.target.value)} />
+      {/* Extra fields controlled by Invoice Builder */}
+      {extraFields.length > 0 && (
+        <div className="cn-meta-extras">
+          {extraFields.map(f => (
+            <div key={f.key} className="cn-meta-extra-field">
+              <label>
+                {f.label}
+                {f.key === "eWayBillNo" && (
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{marginLeft:3,verticalAlign:"middle"}}>
+                    <circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>
+                  </svg>
+                )}
+              </label>
+              <input
+                className="cn-meta-extra-input"
+                value={f.value}
+                onChange={e => onChange(f.fieldProp, e.target.value)}
+              />
+            </div>
+          ))}
+
+          {/* Custom fields from Invoice Builder */}
+          {builderDet.customFields.filter(cf => cf.label.trim()).map((cf, idx) => (
+            <div key={`custom-${idx}`} className="cn-meta-extra-field">
+              <label>{cf.label}:</label>
+              <input
+                className="cn-meta-extra-input"
+                value={customFieldValues[cf.label] ?? cf.value ?? ""}
+                onChange={e => setCustomFieldValues(prev => ({ ...prev, [cf.label]: e.target.value }))}
+              />
+            </div>
+          ))}
         </div>
-        <div className="cn-meta-extra-field">
-          <label>Challan No.:</label>
-          <input className="cn-meta-extra-input" value={challanNo} onChange={e => onChange("challanNo", e.target.value)} />
+      )}
+
+      {/* If no builder fields but there ARE custom fields, still show them */}
+      {extraFields.length === 0 && builderDet.customFields.filter(cf => cf.label.trim()).length > 0 && (
+        <div className="cn-meta-extras">
+          {builderDet.customFields.filter(cf => cf.label.trim()).map((cf, idx) => (
+            <div key={`custom-${idx}`} className="cn-meta-extra-field">
+              <label>{cf.label}:</label>
+              <input
+                className="cn-meta-extra-input"
+                value={customFieldValues[cf.label] ?? cf.value ?? ""}
+                onChange={e => setCustomFieldValues(prev => ({ ...prev, [cf.label]: e.target.value }))}
+              />
+            </div>
+          ))}
         </div>
-        <div className="cn-meta-extra-field">
-          <label>Financed By:</label>
-          <input className="cn-meta-extra-input" value={financedBy} onChange={e => onChange("financedBy", e.target.value)} />
-        </div>
-        <div className="cn-meta-extra-field">
-          <label>Salesman:</label>
-          <input className="cn-meta-extra-input" value={salesman} onChange={e => onChange("salesman", e.target.value)} />
-        </div>
-        <div className="cn-meta-extra-field">
-          <label>Email ID:</label>
-          <input className="cn-meta-extra-input" value={emailId} onChange={e => onChange("emailId", e.target.value)} />
-        </div>
-        <div className="cn-meta-extra-field">
-          <label>Warranty Period:</label>
-          <input className="cn-meta-extra-input" value={warrantyPeriod} onChange={e => onChange("warrantyPeriod", e.target.value)} />
-        </div>
-      </div>
+      )}
     </div>
   );
 }

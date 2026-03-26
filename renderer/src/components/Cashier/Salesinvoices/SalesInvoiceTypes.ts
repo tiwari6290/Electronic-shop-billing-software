@@ -181,7 +181,9 @@ export function calcBillItemAmount(item: BillItem): number {
   return Math.round((afterDisc + tax) * 100) / 100;
 }
 
-const DEFAULT_TERMS = `1. Goods once sold will not be taken back or exchanged after 7 days`;
+const DEFAULT_TERMS = `*Delivery received after full Satisfaction. Goods once sold cannot be taken back or exchanged. *For any type of complaint, please contact the 
+Manufacturer. *Dealer is not liable for any complaint after delivery. *Warranty is given by manufacturer only. *Cheque return charge Rs.200/- besides 
+legal liability. *All disputes subject to Kolkata Jurisdiction.`;
 
 export function makeBlankInvoice(nextNo: string): SalesInvoice {
   const today = todayStr();

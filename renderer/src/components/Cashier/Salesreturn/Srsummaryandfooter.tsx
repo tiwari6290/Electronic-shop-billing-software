@@ -1,9 +1,97 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useRef, useEffect } from "react";
 import {
   AdditionalCharge, InvoiceItem, PAYMENT_METHODS, TAX_OPTIONS,
 } from "./Salesreturntypes";
 import "./Createsalesreturn.css";
+
+// ─── Read signature / company from InvoiceBuilder localStorage ───────────────
+function getBuilderSignature(): string {
+  try {
+    const raw = localStorage.getItem("activeInvoiceTemplate");
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed?.misc?.signatureUrl) return parsed.misc.signatureUrl;
+    }
+  } catch {}
+  return "";
+}
+
+function getBuilderCompanyName(): string {
+  try {
+    const raw = localStorage.getItem("activeInvoiceTemplate");
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed?.inv?.companyName) return parsed.inv.companyName;
+    }
+  } catch {}
+  return "Your Business";
+}
+
+// ─── Signature Modal ──────────────────────────────────────────────────────────
+interface SignatureModalProps {
+  onClose: () => void;
+  onUpload: (url: string) => void;
+  onShowEmpty: () => void;
+}
+
+function SignatureModal({ onClose, onUpload, onShowEmpty }: SignatureModalProps) {
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    onUpload(url);
+    onClose();
+  };
+
+  return (
+    <div className="csr-overlay" onClick={onClose}>
+      <div className="csr-sig-modal" onClick={e => e.stopPropagation()}>
+        <div className="csr-sig-modal-hdr">
+          <span className="csr-sig-modal-title">Signature</span>
+          <button className="csr-modal-close" onClick={onClose}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
+        </div>
+        <div className="csr-sig-modal-body">
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            style={{ display: "none" }}
+            onChange={handleFile}
+          />
+          {/* Upload from Desktop */}
+          <button className="csr-sig-option-card" onClick={() => fileRef.current?.click()}>
+            <div className="csr-sig-option-icon">
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2"/>
+                <circle cx="8.5" cy="8.5" r="1.5"/>
+                <polyline points="21 15 16 10 5 21"/>
+                <line x1="12" y1="1" x2="12" y2="5"/>
+                <polyline points="9 4 12 1 15 4"/>
+              </svg>
+            </div>
+            <span className="csr-sig-option-label">Upload Signature from Desktop</span>
+          </button>
+
+          {/* Show Empty Signature Box */}
+          <button className="csr-sig-option-card" onClick={() => { onShowEmpty(); onClose(); }}>
+            <div className="csr-sig-option-icon">
+              <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="5" width="18" height="14" rx="2"/>
+              </svg>
+            </div>
+            <span className="csr-sig-option-label">Show Empty Signature Box on Invoice</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // ─── Summary Panel ────────────────────────────────────────────────────────────
 interface SummaryProps {
@@ -38,6 +126,27 @@ export function SRSummary({
   const [roundOffDropOpen, setRoundOffDropOpen] = useState(false);
   const [manualTotal, setManualTotal] = useState<string>("");
 
+  // Signature state — read from Invoice Builder on mount
+  const [showSigModal, setShowSigModal] = useState(false);
+  const [signatureUrl, setSignatureUrl] = useState<string>(() => getBuilderSignature());
+  const [showEmptyBox, setShowEmptyBox] = useState(false);
+  const companyName = getBuilderCompanyName();
+
+  useEffect(() => {
+    const url = getBuilderSignature();
+    if (url) { setSignatureUrl(url); setShowEmptyBox(false); }
+  }, []);
+
+  const roundOffRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const h = (e: MouseEvent) => {
+      if (roundOffRef.current && !roundOffRef.current.contains(e.target as Node)) setRoundOffDropOpen(false);
+    };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, []);
+
   const hasItems = items.length > 0;
 
   const subtotal = items.reduce((s, i) => s + i.qty * i.price, 0);
@@ -70,20 +179,28 @@ export function SRSummary({
     onChargesChange(additionalCharges.filter(c => c.id !== id));
   };
 
+  const XCircleIcon = () => (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="12" cy="12" r="10"/>
+      <line x1="15" y1="9" x2="9" y2="15"/>
+      <line x1="9" y1="9" x2="15" y2="15"/>
+    </svg>
+  );
+
+  const hasSignature = signatureUrl || showEmptyBox;
+
   return (
     <div className="csr-summary">
 
       {/* ── Additional Charges ── */}
       {additionalCharges.map(charge => (
         <div key={charge.id} className="csr-charge-row">
-          {/* Label input — full width top row */}
           <input
             className="csr-charge-label-input"
             value={charge.label}
             onChange={e => updateCharge(charge.id, "label", e.target.value)}
             placeholder="Enter charge (ex. Transport Charge)"
           />
-          {/* Amount + tax + remove on same row */}
           <div className="csr-charge-inline-row">
             <div className="csr-charge-amt-wrap">
               <span className="csr-charge-rs">₹</span>
@@ -109,17 +226,12 @@ export function SRSummary({
               ))}
             </select>
             <button className="csr-charge-remove" onClick={() => removeCharge(charge.id)}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="12" cy="12" r="10"/>
-                <line x1="15" y1="9" x2="9" y2="15"/>
-                <line x1="9" y1="9" x2="15" y2="15"/>
-              </svg>
+              <XCircleIcon />
             </button>
           </div>
         </div>
       ))}
 
-      {/* Add charge links */}
       {additionalCharges.length > 0 ? (
         <button className="csr-link-btn csr-link-btn--sm" onClick={addCharge}>
           + Add Another Charge
@@ -130,13 +242,13 @@ export function SRSummary({
         </button>
       )}
 
-      {/* Taxable Amount */}
+      {/* ── Taxable Amount ── */}
       <div className="csr-summary-row">
         <span>Taxable Amount</span>
         <span>₹ {taxableAmount.toFixed(0)}</span>
       </div>
 
-      {/* Discount */}
+      {/* ── Discount ── */}
       {showDiscount ? (
         <div className="csr-discount-row">
           <select
@@ -176,11 +288,7 @@ export function SRSummary({
               />
             </div>
             <button className="csr-charge-remove" onClick={() => onToggleDiscount(false)}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <circle cx="12" cy="12" r="10"/>
-                <line x1="15" y1="9" x2="9" y2="15"/>
-                <line x1="9" y1="9" x2="15" y2="15"/>
-              </svg>
+              <XCircleIcon />
             </button>
           </div>
         </div>
@@ -193,7 +301,7 @@ export function SRSummary({
         </div>
       )}
 
-      {/* Round Off */}
+      {/* ── Round Off ── */}
       <div className="csr-roundoff-row">
         <label className="csr-checkbox-label">
           <input
@@ -204,8 +312,7 @@ export function SRSummary({
           <span>Auto Round Off</span>
         </label>
         <div className="csr-roundoff-right">
-          {/* +Add / Reduce dropdown */}
-          <div className="csr-roundoff-sign-wrap">
+          <div className="csr-roundoff-sign-wrap" ref={roundOffRef}>
             <button
               className="csr-roundoff-type-btn"
               onClick={() => setRoundOffDropOpen(o => !o)}
@@ -217,18 +324,8 @@ export function SRSummary({
             </button>
             {roundOffDropOpen && (
               <div className="csr-roundoff-dropdown">
-                <button
-                  className="csr-roundoff-opt"
-                  onClick={() => { setRoundOffSign("add"); setRoundOffDropOpen(false); }}
-                >
-                  + Add
-                </button>
-                <button
-                  className="csr-roundoff-opt"
-                  onClick={() => { setRoundOffSign("reduce"); setRoundOffDropOpen(false); }}
-                >
-                  - Reduce
-                </button>
+                <button className="csr-roundoff-opt" onClick={() => { setRoundOffSign("add"); setRoundOffDropOpen(false); }}>+ Add</button>
+                <button className="csr-roundoff-opt" onClick={() => { setRoundOffSign("reduce"); setRoundOffDropOpen(false); }}>- Reduce</button>
               </div>
             )}
           </div>
@@ -243,16 +340,14 @@ export function SRSummary({
         </div>
       </div>
 
-      {/* Total Amount */}
+      {/* ── Total Amount ── */}
       <div className="csr-summary-total-row">
         <span className="csr-total-label">Total Amount</span>
         {hasItems ? (
-          /* Items exist → computed, read-only, shown as plain text */
           <span className="csr-total-computed">
             {totalAmount > 0 ? `₹ ${totalAmount.toFixed(2)}` : "₹ 0"}
           </span>
         ) : (
-          /* No items → user can type a manual total */
           <input
             className="csr-total-input csr-total-input--editable"
             placeholder="Enter Payment amount"
@@ -269,7 +364,7 @@ export function SRSummary({
 
       <div className="csr-summary-divider" />
 
-      {/* Mark as fully paid */}
+      {/* ── Mark as fully paid ── */}
       <div className="csr-fully-paid-row">
         <span />
         <label className="csr-checkbox-label">
@@ -286,7 +381,7 @@ export function SRSummary({
         </label>
       </div>
 
-      {/* Amount Paid */}
+      {/* ── Amount Paid ── */}
       <div className="csr-amount-paid-row">
         <span>Amount Paid</span>
         <div className="csr-amount-paid-inputs">
@@ -312,7 +407,7 @@ export function SRSummary({
 
       <div className="csr-summary-divider" />
 
-      {/* Balance */}
+      {/* ── Balance ── */}
       <div className="csr-balance-row">
         <span className="csr-balance-label">Balance Amount</span>
         <span className={`csr-balance-value${balanceAmount === 0 ? " csr-balance-value--zero" : ""}`}>
@@ -320,13 +415,53 @@ export function SRSummary({
         </span>
       </div>
 
-      {/* Signatory */}
+      {/* ── Authorized Signatory ── */}
       <div className="csr-signatory">
         <div className="csr-signatory-text">
-          Authorized signatory for <strong>scratchweb.solutions</strong>
+          Authorized signatory for <strong>{companyName}</strong>
         </div>
-        <div className="csr-signatory-box" />
+
+        {!hasSignature ? (
+          /* ── Add Signature dashed button ── */
+          <button className="csr-add-signature-btn" onClick={() => setShowSigModal(true)}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="12" y1="5" x2="12" y2="19"/>
+              <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            Add Signature
+          </button>
+        ) : signatureUrl ? (
+          /* ── Uploaded signature preview ── */
+          <div className="csr-signature-preview-wrap">
+            <img src={signatureUrl} alt="Signature" className="csr-signature-preview-img" />
+            <button
+              className="csr-sig-change-btn"
+              onClick={() => setShowSigModal(true)}
+              title="Change signature"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              </svg>
+              Change
+            </button>
+          </div>
+        ) : (
+          /* ── Empty signature box ── */
+          <div className="csr-signatory-empty-box" onClick={() => setShowSigModal(true)} title="Click to change">
+            <span className="csr-signatory-empty-hint">Signature</span>
+          </div>
+        )}
       </div>
+
+      {/* ── Signature Modal ── */}
+      {showSigModal && (
+        <SignatureModal
+          onClose={() => setShowSigModal(false)}
+          onUpload={url => { setSignatureUrl(url); setShowEmptyBox(false); }}
+          onShowEmpty={() => { setShowEmptyBox(true); setSignatureUrl(""); }}
+        />
+      )}
     </div>
   );
 }
@@ -430,7 +565,11 @@ export function SRQuickSettings({ nextNo, onClose, onSave }: SettingsModalProps)
       <div className="csr-modal csr-settings-modal" onClick={e => e.stopPropagation()}>
         <div className="csr-modal-hdr">
           <span>Quick Sales Return Settings</span>
-          <button className="csr-modal-close" onClick={onClose}>×</button>
+          <button className="csr-modal-close" onClick={onClose}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+          </button>
         </div>
         <div className="csr-modal-body">
           <div className="csr-settings-section">
