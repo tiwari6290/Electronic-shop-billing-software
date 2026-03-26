@@ -13,6 +13,7 @@ import {
   getAllPurchaseInvoices,
   deletePurchaseInvoice,
   recordPurchasePayment,
+  updatePurchaseInvoiceSignature,
 } from "@/services/purchaseService";
 import api from "@/lib/axios";
 import { getAllParties } from "@/services/partyService";
@@ -515,6 +516,7 @@ interface RawPurchaseInvoice {
   discountAmount?: number;
   roundOff?: number;
   partyId: number;
+  signatureUrl?: string | null;
   party?: {
     partyName?: string;
     name?: string;
@@ -565,6 +567,7 @@ interface Invoice {
   roundOffVal: number;
   amtPaid: number;
   payMethod: string;
+  signatureUrl?: string | null;
 }
 
 interface AppSettings {
@@ -1385,16 +1388,29 @@ function InvoiceBillView({
   const [showPrintDD, setShowPrintDD] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
-  const [signatureUrl, setSignatureUrl] = useState<string | null>(null);
+  const [signatureUrl, setSignatureUrl] = useState<string | null>(
+    invoice.signatureUrl ?? null,
+  );
   const sigInputRef = useRef<HTMLInputElement>(null);
 
-  const handleSignatureUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSignatureUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = () => setSignatureUrl(reader.result as string);
+    reader.onload = async () => {
+      const dataUrl = reader.result as string;
+      setSignatureUrl(dataUrl);
+      try {
+        await updatePurchaseInvoiceSignature(inv.id, dataUrl);
+        showT("Signature saved");
+      } catch (err) {
+        console.error("Failed to save signature", err);
+        showT("Signature uploaded (save failed)");
+      }
+    };
     reader.readAsDataURL(file);
-    showT("Signature uploaded");
   };
 
   const shareRef = useRef<HTMLDivElement>(null);
@@ -1596,23 +1612,6 @@ function InvoiceBillView({
             <IC.Refresh />
           </button>
 
-          <button
-            className="report-action-btn"
-            onClick={() => sigInputRef.current?.click()}
-            title="Upload Authorised Signature"
-            style={{ display: "flex", alignItems: "center", gap: 5 }}
-          >
-            <IC.Pen />
-            {signatureUrl ? "Change Signature" : "Upload Signature"}
-          </button>
-          <input
-            ref={sigInputRef}
-            type="file"
-            accept="image/*"
-            style={{ display: "none" }}
-            onChange={handleSignatureUpload}
-          />
-
           <div
             className="report-action-split"
             ref={shareRef}
@@ -1760,7 +1759,9 @@ function InvoiceBillView({
             <tbody>
               {inv.items.map((item, idx) => {
                 const amt = item.qty * item.price - item.discount;
-                const taxAmt = ((item.qty * item.price - (item.discount || 0)) * item.tax) / 100;
+                const taxAmt =
+                  ((item.qty * item.price - (item.discount || 0)) * item.tax) /
+                  100;
                 return (
                   <tr key={item.rowId ?? item.id}>
                     <td style={{ textAlign: "center", color: "#667085" }}>
@@ -1924,72 +1925,20 @@ function InvoiceBillView({
               <div className="bill-auth-label">Authorised Signatory For</div>
               <div className="bill-auth-company">scratchweb.solutions</div>
 
-              <div
-                className="bill-sig-box"
-                style={{
-                  position: "relative",
-                  overflow: "hidden",
-                  cursor: "pointer",
-                }}
-                onClick={() => sigInputRef.current?.click()}
-                title={
-                  signatureUrl
-                    ? "Click to change signature"
-                    : "Click to upload signature"
-                }
-              >
-                {signatureUrl ? (
-                  <>
-                    <img
-                      src={signatureUrl}
-                      alt="Authorised Signature"
-                      style={{
-                        width: "100%",
-                        height: "100%",
-                        objectFit: "contain",
-                        padding: 4,
-                      }}
-                    />
-                    <div
-                      style={{
-                        position: "absolute",
-                        inset: 0,
-                        background: "rgba(255,255,255,0.82)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        gap: 5,
-                        opacity: 0,
-                        transition: "opacity 0.18s",
-                        fontSize: 11,
-                        color: "#4361ee",
-                        fontWeight: 600,
-                        pointerEvents: "none",
-                      }}
-                      className="sig-hover-overlay"
-                    >
-                      <IC.Pen /> Change Signature
-                    </div>
-                  </>
-                ) : (
-                  <span
-                    style={{
-                      position: "absolute",
-                      inset: 0,
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      gap: 5,
-                      fontSize: 11,
-                      color: "#c0cad8",
-                    }}
-                  >
-                    <IC.Pen />
-                    <span>Click to upload signature</span>
-                  </span>
-                )}
-              </div>
+              {signatureUrl && (
+  <div className="bill-sig-box">
+    <img
+      src={signatureUrl}
+      alt="Signature"
+      style={{
+        width: "100%",
+        height: "100%",
+        objectFit: "contain",
+        padding: 4,
+      }}
+    />
+  </div>
+)}
             </div>
           </div>
           <div className="bill-bottom-footer">
@@ -2839,6 +2788,8 @@ function CreatePurchaseInvoicePage({
   const pendingQtys = addedItems;
   const addedIds = Object.keys(addedItems).map(Number);
   const [showCPISettings, setShowCPISettings] = useState(false);
+  const [cpiSignatureUrl, setCpiSignatureUrl] = useState<string | null>(null);
+  const cpiSigInputRef = useRef<HTMLInputElement>(null);
 
   const partyRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -3113,11 +3064,12 @@ function CreatePurchaseInvoicePage({
               invDateObj.getTime() + parseInt(payTerms) * 86400000,
             ).toISOString()
           : null,
-        paymentMode: payMethod,
+        paymentMode: payMethod?.toUpperCase(),
         amountPaid: amtPaid,
         discountAmount: discountAmt,
         roundOff: roundOffAmt,
         notes: showNotes ? notes : undefined,
+        signatureUrl: cpiSignatureUrl,
         items: invoiceItems.map((i) => ({
           productId: i.productId ?? i.id,
           ...(i.godownId && { godownId: i.godownId }),
@@ -3191,7 +3143,7 @@ function CreatePurchaseInvoicePage({
         setInvoiceItems([]);
         setAdditionalCharges([]);
         setAmtPaid(0);
-        setPayMethod("Cash");
+        setPayMethod("CASH");
         setMarkPaid(false);
         setShowDiscount(false);
         setDiscountType("%");
@@ -4144,13 +4096,16 @@ function CreatePurchaseInvoicePage({
                   />
                 </div>
                 <select
-                  className="payment-method-select"
                   value={payMethod}
                   onChange={(e) => setPayMethod(e.target.value)}
                 >
-                  <option>Cash</option>
-                  <option>Bank</option>
-                  <option>UPI</option>
+                  <option value="">Select Payment Mode</option>
+                  <option value="CASH">Cash</option>
+                  <option value="UPI">UPI</option>
+                  <option value="CARD">Card</option>
+                  <option value="NETBANKING">Net Banking</option>
+                  <option value="BANK_TRANSFER">Bank Transfer</option>
+                  <option value="CHEQUE">Cheque</option>
                 </select>
               </div>
             </div>
@@ -4171,7 +4126,50 @@ function CreatePurchaseInvoicePage({
             <div className="authorized-row">
               Authorized signatory for <strong>scratchweb.solutions</strong>
             </div>
-            <div className="sig-box" />
+            {cpiSignatureUrl ? (
+              <div
+                className="sig-box"
+                style={{
+                  position: "relative",
+                  cursor: "pointer",
+                  overflow: "hidden",
+                }}
+                onClick={() => cpiSigInputRef.current?.click()}
+                title="Click to change signature"
+              >
+                <img
+                  src={cpiSignatureUrl}
+                  alt="Signature"
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "contain",
+                    padding: 4,
+                  }}
+                />
+              </div>
+            ) : (
+              <button
+                className="add-signature-btn"
+                onClick={() => cpiSigInputRef.current?.click()}
+              >
+                + Add Signature
+              </button>
+            )}
+            <input
+              ref={cpiSigInputRef}
+              type="file"
+              accept="image/*"
+              style={{ display: "none" }}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = () =>
+                  setCpiSignatureUrl(reader.result as string);
+                reader.readAsDataURL(file);
+              }}
+            />
           </div>
         </div>
       </div>
@@ -5365,6 +5363,7 @@ export default function PurchaseModule() {
     partyId: raw.partyId,
     partyPhone: raw.party?.mobileNumber ?? raw.party?.phone ?? "",
     partyPan: raw.party?.gstin ?? raw.party?.pan ?? "",
+    signatureUrl: raw.signatureUrl ?? null,
     dueIn: raw.dueDate
       ? Math.ceil(
           (new Date(raw.dueDate).getTime() -
