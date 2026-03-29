@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ItemProduct, SAMPLE_ITEMS } from "./Types";
 import "./Additemsmodal.css";
-
+import { fetchProducts } from "../../../api/partiesAndProductsApi";
 const IconClose = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
     <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
@@ -28,24 +28,43 @@ const AddItemsModal: React.FC<Props> = ({ onAdd, onClose }) => {
   const [category, setCategory] = useState("");
   const [catOpen, setCatOpen] = useState(false);
   const [quantities, setQuantities] = useState<Record<number, number>>({});
-  const [items, setItems] = useState<ItemProduct[]>(SAMPLE_ITEMS);
-
-  useEffect(() => {
-    try {
-      const stored = JSON.parse(localStorage.getItem("items") || "[]");
-      if (stored.length > 0) setItems(stored);
-    } catch {}
-  }, []);
-
+const [items, setItems] = useState<ItemProduct[]>([]);
+useEffect(() => {
+  fetch("http://localhost:4000/api/product-stocks")
+    .then(res => res.json())
+    .then(data => {
+      const mapped = (data?.data || []).map((s: any) => ({
+        id: s.product?.id,
+        name: s.product?.name || "",
+        itemCode: s.product?.itemCode || "",
+        stock: s.currentStock || 0,
+        salesPrice: Number(s.product?.salesPrice || 0),
+        purchasePrice: Number(s.product?.purchasePrice || 0),
+        unit: s.product?.unit || "PCS",
+        hsn: s.product?.hsnCode || "",
+        category: s.product?.category || "General", // ✅ FIX
+        taxRate: 0
+      }));
+      setItems(mapped);
+    })
+    .catch(err => console.error(err));
+}, []);
   // Get unique categories
-  const categories: string[] = [...new Set(items.map(i => (i as any).category).filter(Boolean))] as string[];
+const categories: string[] = [
+  ...new Set(items.map(i => i.category).filter((c): c is string => Boolean(c)))
+]; const filtered = items.filter(item => {
+  const q = search.toLowerCase();
 
-  const filtered = items.filter(item => {
-    const q = search.toLowerCase();
-    const matchSearch = !search || item.name.toLowerCase().includes(q) || item.itemCode.toLowerCase().includes(q) || item.hsn.toLowerCase().includes(q);
-    const matchCat = !category || (item as any).category === category;
-    return matchSearch && matchCat;
-  });
+  const matchSearch =
+    !search ||
+    item.name.toLowerCase().includes(q) ||
+    (item.itemCode || "").toLowerCase().includes(q) ||
+    (item.hsn || "").toLowerCase().includes(q);
+
+  const matchCat = !category || item.category === category;
+
+  return matchSearch && matchCat;
+});
 
   const selectedCount = Object.values(quantities).filter(v => v > 0).length;
   const totalSelected = Object.entries(quantities).filter(([,v]) => v > 0).length;

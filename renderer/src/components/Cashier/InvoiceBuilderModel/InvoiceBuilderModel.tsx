@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import "./InvoiceBuilderModel.css";
-
+import { saveInvoiceDetailsSettings } from "../../../api/salesInvoiceApi";
 // ─── TYPES ────────────────────────────────────────────────────────────────────
 
 type View = "home" | "builder";
@@ -1495,6 +1495,23 @@ const HomePage: React.FC<HomePageProps> = ({ savedTemplates, onCreateOwn, onUse,
     onSaved(t);
     setSaveSuccess(true);
     setTimeout(() => setSaveSuccess(false), 2000);
+
+    // Sync settings to backend
+    saveInvoiceDetailsSettings({
+      showChallan:           invDet.challan,
+      showDispatchedThrough: invDet.dispatched,
+      showEmailId:           invDet.email,
+      showFinancedBy:        invDet.financed,
+      showSalesman:          invDet.salesman,
+      showTransportName:     invDet.transport,
+      showWarranty:          invDet.warranty,
+      showPO:                invDet.po,
+      showEwayBill:          invDet.eway,
+      showVehicle:           invDet.vehicle,
+      customFields:          invCustomFields,
+    }).catch(err => {
+      console.warn("InvoiceBuilderModel: failed to sync settings to backend:", err);
+    });
   };
 
   return (

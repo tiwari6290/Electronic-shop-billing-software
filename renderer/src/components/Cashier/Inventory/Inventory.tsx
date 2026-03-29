@@ -552,7 +552,7 @@ const ItemDetailPage = ({ item, onBack, onDelete, onAdjust, onEdit, loading }: {
           <button className="btn-outline-sm"><IcBarcode /> View Barcode</button>
           <button className="btn-outline-sm" onClick={onAdjust}>Adjust Stock</button>
           <button className="btn-icon-action edit" title="Edit Item" onClick={e=>{e.stopPropagation();onEdit();}}><IcEdit /></button>
-          <button className="btn-icon-action delete" title="Delete Item" onClick={()=>{if(confirm(`Delete ${item.itemName}?`)){onDelete(item.id);onBack();}}}><IcTrash /></button>
+          <button className="btn-icon-action delete" title="Remove Item" onClick={()=>onDelete(item.id)}><IcTrash /></button>
         </div>
       </div>
       <div className="detail-tabbar">
@@ -950,7 +950,7 @@ const ItemsListPage = ({ items, onItemClick, onDelete, search, setSearch,
                   <td className="td-secondary">{fmt(item.sellingPrice)}</td>
                   <td className="td-secondary">{fmt(item.purchasePrice)}</td>
                   <td className="td-actions" onClick={e=>e.stopPropagation()}>
-                    <button className="icon-btn-danger" onClick={()=>{if(confirm(`Delete ${item.itemName}?`))onDelete(item.id);}}><IcTrash /></button>
+                    <button className="icon-btn-danger" title="Remove item" onClick={e=>{e.stopPropagation();onDelete(item.id);}}><IcTrash /></button>
                   </td>
                 </tr>
               ))}
@@ -1111,14 +1111,41 @@ const purchaseMap: Record<number, string> = {};
   const goReport   = (r: ReportView) => { setActiveReport(r); setView("report"); };
   const backReport = ()              => { setView("list"); setActiveReport(null); };
 
+  // ─── Soft-delete confirmation state ──────────────────────────────────────
+  const [pendingDeleteId,   setPendingDeleteId]   = useState<string | null>(null);
+  const [pendingDeleteName, setPendingDeleteName] = useState<string>("");
+
   // ─── CRUD ─────────────────────────────────────────────────────────────────
-  const deleteItem = async (id: string) => {
+  // SOFT-DELETE: sets status → "disabled" on the backend (keeps DB record).
+  // The item is hidden from the list immediately on the frontend.
+  // To restore, update status → "active" via backend.
+  const requestDelete = (id: string, name: string) => {
+    setPendingDeleteId(id);
+    setPendingDeleteName(name);
+  };
+
+  const confirmDelete = async () => {
+    if (!pendingDeleteId) return;
+    const id = pendingDeleteId;
+    setPendingDeleteId(null);
     try {
-      await api.delete(`/items/${id}`);
+      // Soft-delete: PUT with status disabled (item stays in DB)
+      await api.put(`/items/${id}`, { status: "disabled" });
       setItems(p => p.filter(i => i.id !== id));
       setSelectedId(null); setView("list");
-      setToast("Item deleted successfully");
-    } catch (error) { console.error(error); }
+      setToast("Item disabled (soft-deleted). It no longer appears in the list.");
+    } catch (error) {
+      console.error("Soft-delete failed:", error);
+      setToast("Failed to remove item. Please try again.");
+    }
+  };
+
+  const cancelDelete = () => setPendingDeleteId(null);
+
+  // Legacy alias kept for any existing call-sites that pass a single id
+  const deleteItem = (id: string) => {
+    const item = items.find(i => i.id === id);
+    requestDelete(id, item?.itemName ?? "this item");
   };
 
   const saveEditedItem = async (updated: Item) => {
@@ -1184,6 +1211,28 @@ const purchaseMap: Record<number, string> = {};
       {editItem&&<EditItemModal item={editItem} onClose={()=>setEditItem(null)} onSave={saveEditedItem}/>}
       {showSettings&&<SettingsModal settings={settings} customFields={customFields} onClose={()=>setShowSettings(false)} onSave={saveSettings}/>}
       {toast&&<Toast msg={toast} onDone={()=>setToast(null)}/>}
+
+      {/* ── Soft-Delete Confirmation Modal ── */}
+      {pendingDeleteId && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.45)", zIndex:2000, display:"flex", alignItems:"center", justifyContent:"center" }}>
+          <div style={{ background:"#fff", borderRadius:12, width:380, boxShadow:"0 20px 60px rgba(0,0,0,.18)", fontFamily:"inherit", overflow:"hidden" }}>
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"16px 20px", borderBottom:"1px solid #f3f4f6" }}>
+              <span style={{ fontSize:15, fontWeight:700, color:"#111827" }}>Remove Item</span>
+              <button onClick={cancelDelete} style={{ background:"none", border:"1px solid #e5e7eb", borderRadius:6, width:28, height:28, cursor:"pointer", color:"#6b7280", display:"flex", alignItems:"center", justifyContent:"center", fontSize:14 }}>✕</button>
+            </div>
+            <div style={{ padding:"20px", fontSize:13.5, color:"#374151", lineHeight:1.6 }}>
+              <p>Are you sure you want to remove <strong>{pendingDeleteName}</strong>?</p>
+              <p style={{ marginTop:8, color:"#6b7280", fontSize:12.5 }}>
+                The item will be hidden from the inventory list but its history (stock ledger, invoices) will be preserved in the database.
+              </p>
+            </div>
+            <div style={{ display:"flex", justifyContent:"flex-end", gap:10, padding:"14px 20px", borderTop:"1px solid #f3f4f6" }}>
+              <button onClick={cancelDelete} style={{ padding:"8px 22px", border:"1px solid #e5e7eb", background:"#fff", borderRadius:8, fontSize:13, cursor:"pointer", color:"#374151", fontWeight:500, fontFamily:"inherit" }}>Cancel</button>
+              <button onClick={confirmDelete} style={{ padding:"8px 22px", background:"#fff", border:"1.5px solid #ef4444", borderRadius:8, fontSize:13, fontWeight:600, cursor:"pointer", color:"#ef4444", fontFamily:"inherit" }}>Yes, Remove</button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

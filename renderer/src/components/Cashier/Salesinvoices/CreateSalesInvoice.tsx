@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";   // ← FIX: read convert state from router
 
 import {
   SalesInvoice,
@@ -17,6 +18,28 @@ import {
 } from "../../../api/salesInvoiceApi";
 
 import { mapBackendInvoice } from "../../../utils/invoiceMapper";
+
+// FIX: import the status-update helpers so we can close the source docs
+// ONLY after the invoice has been successfully saved to the backend.
+import { updateChallanStatus } from "../../../api/deliverychallanapi";
+
+// FIX: proformaApi may not exist. Use a direct fetch to the dedicated
+// PATCH /api/proforma-invoices/:id/status endpoint added in proforma_routes.ts.
+async function updateProformaStatus(id: number, status: string): Promise<void> {
+  const token = localStorage.getItem("token") || sessionStorage.getItem("token") || "";
+  const res = await fetch(`http://localhost:4000/api/proforma-invoices/${id}/status`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({ status }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error((body as any).message || `HTTP ${res.status}`);
+  }
+}
 
 import SIPartySelector from "./SIPartySelector";
 import SIMetaFields    from "./SIMetaFields";
@@ -103,12 +126,12 @@ function QuickSettingsModal({ onClose, onSaved }: QuickSettingsModalProps) {
     try {
       const payload: Omit<InvoiceSettings, "id"> = {
         enablePrefix,
-        prefix:            prefix.trim(),
-        sequenceNumber:    seqNo,
+        prefix:             prefix.trim(),
+        sequenceNumber:     seqNo,
         showPurchasePrice,
         showItemImage,
         enablePriceHistory: priceHistory,
-        invoiceTheme:      theme,
+        invoiceTheme:       theme,
       };
       const saved = await saveInvoiceSettings(payload);
       onSaved(buildInvoiceNo(saved));
@@ -270,7 +293,7 @@ interface Props {
   editId?: string;
   onBack: () => void;
   onSaveAndNew?: () => void;
-  /** Pre-fill form from a converted quotation */
+  /** Pre-fill form from a converted quotation (passed via props) */
   fromQuotation?: any | null;
   /**
    * When converting from a quotation, pass the source quotation's id here.
@@ -278,8 +301,22 @@ interface Props {
    * after the invoice is successfully saved to the backend.
    */
   fromQuotationId?: string | null;
-  /** Pre-fill form from a converted delivery challan */
+  /**
+   * Pre-fill form from a converted delivery challan (passed via props).
+   * If the component is rendered via React Router navigate() with
+   * location.state, these values are read from the router state instead.
+   */
   fromChallan?: any | null;
+  /**
+   * FIX: Source challan ID — used to mark the challan CLOSED only after
+   * the invoice is successfully saved. May come from props OR router state.
+   */
+  fromChallanId?: number | null;
+  /**
+   * FIX: Source proforma invoice ID — used to mark the proforma CLOSED only
+   * after the invoice is successfully saved. Comes from router state.
+   */
+  fromProformaId?: number | null;
 }
 
 export default function CreateSalesInvoice({
@@ -288,8 +325,28 @@ export default function CreateSalesInvoice({
   onSaveAndNew,
   fromQuotation,
   fromQuotationId,
-  fromChallan,
+  fromChallan:    fromChallanProp,
+  fromChallanId:  fromChallanIdProp,
+  fromProformaId: fromProformaIdProp,
 }: Props) {
+
+  // ── Read any convert-payload injected by navigate() state ────────────────
+  // DeliveryChallanModel and the Proforma list both call:
+  //   navigate("/cashier/sales-invoice", { state: { fromChallan, fromChallanId } })
+  //   navigate("/cashier/sales-invoice", { state: { fromProforma, fromProformaId } })
+  const location = useLocation();
+  const routeState = (location.state ?? {}) as {
+    fromChallan?:    any;
+    fromChallanId?:  number;
+    fromProforma?:   any;
+    fromProformaId?: number;
+  };
+
+  // Merge props + router-state so both call styles work
+  const fromChallan    = fromChallanProp    ?? routeState.fromChallan    ?? null;
+  const fromChallanId  = fromChallanIdProp  ?? routeState.fromChallanId  ?? null;
+  const fromProforma   =                       routeState.fromProforma   ?? null;
+  const fromProformaId = fromProformaIdProp ?? routeState.fromProformaId ?? null;
 
   // ── Convert challan data → SalesInvoice shape ────────────────────────────
   function challanToInvoice(c: any): SalesInvoice {
@@ -322,6 +379,40 @@ export default function CreateSalesInvoice({
       notes:             c.notes             || "",
       termsConditions:   c.termsConditions   || blank.termsConditions,
       challanNo:         c.challanNo         || "",
+    };
+  }
+
+  // ── Convert proforma data → SalesInvoice shape ───────────────────────────
+  function proformaToInvoice(p: any): SalesInvoice {
+    const blank = makeBlankInvoice("…");
+    const fd = p.fullData ?? p;
+    const billItems = (fd.lineItems || fd.billItems || []).map((item: any) => ({
+      rowId:        `row-${Date.now()}-${item.rowId || item.id || Math.random()}`,
+      itemId:       item.productId ?? item.itemId ?? null,
+      name:         item.item?.name || item.name || item.itemName || "",
+      description:  item.description  || "",
+      hsn:          item.hsnSac || item.hsn || item.item?.hsnCode || "",
+      qty:          Number(item.qty || item.quantity || 1),
+      unit:         item.unit || item.item?.unit || "PCS",
+      price:        Number(item.pricePerItem || item.price || 0),
+      discountPct:  Number(item.discountPct  || 0),
+      discountAmt:  Number(item.discountAmt  || 0),
+      taxLabel:     item.taxLabel || item.taxName || "None",
+      taxRate:      Number(item.taxRate || 0),
+      amount:       Number(item.amount || 0),
+    }));
+    return {
+      ...blank,
+      party:             fd.party || null,
+      billItems,
+      additionalCharges: fd.charges || fd.additionalCharges || [],
+      discountType:      fd.discountType  || blank.discountType,
+      discountPct:       fd.discountPct   || 0,
+      discountAmt:       fd.discountAmt   || 0,
+      roundOff:          fd.autoRound     ? "+Add" : "none",
+      roundOffAmt:       fd.adjustAmt     || 0,
+      notes:             fd.notes         || "",
+      termsConditions:   fd.terms         || blank.termsConditions,
     };
   }
 
@@ -362,6 +453,7 @@ export default function CreateSalesInvoice({
     // Pre-load builder custom field defaults so they show immediately on new invoice
     const cfDefaults = loadBuilderCustomFieldDefaults();
     if (fromChallan)   return { ...challanToInvoice(fromChallan),   customFieldValues: cfDefaults };
+    if (fromProforma)  return { ...proformaToInvoice(fromProforma),  customFieldValues: cfDefaults };
     if (fromQuotation) return { ...quotationToInvoice(fromQuotation), customFieldValues: cfDefaults };
     return { ...makeBlankInvoice("…"), customFieldValues: cfDefaults };
   });
@@ -375,8 +467,8 @@ export default function CreateSalesInvoice({
 
   /*────────────────────────────
    ON MOUNT: load invoice number from backend settings.
-   Applies to new invoices AND converted docs (quotation/challan)
-   since we used "…" as a placeholder in both cases.
+   Applies to new invoices AND converted docs (quotation/challan/proforma)
+   since we used "…" as a placeholder in all cases.
   ────────────────────────────*/
   useEffect(() => {
     if (editId) return; // editing existing — don't override
@@ -422,9 +514,15 @@ export default function CreateSalesInvoice({
     }
   }
 
-  /*────────────────────────────
+  /*────────────────────────────────────────────────────────────
    SAVE INVOICE TO BACKEND
-  ────────────────────────────*/
+
+   FIX: After a successful save, if this invoice was converted from
+   a delivery challan or a proforma invoice, we NOW mark the source
+   document as CLOSED. This way the status in those tables only
+   changes once the invoice is actually saved — not the moment the
+   user clicks "Convert to Invoice".
+  ────────────────────────────────────────────────────────────*/
   async function handleSave(calledFromSaveAndNew = false): Promise<boolean> {
     if (!form.party) {
       setSaveError("Please select a party before saving.");
@@ -476,6 +574,29 @@ export default function CreateSalesInvoice({
         await createInvoice(payload);
       }
 
+      // ── FIX: Close the source delivery challan AFTER successful save ──────
+      // The challan status was NOT changed when the user clicked
+      // "Convert to Invoice". We close it here instead.
+      if (fromChallanId) {
+        try {
+          await updateChallanStatus(fromChallanId, "CLOSED");
+        } catch (err) {
+          // Non-critical: log but don't block navigation. The invoice was saved.
+          console.warn("Could not close source challan:", err);
+        }
+      }
+
+      // ── FIX: Mark the source proforma as CONVERTED AFTER successful save ────
+      // Uses the dedicated PATCH /:id/status endpoint so the status changes
+      // only once the invoice is confirmed — not when the user clicks Convert.
+      if (fromProformaId) {
+        try {
+          await updateProformaStatus(fromProformaId, "CONVERTED");
+        } catch (err) {
+          console.warn("Could not mark source proforma as converted:", err);
+        }
+      }
+
       // ── Close the source quotation in localStorage now that the
       //    invoice has been successfully saved to the backend. ────────────
       if (fromQuotationId) {
@@ -516,53 +637,104 @@ export default function CreateSalesInvoice({
     if (onSaveAndNew) onSaveAndNew();
   }
 
-  /*────────────────────────────
-   CALCULATIONS
-   All values mirror SISummary exactly so the payload sent to the
-   backend matches what the user sees on screen.
-  ────────────────────────────*/
-  const subtotal = form.billItems.reduce((s, i) => {
-    const lineTotal = (Number(i.qty) || 0) * (Number(i.price) || 0);
-    const lineDisc  = lineTotal * ((Number(i.discountPct) || 0) / 100)
-                    + (Number(i.discountAmt) || 0);
-    return s + Math.max(0, lineTotal - lineDisc);
+  /*════════════════════════════════════════════════════════════════
+   CALCULATIONS — mirrors SISummary exactly so the payload stored
+   in the DB matches what the user sees on screen.
+
+   Correct GST invoice flow:
+     Per line item (in SIItemsTable / calcBillItemAmount):
+       lineGross  = qty × price         (price = pre-tax base)
+       lineDisc   = lineGross × discPct%  (or flat discAmt, not both)
+       taxable    = lineGross − lineDisc
+       lineTax    = taxable × taxRate%
+       lineTotal  = taxable + lineTax
+
+     In the summary panel:
+       itemsTaxableSum = Σ taxable per line
+       itemsTaxSum     = Σ lineTax per line
+       chargesBase     = Σ additional charge base amounts
+       chargesTax      = Σ charge × chargeRate%
+       preTotalAmount  = itemsTaxableSum + itemsTaxSum + chargesBase + chargesTax
+                       = all lineTotal + all charge totals
+
+     Invoice-level discount (Discount After Tax) on preTotalAmount:
+       invoiceDiscAmt  = preTotalAmount × discPct%   (or flat discAmt)
+       totalAmount     = preTotalAmount − invoiceDiscAmt + TCS + roundOff
+  ════════════════════════════════════════════════════════════════*/
+
+  // ── Per-line taxable and tax ────────────────────────────────────────────────
+  // itemsTaxableSum: sum of per-line taxable amounts (pre-tax, post-item-discount)
+  const itemsTaxableSum = form.billItems.reduce((s, i) => {
+    const lineGross = (Number(i.qty) || 0) * (Number(i.price) || 0);
+    const discByPct = lineGross * ((Number(i.discountPct) || 0) / 100);
+    const discFlat  = (Number(i.discountPct) || 0) > 0 ? 0 : (Number(i.discountAmt) || 0);
+    return s + Math.max(0, lineGross - discByPct - discFlat);
   }, 0);
 
-  const totalTax = form.billItems.reduce((s, i) => {
-    const lineTotal = (Number(i.qty) || 0) * (Number(i.price) || 0);
-    const lineDisc  = lineTotal * ((Number(i.discountPct) || 0) / 100)
-                    + (Number(i.discountAmt) || 0);
-    const taxBase   = Math.max(0, lineTotal - lineDisc);
-    return s + taxBase * ((Number(i.taxRate) || 0) / 100);
+  // itemsTaxSum: sum of per-line tax amounts (each on its own taxable)
+  const itemsTaxSum = form.billItems.reduce((s, i) => {
+    const lineGross = (Number(i.qty) || 0) * (Number(i.price) || 0);
+    const discByPct = lineGross * ((Number(i.discountPct) || 0) / 100);
+    const discFlat  = (Number(i.discountPct) || 0) > 0 ? 0 : (Number(i.discountAmt) || 0);
+    const taxable   = Math.max(0, lineGross - discByPct - discFlat);
+    return s + Math.round(taxable * ((Number(i.taxRate) || 0) / 100) * 100) / 100;
   }, 0);
 
-  const chargesTotal   = form.additionalCharges.reduce((s, c) => s + (Number(c.amount) || 0), 0);
-  const taxableBase    = subtotal + chargesTotal;
-  const discValue      = form.discountPct > 0
-    ? taxableBase * (form.discountPct / 100)
-    : (Number(form.discountAmt) || 0);
-  const afterDisc      = Math.max(0, taxableBase - discValue);
-  const taxScaleFactor = taxableBase > 0 ? afterDisc / taxableBase : 1;
-  const effectiveTax   = Math.round(totalTax * taxScaleFactor * 100) / 100;
-  const afterTax       = afterDisc + effectiveTax;
-  const tcsBaseAmt     = form.tcsBase === "Total Amount" ? afterTax : afterDisc;
-  const tcsValue       = form.applyTCS
+  // ── Additional charges ──────────────────────────────────────────────────────
+  function chargeRate(taxLabel: string): number {
+    const m = (taxLabel ?? "").match(/(\d+)%/);
+    return m ? Number(m[1]) : 0;
+  }
+  const chargesBase  = form.additionalCharges.reduce((s, c) => s + (Number(c.amount) || 0), 0);
+  const chargesTax   = form.additionalCharges.reduce((s, c) => {
+    const rate = chargeRate(c.taxLabel);
+    return s + (Number(c.amount) || 0) * rate / 100;
+  }, 0);
+  const chargesTotal = chargesBase + chargesTax;
+
+  // ── Pre-discount total (items + charges, tax already included per-line) ─────
+  const preTotalAmount = Math.round((itemsTaxableSum + itemsTaxSum + chargesTotal) * 100) / 100;
+
+  // ── Invoice-level discount (Discount After Tax — applied on preTotalAmount) ─
+  const invoiceDiscAmt = showDiscount
+    ? (form.discountPct > 0
+        ? Math.round(preTotalAmount * (form.discountPct / 100) * 100) / 100
+        : (Number(form.discountAmt) || 0))
+    : 0;
+
+  const afterInvoiceDisc = Math.max(0, Math.round((preTotalAmount - invoiceDiscAmt) * 100) / 100);
+
+  // ── TCS ─────────────────────────────────────────────────────────────────────
+  const tcsBaseAmt = form.tcsBase === "Total Amount" ? afterInvoiceDisc : itemsTaxableSum;
+  const tcsValue   = form.applyTCS
     ? Math.round(tcsBaseAmt * (form.tcsRate / 100) * 100) / 100
     : 0;
-  const preRound       = Math.round((afterTax + tcsValue) * 100) / 100;
-  // roundOffAmt is kept in sync by SISummary's useEffect which calls onRoundOffChange
-  // whenever preRound or mode changes. We use form.roundOffAmt directly here.
-  // Fallback: re-compute if somehow form.roundOffAmt is stale (e.g. on first render)
-  const roundOffAmt    = form.roundOff === "none"
+
+  // ── Round off ────────────────────────────────────────────────────────────────
+  const preRound    = Math.round((afterInvoiceDisc + tcsValue) * 100) / 100;
+  const roundOffAmt = form.roundOff === "none"
     ? (Number(form.roundOffAmt) || 0)
     : form.roundOff === "+Add"
     ? Math.round((Math.ceil(preRound)  - preRound) * 100) / 100
     : Math.round((Math.floor(preRound) - preRound) * 100) / 100;
+
   const computedTotal       = Math.round((preRound + roundOffAmt) * 100) / 100;
   const computedOutstanding = Math.max(
     0,
     Math.round((computedTotal - (Number(form.amountReceived) || 0)) * 100) / 100
   );
+
+  // ── Legacy aliases kept for the payload block below ─────────────────────────
+  const subtotal     = itemsTaxableSum;          // pre-tax taxable sum
+  const totalTax     = itemsTaxSum;              // total tax sum
+  const discValue    = invoiceDiscAmt;           // invoice-level discount ₹
+  const effectiveTax = itemsTaxSum;              // same as totalTax (no scale factor needed)
+  const afterTax     = afterInvoiceDisc;         // after invoice discount
+
+  /*────────────────────────────
+   BANNER: shown when this invoice was pre-filled from a challan/proforma
+  ────────────────────────────*/
+  const showConvertBanner = !editId && (fromChallanId || fromProformaId);
 
   /*────────────────────────────
    UI
@@ -607,6 +779,30 @@ export default function CreateSalesInvoice({
         </div>
       </div>
 
+      {/* ── FIX: Info banner when invoice is pre-filled from a source document ── */}
+      {showConvertBanner && (
+        <div style={{
+          background: "#eff6ff",
+          border: "1px solid #bfdbfe",
+          borderRadius: 8,
+          padding: "10px 16px",
+          margin: "0 0 12px",
+          fontSize: 13,
+          color: "#1e40af",
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+        }}>
+          <span>ℹ</span>
+          <span>
+            {fromChallanId
+              ? "Pre-filled from Delivery Challan."
+              : "Pre-filled from Proforma Invoice."}
+            {" "}The source document will be marked as{" "}
+            <strong>Closed / Converted</strong> only after you save this invoice.
+          </span>
+        </div>
+      )}
 
       <div className="csi-body">
 

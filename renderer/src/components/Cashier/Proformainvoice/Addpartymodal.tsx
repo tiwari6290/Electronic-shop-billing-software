@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Party, loadPartiesFromStorage } from "./Types";
 import "./Addpartymodal.css";
+import { fetchParties } from "../../../api/partiesAndProductsApi";
+
 
 // ── Inline SVG Icons ──────────────────────────────────────────────────────────
 const IconClose = () => (
@@ -26,15 +28,21 @@ const AddPartyModal: React.FC<Props> = ({ onSelect, onClose }) => {
   const [parties, setParties] = useState<Party[]>([]);
 
   // Load parties from localStorage on mount (same source as Parties.tsx)
-  useEffect(() => {
-    setParties(loadPartiesFromStorage());
-
-    // Also react to storage changes (e.g. party created in another tab)
-    const onStorage = () => setParties(loadPartiesFromStorage());
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
-  }, []);
-
+ useEffect(() => {
+  fetchParties()
+.then(data => {
+  const mapped = data.map((p: any) => ({
+    id: p.id,
+    name: p.name || p.partyName || "",
+    mobile: p.mobileNumber || "-",
+    type: p.partyType || "Customer",
+    category: "General",
+    balance: Number(p.openingBalance || 0)
+  }));
+  setParties(mapped);
+})
+    .catch(err => console.error(err));
+}, []);
   const filtered = parties.filter(p => {
     const q = search.toLowerCase();
     return (

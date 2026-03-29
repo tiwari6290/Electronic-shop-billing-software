@@ -15,6 +15,19 @@ const fmtDate = (s: string) => {
   return `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${d.getFullYear()}`;
 };
 
+const statusLabel = (s: string) => {
+  if (s === "OPEN") return "Open";
+  if (s === "CLOSED") return "Closed";
+  if (s === "CANCELLED") return "Cancelled";
+  return s;
+};
+
+const statusClass = (s: string) => {
+  if (s === "OPEN") return "cvp-status-open";
+  if (s === "CLOSED") return "cvp-status-closed";
+  return "cvp-status-open";
+};
+
 // ─── Thermal Print Settings Modal ─────────────────────────────────────────────
 function ThermalPrintModal({ onClose }: { onClose: () => void }) {
   const [left, setLeft] = useState("1000");
@@ -54,18 +67,21 @@ function ThermalPrintModal({ onClose }: { onClose: () => void }) {
   );
 }
 
-// ─── Three-dot Menu (view page) ────────────────────────────────────────────────
-function ViewMenu({ onEdit }: { onEdit: () => void }) {
+// ─── Three-dot Menu ────────────────────────────────────────────────────────────
+function ViewMenu({ onEdit, challanStatus }: { onEdit: () => void; challanStatus: string }) {
   const [open, setOpen] = useState(false);
+  const isClosed = challanStatus === "CLOSED" || challanStatus === "CANCELLED";
   return (
     <div className="cvp-menu-wrapper">
       <button className="cvp-menu-btn" onClick={() => setOpen(!open)}>⋮</button>
       {open && (
         <ul className="cvp-menu-dropdown">
-          <li onClick={() => { onEdit(); setOpen(false); }}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-            Edit
-          </li>
+          {!isClosed && (
+            <li onClick={() => { onEdit(); setOpen(false); }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              Edit
+            </li>
+          )}
           <li onClick={() => setOpen(false)}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
             Edit History
@@ -88,20 +104,29 @@ export default function ChallanViewPage({ challan, onBack, onEdit, onConvertToIn
   const [showThermal, setShowThermal] = useState(false);
   const [showPrintMenu, setShowPrintMenu] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
+  const [converting, setConverting] = useState(false);
 
   const items = challan.items || [];
-  const subtotal = items.reduce((s, i) => s + i.amount, 0);
-  const totalTax = items.reduce((s, i) => {
-    const base = i.qty * i.pricePerItem;
-    return s + base * (i.taxRate || 0) / 100;
-  }, 0);
+  const subtotal = items.reduce((s, i) => s + i.qty * i.pricePerItem, 0);
   const totalDiscount = items.reduce((s, i) => s + i.discount.amount + (i.qty * i.pricePerItem * i.discount.percent / 100), 0);
   const grandTotal = challan.amount;
 
-  // Get business info from localStorage
   const businessInfo = (() => {
     try { return JSON.parse(localStorage.getItem("businessInfo") || "{}"); } catch { return {}; }
   })();
+
+  const handleConvert = async () => {
+    if (challan.status === "CLOSED" || challan.status === "CANCELLED") {
+      alert("This challan has already been converted or closed.");
+      return;
+    }
+    setConverting(true);
+    try {
+      await onConvertToInvoice();
+    } finally {
+      setConverting(false);
+    }
+  };
 
   return (
     <div className="cvp-page">
@@ -110,14 +135,21 @@ export default function ChallanViewPage({ challan, onBack, onEdit, onConvertToIn
         <div className="cvp-topnav-left">
           <button className="cvp-back-btn" onClick={onBack}><ArrowLeft size={16}/></button>
           <span className="cvp-title">Delivery Challan #{challan.challanNumber}</span>
-          <span className={`cvp-status-badge cvp-status-${challan.status.toLowerCase()}`}>{challan.status}</span>
+          <span className={`cvp-status-badge ${statusClass(challan.status)}`}>{statusLabel(challan.status)}</span>
         </div>
         <div className="cvp-topnav-right">
-          <ViewMenu onEdit={onEdit} />
-          <div className="cvp-btn-icon-wrapper">
-            <button className="cvp-icon-btn" title="Info">ⓘ</button>
-          </div>
-          <button className="cvp-convert-btn" onClick={onConvertToInvoice}>Convert to Invoice</button>
+          <ViewMenu onEdit={onEdit} challanStatus={challan.status} />
+          <button className="cvp-icon-btn" title="Info"></button>
+          {challan.status === "OPEN" && (
+            <button className="cvp-convert-btn" onClick={handleConvert} disabled={converting}>
+              {converting ? "Converting…" : "Convert to Invoice"}
+            </button>
+          )}
+          {challan.status === "CLOSED" && (
+            <span style={{ fontSize: 13, color: "#166534", background: "#dcfce7", padding: "6px 12px", borderRadius: 8, fontWeight: 600 }}>
+              ✓ Converted to Invoice
+            </span>
+          )}
         </div>
       </div>
 
@@ -164,7 +196,9 @@ export default function ChallanViewPage({ challan, onBack, onEdit, onConvertToIn
           <div className="cvp-doc-header">
             <div className="cvp-company-block">
               <div className="cvp-company-logo">
-                <div className="cvp-logo-placeholder">S</div>
+                <div className="cvp-logo-placeholder">
+                  {(businessInfo.name || "S")[0].toUpperCase()}
+                </div>
               </div>
               <div className="cvp-company-info">
                 <div className="cvp-company-name" style={{ color: "#c07000" }}>
@@ -174,7 +208,7 @@ export default function ChallanViewPage({ challan, onBack, onEdit, onConvertToIn
                   {businessInfo.address || "WEST SHANTINAGAR ANANDNAGAR BALLY HOWRAH SAREE HOUSE, HOWRAH, 711227"}
                 </div>
                 <div className="cvp-company-detail">Mobile: {businessInfo.mobile || "06299909521"}</div>
-                <div className="cvp-company-detail">Email: {businessInfo.email || "rakeshranjantiwar i11@gmail.com"}</div>
+                <div className="cvp-company-detail">Email: {businessInfo.email || ""}</div>
               </div>
             </div>
             <div className="cvp-challan-meta">
@@ -185,6 +219,10 @@ export default function ChallanViewPage({ challan, onBack, onEdit, onConvertToIn
               <div className="cvp-meta-row">
                 <span className="cvp-meta-label">Challan Date</span>
                 <span className="cvp-meta-value">{fmtDate(challan.date)}</span>
+              </div>
+              <div className="cvp-meta-row">
+                <span className="cvp-meta-label">Status</span>
+                <span className="cvp-meta-value">{statusLabel(challan.status)}</span>
               </div>
             </div>
           </div>
@@ -198,6 +236,16 @@ export default function ChallanViewPage({ challan, onBack, onEdit, onConvertToIn
             <div className="cvp-bill-name">{challan.partyName}</div>
             {challan.shippingAddress && <div className="cvp-bill-addr">Address: {challan.shippingAddress}</div>}
           </div>
+
+          {/* Optional meta fields */}
+          {(challan.eWayBillNo || challan.vehicleNo || challan.salesman || challan.poNumber) && (
+            <div className="cvp-bill-section" style={{ display: "flex", flexWrap: "wrap", gap: "12px" }}>
+              {challan.eWayBillNo && <div style={{ fontSize: 11 }}><strong>E-Way Bill No:</strong> {challan.eWayBillNo}</div>}
+              {challan.vehicleNo && <div style={{ fontSize: 11 }}><strong>Vehicle No:</strong> {challan.vehicleNo}</div>}
+              {challan.salesman && <div style={{ fontSize: 11 }}><strong>Salesman:</strong> {challan.salesman}</div>}
+              {challan.poNumber && <div style={{ fontSize: 11 }}><strong>PO Number:</strong> {challan.poNumber}</div>}
+            </div>
+          )}
 
           {/* Items Table */}
           <table className="cvp-items-table">
@@ -217,22 +265,24 @@ export default function ChallanViewPage({ challan, onBack, onEdit, onConvertToIn
               ) : items.map((item, idx) => (
                 <tr key={item.id}>
                   <td>{idx + 1}</td>
-                  <td>{item.name}{item.description && <div className="cvp-item-desc">{item.description}</div>}</td>
+                  <td>
+                    {item.name}
+                    {item.hsnSac && <div className="cvp-item-desc">HSN/SAC: {item.hsnSac}</div>}
+                    {item.description && <div className="cvp-item-desc">{item.description}</div>}
+                  </td>
                   <td>{item.qty} {item.unit}</td>
-                  <td>{item.pricePerItem}</td>
-                  <td>{item.taxRate || 0}<br/>({item.taxRate || 0}%)</td>
-                  <td>{item.amount.toFixed(2)}</td>
+                  <td>₹ {item.pricePerItem.toFixed(2)}</td>
+                  <td>{item.taxRate || 0}%<br/>(₹ {(item.qty * item.pricePerItem * (item.taxRate || 0) / 100).toFixed(0)})</td>
+                  <td>₹ {item.amount.toFixed(2)}</td>
                 </tr>
               ))}
             </tbody>
             <tfoot>
               <tr className="cvp-subtotal-row">
-                <td colSpan={2} className="cvp-subtotal-labels">
-                  <span>abc</span>
-                </td>
-                <td>-</td>
-                <td>{items.reduce((s,i)=>s+i.pricePerItem,0).toLocaleString()}</td>
-                <td>0<br/>(0%)</td>
+                <td colSpan={2}><span>Subtotal</span></td>
+                <td>{items.reduce((s,i)=>s+i.qty,0)}</td>
+                <td>₹ {items.reduce((s,i)=>s+i.pricePerItem,0).toFixed(2)}</td>
+                <td>₹ 0</td>
                 <td>₹ {subtotal.toFixed(2)}</td>
               </tr>
               {totalDiscount > 0 && (
@@ -241,6 +291,12 @@ export default function ChallanViewPage({ challan, onBack, onEdit, onConvertToIn
                   <td>-₹ {totalDiscount.toFixed(2)}</td>
                 </tr>
               )}
+              {challan.additionalCharges && challan.additionalCharges.length > 0 && challan.additionalCharges.map(c => (
+                <tr key={c.id} className="cvp-subtotal-row">
+                  <td colSpan={5} style={{ textAlign: "right" }}>{c.label || "Additional Charge"}</td>
+                  <td>₹ {c.amount.toFixed(2)}</td>
+                </tr>
+              ))}
               <tr className="cvp-total-row">
                 <td colSpan={2}><strong>TOTAL</strong></td>
                 <td>{items.reduce((s,i)=>s+i.qty,0)}</td>
@@ -292,6 +348,14 @@ export default function ChallanViewPage({ challan, onBack, onEdit, onConvertToIn
             <div className="cvp-terms">
               <strong>Terms and Conditions</strong>
               <div>{challan.termsAndConditions}</div>
+            </div>
+          )}
+
+          {/* Notes */}
+          {challan.notes && (
+            <div className="cvp-terms">
+              <strong>Notes</strong>
+              <div>{challan.notes}</div>
             </div>
           )}
 
