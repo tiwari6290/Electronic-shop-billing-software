@@ -1,6 +1,7 @@
-import { useState, useRef, useEffect } from "react";
-import { LinkedInvoice, getSalesInvoices, getSalesReturns, fmtDisplayDate } from "./Salesreturntypes";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { LinkedInvoice, fmtDisplayDate } from "./Salesreturntypes";
 import { Party } from "./Salesreturntypes";
+import { getAvailableInvoicesForReturn, AvailableInvoice } from "../../../api/salesreturnapi";
 import "./Createsalesreturn.css";
 
 // ─── Read field visibility + custom fields from InvoiceBuilder localStorage ───
@@ -55,6 +56,38 @@ function getBuilderDetSettings(): BuilderDetSettings {
     }
   } catch {}
   return defaults;
+}
+
+// ─── Convert backend AvailableInvoice → frontend LinkedInvoice ────────────────
+function toLinkedInvoice(inv: AvailableInvoice, partyName: string): LinkedInvoice {
+  return {
+    id:         String(inv.id),
+    invoiceNo:  inv.invoiceNo,
+    invoiceDate: inv.invoiceDate.split("T")[0],
+    party:      { name: partyName },
+    billItems:  inv.items.map((item) => ({
+      rowId:       `row-${item.id}`,
+      itemId:      String(item.productId),
+      name:        item.product.name,
+      description: "",
+      hsn:         item.product.hsnCode || "",
+      qty:         item.quantity,
+      unit:        item.product.unit || "PCS",
+      price:       item.price,
+      discountPct: 0,
+      discountAmt: 0,
+      taxLabel:    "None",
+      taxRate:     0,
+      amount:      item.quantity * item.price,
+    })),
+    additionalCharges: [],
+    discountPct:       0,
+    discountAmt:       0,
+    notes:             "",
+    termsConditions:   "",
+    amountReceived:    Number(inv.totalAmount) - Number(inv.outstandingAmount),
+    status:            inv.status,
+  };
 }
 
 // ─── Date Picker ──────────────────────────────────────────────────────────────
@@ -146,19 +179,19 @@ function DatePicker({ value, onChange }: { value: string; onChange: (v: string) 
 
 // ─── Meta Fields Component ────────────────────────────────────────────────────
 interface MetaFieldsProps {
-  salesReturnNo: number;
+  salesReturnNo:   number;
   salesReturnDate: string;
-  party: Party | null;
+  party:           Party | null;
   currentReturnId: string;
   linkedInvoiceId: string | null;
-  eWayBillNo: string;
-  challanNo: string;
-  financedBy: string;
-  salesman: string;
-  emailId: string;
-  warrantyPeriod: string;
-  onChange: (field: string, value: any) => void;
-  onInvoiceLink: (invoice: LinkedInvoice | null) => void;
+  eWayBillNo:      string;
+  challanNo:       string;
+  financedBy:      string;
+  salesman:        string;
+  emailId:         string;
+  warrantyPeriod:  string;
+  onChange:        (field: string, value: any) => void;
+  onInvoiceLink:   (invoice: LinkedInvoice | null) => void;
 }
 
 export default function SRMetaFields({
@@ -166,27 +199,28 @@ export default function SRMetaFields({
   linkedInvoiceId, eWayBillNo, challanNo, financedBy,
   salesman, emailId, warrantyPeriod, onChange, onInvoiceLink,
 }: MetaFieldsProps) {
-  const [invoiceOpen, setInvoiceOpen] = useState(false);
-  const [invoiceSearch, setInvoiceSearch] = useState("");
-  const [editNo, setEditNo] = useState(false);
-  const [tempNo, setTempNo] = useState(String(salesReturnNo));
+  const [invoiceOpen, setInvoiceOpen]         = useState(false);
+  const [invoiceSearch, setInvoiceSearch]     = useState("");
+  const [editNo, setEditNo]                   = useState(false);
+  const [tempNo, setTempNo]                   = useState(String(salesReturnNo));
+  const [availableInvoices, setAvailableInvoices] = useState<AvailableInvoice[]>([]);
+  const [loadingInvoices, setLoadingInvoices] = useState(false);
+  const [invoiceError, setInvoiceError]       = useState<string | null>(null);
+  const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
+  const [builderDet, setBuilderDet]           = useState<BuilderDetSettings>(() => getBuilderDetSettings());
+
   const invoiceRef = useRef<HTMLDivElement>(null);
 
-  // Custom field values keyed by label
-  const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
-
-  // Read builder settings once on mount
-  const [builderDet, setBuilderDet] = useState<BuilderDetSettings>(() => getBuilderDetSettings());
-
+  // Read builder settings once
   useEffect(() => {
     const det = getBuilderDetSettings();
     setBuilderDet(det);
-    // Seed custom field defaults
     const initial: Record<string, string> = {};
     det.customFields.forEach(f => { if (f.label) initial[f.label] = f.value || ""; });
     setCustomFieldValues(initial);
   }, []);
 
+  // Close dropdown on outside click
   useEffect(() => {
     const h = (e: MouseEvent) => {
       if (invoiceRef.current && !invoiceRef.current.contains(e.target as Node)) setInvoiceOpen(false);
@@ -197,31 +231,61 @@ export default function SRMetaFields({
 
   useEffect(() => { setTempNo(String(salesReturnNo)); }, [salesReturnNo]);
 
-  // Get invoices for this party, excluding those already used in other returns
-  const allInvoices = getSalesInvoices();
-  const allReturns = getSalesReturns();
-  const usedInvoiceIds = allReturns
-    .filter(r => r.id !== currentReturnId && r.linkedInvoiceId)
-    .map(r => r.linkedInvoiceId);
+  // ── Fetch available invoices from backend when a party is selected ──────────
+  const fetchAvailableInvoices = useCallback(async () => {
+    if (!party?.id) {
+      setAvailableInvoices([]);
+      return;
+    }
+    setLoadingInvoices(true);
+    setInvoiceError(null);
+    try {
+      const invoices = await getAvailableInvoicesForReturn(party.id);
+      setAvailableInvoices(invoices);
+    } catch (err: any) {
+      setInvoiceError("Failed to load invoices");
+      setAvailableInvoices([]);
+    } finally {
+      setLoadingInvoices(false);
+    }
+  }, [party?.id]);
 
-  const partyInvoices = allInvoices.filter(inv => {
-    if (party && inv.party?.name !== party.name) return false;
-    if (usedInvoiceIds.includes(inv.id)) return false;
-    return true;
-  }).filter(inv => {
+  // Re-fetch whenever party changes
+  useEffect(() => {
+    fetchAvailableInvoices();
+    // Clear linked invoice if party changes
+    if (!party) {
+      onChange("linkedInvoiceId", null);
+      onInvoiceLink(null);
+    }
+  }, [party?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Filter by search term
+  const filteredInvoices = availableInvoices.filter(inv => {
     if (!invoiceSearch.trim()) return true;
+    const q = invoiceSearch.toLowerCase();
     return (
-      String(inv.invoiceNo).includes(invoiceSearch) ||
-      fmtDisplayDate(inv.invoiceDate).toLowerCase().includes(invoiceSearch.toLowerCase())
+      String(inv.invoiceNo).toLowerCase().includes(q) ||
+      inv.invoiceDate.includes(q)
     );
   });
 
-  const linkedInvoice = linkedInvoiceId ? allInvoices.find(i => i.id === linkedInvoiceId) : null;
+  // Find the currently linked invoice for display
+  const linkedInvoice = linkedInvoiceId
+    ? availableInvoices.find(i => String(i.id) === String(linkedInvoiceId))
+    : null;
 
-  const handleSelectInvoice = (inv: LinkedInvoice) => {
-    onChange("linkedInvoiceId", inv.id);
-    onInvoiceLink(inv);
+  const handleSelectInvoice = (inv: AvailableInvoice) => {
+    const linked = toLinkedInvoice(inv, party?.name ?? "");
+    onChange("linkedInvoiceId", String(inv.id));
+    onInvoiceLink(linked);
     setInvoiceOpen(false);
+    setInvoiceSearch("");
+  };
+
+  const handleClearInvoice = () => {
+    onChange("linkedInvoiceId", null);
+    onInvoiceLink(null);
     setInvoiceSearch("");
   };
 
@@ -230,17 +294,14 @@ export default function SRMetaFields({
     return `${String(dt.getDate()).padStart(2,"0")}/${String(dt.getMonth()+1).padStart(2,"0")}/${String(dt.getFullYear()).slice(-2)}`;
   };
 
-  const calcInvoiceAmount = (inv: LinkedInvoice): number =>
-    inv.billItems.reduce((s, i) => s + (i.amount || i.qty * i.price), 0);
-
-  // Build list of visible extra fields from builder settings
+  // Extra fields from Invoice Builder settings
   const extraFields: { key: string; label: string; value: string; fieldProp: string }[] = [];
-  if (builderDet.showEwayBill)  extraFields.push({ key: "eWayBillNo",      label: "E-Way Bill No:",    value: eWayBillNo,      fieldProp: "eWayBillNo" });
-  if (builderDet.showChallan)   extraFields.push({ key: "challanNo",       label: "Challan No.:",      value: challanNo,       fieldProp: "challanNo" });
-  if (builderDet.showFinancedBy) extraFields.push({ key: "financedBy",     label: "Financed By:",      value: financedBy,      fieldProp: "financedBy" });
-  if (builderDet.showSalesman)  extraFields.push({ key: "salesman",        label: "Salesman:",         value: salesman,        fieldProp: "salesman" });
-  if (builderDet.showEmailId)   extraFields.push({ key: "emailId",         label: "Email ID:",         value: emailId,         fieldProp: "emailId" });
-  if (builderDet.showWarranty)  extraFields.push({ key: "warrantyPeriod",  label: "Warranty Period:",  value: warrantyPeriod,  fieldProp: "warrantyPeriod" });
+  if (builderDet.showEwayBill)   extraFields.push({ key: "eWayBillNo",     label: "E-Way Bill No:",   value: eWayBillNo,     fieldProp: "eWayBillNo" });
+  if (builderDet.showChallan)    extraFields.push({ key: "challanNo",      label: "Challan No.:",     value: challanNo,      fieldProp: "challanNo" });
+  if (builderDet.showFinancedBy) extraFields.push({ key: "financedBy",     label: "Financed By:",     value: financedBy,     fieldProp: "financedBy" });
+  if (builderDet.showSalesman)   extraFields.push({ key: "salesman",       label: "Salesman:",        value: salesman,       fieldProp: "salesman" });
+  if (builderDet.showEmailId)    extraFields.push({ key: "emailId",        label: "Email ID:",        value: emailId,        fieldProp: "emailId" });
+  if (builderDet.showWarranty)   extraFields.push({ key: "warrantyPeriod", label: "Warranty Period:", value: warrantyPeriod, fieldProp: "warrantyPeriod" });
 
   const visibleCustomFields = builderDet.customFields.filter(cf => cf.label.trim());
 
@@ -271,30 +332,50 @@ export default function SRMetaFields({
         </div>
       </div>
 
-      {/* ── Link to Invoice ── */}
+      {/* ── Link to Invoice (backend-powered) ── */}
       <div className="csr-meta-field csr-meta-field--full">
         <label className="csr-meta-label">Link to Invoice :</label>
         <div ref={invoiceRef} className="csr-invoice-link-wrap">
           <div
             className={`csr-invoice-search-box${invoiceOpen ? " csr-invoice-search-box--open" : ""}`}
-            onClick={() => setInvoiceOpen(true)}
+            onClick={() => { if (party?.id) setInvoiceOpen(true); }}
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
             </svg>
             <input
               className="csr-invoice-search-input"
-              placeholder="Search invoices"
+              placeholder={party ? "Search invoices" : "Select a party first"}
               value={invoiceSearch}
+              disabled={!party?.id}
               onChange={e => setInvoiceSearch(e.target.value)}
-              onFocus={() => setInvoiceOpen(true)}
+              onFocus={() => { if (party?.id) { setInvoiceOpen(true); fetchAvailableInvoices(); } }}
             />
+            {loadingInvoices && (
+              <span className="csr-invoice-loading">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ animation: "spin 1s linear infinite" }}>
+                  <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+                </svg>
+              </span>
+            )}
           </div>
+
           {invoiceOpen && (
             <div className="csr-invoice-dropdown">
-              {partyInvoices.length === 0 ? (
+              {loadingInvoices ? (
+                <div className="csr-invoice-empty">Loading invoices…</div>
+              ) : invoiceError ? (
+                <div className="csr-invoice-empty csr-invoice-error">
+                  {invoiceError}
+                  <button className="csr-invoice-retry" onClick={fetchAvailableInvoices}>Retry</button>
+                </div>
+              ) : filteredInvoices.length === 0 ? (
                 <div className="csr-invoice-empty">
-                  {party ? "No available invoices for this party" : "Select a party to see invoices"}
+                  {invoiceSearch
+                    ? "No invoices match your search"
+                    : party
+                    ? "No available invoices — all invoices for this party already have a return"
+                    : "Select a party to see invoices"}
                 </div>
               ) : (
                 <>
@@ -302,16 +383,20 @@ export default function SRMetaFields({
                     <span>Date</span>
                     <span>Invoice No.</span>
                     <span>Amount (₹)</span>
+                    <span>Status</span>
                   </div>
-                  {partyInvoices.map(inv => (
+                  {filteredInvoices.map(inv => (
                     <div
                       key={inv.id}
-                      className={`csr-invoice-option${inv.id === linkedInvoiceId ? " csr-invoice-option--sel" : ""}`}
+                      className={`csr-invoice-option${String(inv.id) === String(linkedInvoiceId) ? " csr-invoice-option--sel" : ""}`}
                       onClick={() => handleSelectInvoice(inv)}
                     >
                       <span>{formatInvoiceDate(inv.invoiceDate)}</span>
                       <span>#{inv.invoiceNo}</span>
-                      <span>₹{calcInvoiceAmount(inv).toLocaleString("en-IN")}</span>
+                      <span>₹{Number(inv.totalAmount).toLocaleString("en-IN")}</span>
+                      <span className={`csr-inv-status csr-inv-status--${inv.status.toLowerCase()}`}>
+                        {inv.status === "OPEN" ? "Unpaid" : inv.status === "PARTIAL" ? "Partial" : inv.status === "PAID" ? "Paid" : inv.status}
+                      </span>
                     </div>
                   ))}
                 </>
@@ -319,10 +404,20 @@ export default function SRMetaFields({
             </div>
           )}
         </div>
+
+        {/* Linked invoice badge */}
         {linkedInvoice && (
           <div className="csr-linked-badge">
-            Linked to Invoice #{linkedInvoice.invoiceNo}
-            <button className="csr-linked-clear" onClick={() => { onChange("linkedInvoiceId", null); onInvoiceLink(null); setInvoiceSearch(""); }}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+            </svg>
+            &nbsp;Linked to Invoice #{linkedInvoice.invoiceNo}
+            &nbsp;
+            <span className="csr-linked-status">
+              ({linkedInvoice.status === "OPEN" ? "Unpaid" : linkedInvoice.status === "PARTIAL" ? "Partially Paid" : "Paid"})
+            </span>
+            <button className="csr-linked-clear" onClick={handleClearInvoice} title="Remove link">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                 <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
               </svg>
@@ -331,7 +426,7 @@ export default function SRMetaFields({
         )}
       </div>
 
-      {/* ── Extra fields controlled by Invoice Builder ── */}
+      {/* ── Extra fields from Invoice Builder ── */}
       {(extraFields.length > 0 || visibleCustomFields.length > 0) && (
         <div className="csr-meta-extras">
           {extraFields.map(f => (
@@ -353,7 +448,6 @@ export default function SRMetaFields({
             </div>
           ))}
 
-          {/* Custom fields from Invoice Builder */}
           {visibleCustomFields.map((cf, idx) => (
             <div key={`custom-${idx}`} className="csr-meta-extra-field">
               <label>{cf.label}:</label>

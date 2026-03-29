@@ -41,6 +41,19 @@ export interface SaleInvoice {
   dispatchedThrough?: string | null;
   transportName?: string | null;
   customFieldValues?: Record<string, string> | null;
+  snapshotMetaFields?: {
+    showSalesman?: boolean;
+    showVehicle?: boolean;
+    showChallan?: boolean;
+    showFinancedBy?: boolean;
+    showWarranty?: boolean;
+    showEwayBill?: boolean;
+    showPO?: boolean;
+    showDispatchedThrough?: boolean;
+    showTransportName?: boolean;
+    showEmailId?: boolean;
+    customFieldLabels?: string[];
+  } | null;
   paymentDetails?: Record<string, any> | null;
   financeDetails?: Record<string, any> | null;
   party: {
@@ -105,6 +118,19 @@ export interface FeSalesInvoice {
   dispatchedThrough?: string;
   transportName?: string;
   customFieldValues?: Record<string, string>;
+  snapshotMetaFields?: {
+    showSalesman?: boolean;
+    showVehicle?: boolean;
+    showChallan?: boolean;
+    showFinancedBy?: boolean;
+    showWarranty?: boolean;
+    showEwayBill?: boolean;
+    showPO?: boolean;
+    showDispatchedThrough?: boolean;
+    showTransportName?: boolean;
+    showEmailId?: boolean;
+    customFieldLabels?: string[];
+  } | null;
   paymentDetails?: Record<string, any>;
   financeDetails?: Record<string, any>;
   party: {
@@ -190,6 +216,7 @@ export function fromSaleInvoice(inv: SaleInvoice): FeSalesInvoice {
     dispatchedThrough: inv.dispatchedThrough ?? "",
     transportName:     inv.transportName     ?? "",
     customFieldValues: (inv.customFieldValues as Record<string, string>) ?? {},
+    snapshotMetaFields: (inv.snapshotMetaFields as FeSalesInvoice["snapshotMetaFields"]) ?? null,
     paymentDetails:    (inv.paymentDetails   as Record<string, any>)    ?? undefined,
     financeDetails:    (inv.financeDetails   as Record<string, any>)    ?? undefined,
     party: inv.party
@@ -313,6 +340,19 @@ export interface CreateInvoicePayload {
   dispatchedThrough?: string | null;
   transportName?:     string | null;
   customFieldValues?: Record<string, string>;
+  snapshotMetaFields?: {
+    showSalesman?: boolean;
+    showVehicle?: boolean;
+    showChallan?: boolean;
+    showFinancedBy?: boolean;
+    showWarranty?: boolean;
+    showEwayBill?: boolean;
+    showPO?: boolean;
+    showDispatchedThrough?: boolean;
+    showTransportName?: boolean;
+    showEmailId?: boolean;
+    customFieldLabels?: string[];
+  } | null;
   paymentDetails?:    Record<string, any> | null;
   financeDetails?:    Record<string, any> | null;
 }
@@ -362,6 +402,7 @@ export function toCreatePayload(form: FeSalesInvoice): CreateInvoicePayload {
     dispatchedThrough: form.dispatchedThrough || null,
     transportName:     form.transportName     || null,
     customFieldValues: form.customFieldValues || {},
+    snapshotMetaFields: form.snapshotMetaFields ?? null,
     paymentDetails:    form.paymentDetails    || null,
     financeDetails:    (form.financeDetails as any)?.enabled === true
                          ? form.financeDetails
