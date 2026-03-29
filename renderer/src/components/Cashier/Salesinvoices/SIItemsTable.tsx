@@ -20,9 +20,9 @@ export default function SIItemsTable({ items, showColumns, onChange, onAddItem }
    *   Step 4 — taxAmt     = taxable × taxRate%
    *   Step 5 — lineTotal  = taxable + taxAmt
    *
-   * The "Add Discount" button at the bottom of the invoice (in SISummary) is a
-   * SEPARATE invoice-level discount that applies to the final total AFTER all
-   * line taxes have been computed. It does NOT affect per-line tax calculations.
+   * The invoice-level "Add Discount" (in SISummary) is SEPARATE — it only
+   * reduces the final total AFTER all per-line taxes have been computed.
+   * It does NOT affect per-line taxable or tax values.
    */
   function update(rowId: string, field: Partial<BillItem>) {
     const updated = items.map(i => {
@@ -115,8 +115,7 @@ export default function SIItemsTable({ items, showColumns, onChange, onAddItem }
 
                   {/*
                    * Price per item — ALWAYS the PRE-TAX base price.
-                   * This is what the user entered when creating the item as "base price".
-                   * Tax is then computed on top of this value (after any discount).
+                   * Tax is computed on top of this value (after any per-line discount).
                    */}
                   {showColumns.pricePerItem && (
                     <td className="si-td">
@@ -133,59 +132,84 @@ export default function SIItemsTable({ items, showColumns, onChange, onAddItem }
                   {/*
                    * Per-line discount — % and ₹ are bidirectionally linked.
                    *
-                   * Rule: % takes priority over flat ₹.
-                   *   - When user types a %, the ₹ field auto-computes (read-only display).
-                   *   - When user types a ₹ amount, the % field is cleared.
+                   * When user types %  → ₹ field auto-computes and shows as read-only.
+                   * When user types ₹  → % field auto-computes and shows as read-only.
                    *
-                   * This discount reduces the TAXABLE amount:
-                   *   taxable = (qty × price) − this discount
-                   *   GST is then computed on that reduced taxable amount.
+                   * Only one mode is "active" at a time:
+                   *   discountPct > 0  → % is the active mode, ₹ is computed display
+                   *   discountAmt > 0  → ₹ is the active mode, % is computed display
                    *
-                   * NOTE: This is the PER-LINE item discount.
-                   * The invoice-level "Add Discount" in the summary panel is separate —
-                   * that applies to the total AFTER all per-line taxes are summed.
+                   * Clearing the active field (setting it to 0) resets both fields.
                    */}
                   <td className="si-td">
                     <div className="si-disc-wrap">
 
-                      {/* Discount % input */}
+                      {/*
+                       * % input:
+                       *   - Editable when discountPct is the active mode (discountAmt === 0)
+                       *   - Read-only (computed) when discountAmt is the active mode
+                       */}
                       <div className="si-disc-row">
                         <span className="si-disc-pct-label">%</span>
                         <input
                           type="number"
                           className="si-disc-input"
-                          value={item.discountPct || ""}
                           placeholder="0"
                           min={0}
                           max={100}
+                          // When ₹ is active: show computed % equivalent
+                          // When % is active: show the actual % value
+                          value={
+                            item.discountPct > 0
+                              ? item.discountPct
+                              : item.discountAmt > 0 && lineGross > 0
+                                ? Math.round(item.discountAmt / lineGross * 100 * 100) / 100
+                                : ""
+                          }
+                          // Read-only when ₹ is the active mode
+                          readOnly={item.discountPct === 0 && item.discountAmt > 0}
+                          style={
+                            item.discountPct === 0 && item.discountAmt > 0
+                              ? { background: "#f3f4f6", color: "#6b7280" }
+                              : {}
+                          }
                           onChange={e => {
                             const pct = Math.min(100, Math.max(0, Number(e.target.value) || 0));
-                            // Setting % clears any flat ₹ discount
+                            // Typing % activates % mode — clears any flat ₹ discount
                             update(item.rowId, { discountPct: pct, discountAmt: 0 });
                           }}
                         />
                       </div>
 
-                      {/* Discount ₹ input — editable only when no % is set */}
+                      {/*
+                       * ₹ input:
+                       *   - Editable when discountAmt is the active mode (discountPct === 0)
+                       *   - Read-only (computed) when discountPct is the active mode
+                       */}
                       <div className="si-disc-row">
                         <span className="si-disc-rs-label">&#8377;</span>
                         <input
                           type="number"
                           className="si-disc-input"
                           placeholder="0"
+                          min={0}
+                          // When % is active: show computed ₹ equivalent (read-only)
+                          // When ₹ is active: show the actual ₹ value
                           value={
                             item.discountPct > 0
                               ? Math.round(lineGross * item.discountPct / 100 * 100) / 100
                               : (item.discountAmt || "")
                           }
+                          // Read-only when % is the active mode
                           readOnly={item.discountPct > 0}
-                          style={item.discountPct > 0
-                            ? { background: "#f3f4f6", color: "#6b7280" }
-                            : {}
+                          style={
+                            item.discountPct > 0
+                              ? { background: "#f3f4f6", color: "#6b7280" }
+                              : {}
                           }
                           onChange={e => {
                             const amt = Math.max(0, Number(e.target.value) || 0);
-                            // Setting flat ₹ clears the % discount
+                            // Typing ₹ activates ₹ mode — clears any % discount
                             update(item.rowId, { discountAmt: amt, discountPct: 0 });
                           }}
                         />
@@ -195,8 +219,7 @@ export default function SIItemsTable({ items, showColumns, onChange, onAddItem }
 
                   {/*
                    * Tax selector — user can change the tax rate per line.
-                   * Tax amount is computed on the TAXABLE amount (after per-line discount).
-                   * Hover over the tax amount to see the taxable base used.
+                   * Tax is computed on the taxable amount (after per-line discount).
                    */}
                   <td className="si-td">
                     <select

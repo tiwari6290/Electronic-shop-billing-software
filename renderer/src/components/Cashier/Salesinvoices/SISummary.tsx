@@ -7,12 +7,12 @@ import "./SISummary.css";
 export interface PaymentDetails {
   method:      string;
   amount:      number;
-  refNo?:      string;   // UPI: txnId | CARD: last4 | NETBANKING: txnId | BANK_TRANSFER: UTR | CHEQUE: chequeNo
-  chequeDate?: string;   // CHEQUE only
-  authNo?:     string;   // CARD only
-  bankName?:   string;   // UPI:app | CARD | NETBANKING | BANK_TRANSFER | CHEQUE
-  cardType?:   string;   // CARD: VISA / Mastercard / Rupay …
-  branchName?: string;   // BANK_TRANSFER | CHEQUE
+  refNo?:      string;
+  chequeDate?: string;
+  authNo?:     string;
+  bankName?:   string;
+  cardType?:   string;
+  branchName?: string;
 }
 
 export interface FinanceDetails {
@@ -31,7 +31,7 @@ export interface FinanceDetails {
   reference?:    string;
 }
 
-// ─── Field config per payment mode (from Image 2) ────────────────────────────
+// ─── Field config per payment mode ───────────────────────────────────────────
 const MODE_FIELDS: Record<string, { refNo?: string; chequeDate?: boolean; authNo?: boolean; bankName?: string; cardType?: boolean; branchName?: boolean }> = {
   Cash:         {},
   UPI:          { refNo: "UPI / Transaction ID", bankName: "UPI App (e.g. PhonePe)" },
@@ -119,7 +119,6 @@ function PaymentDetailsModal({
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={onClose}>
       <div style={{ background: "#fff", borderRadius: 14, width: 480, maxWidth: "95vw", boxShadow: "0 24px 60px rgba(0,0,0,.18)", fontFamily: "inherit" }} onClick={e => e.stopPropagation()}>
 
-        {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid #f3f4f6" }}>
           <div>
             <div style={{ fontSize: 15, fontWeight: 700, color: "#111827" }}>{method} Payment Details</div>
@@ -128,7 +127,6 @@ function PaymentDetailsModal({
           <button onClick={onClose} style={{ background: "none", border: "1.5px solid #e5e7eb", borderRadius: 7, width: 30, height: 30, cursor: "pointer", color: "#374151", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15 }}>✕</button>
         </div>
 
-        {/* Body */}
         <div style={{ padding: "18px 20px", display: "flex", flexDirection: "column", gap: 14 }}>
           {!hasFields ? (
             <div style={{ textAlign: "center", color: "#6b7280", fontSize: 13, padding: "20px 0" }}>
@@ -191,7 +189,6 @@ function PaymentDetailsModal({
           )}
         </div>
 
-        {/* Footer */}
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, padding: "14px 20px", borderTop: "1px solid #f3f4f6" }}>
           <button onClick={onClose} style={{ padding: "8px 20px", border: "1.5px solid #e5e7eb", background: "#fff", borderRadius: 8, fontSize: 13, cursor: "pointer", color: "#374151", fontWeight: 500, fontFamily: "inherit" }}>Cancel</button>
           <button onClick={() => { onSave(form); onClose(); }} style={{ padding: "8px 22px", background: "#4f46e5", color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Save</button>
@@ -231,16 +228,13 @@ function FinanceModal({
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={onClose}>
       <div style={{ background: "#fff", borderRadius: 14, width: 520, maxWidth: "96vw", maxHeight: "90vh", overflow: "hidden", display: "flex", flexDirection: "column", boxShadow: "0 24px 60px rgba(0,0,0,.18)", fontFamily: "inherit" }} onClick={e => e.stopPropagation()}>
 
-        {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid #f3f4f6", flexShrink: 0 }}>
           <div style={{ fontSize: 15, fontWeight: 700, color: "#111827" }}>Finance Details</div>
           <button onClick={onClose} style={{ background: "none", border: "1.5px solid #e5e7eb", borderRadius: 7, width: 30, height: 30, cursor: "pointer", color: "#374151", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15 }}>✕</button>
         </div>
 
-        {/* Body — scrollable */}
         <div style={{ padding: "18px 20px", overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 14 }}>
 
-          {/* Row: Financer Name + Loan Ref No */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <div>
               <label style={labelSty}>Financer Name</label>
@@ -252,7 +246,6 @@ function FinanceModal({
             </div>
           </div>
 
-          {/* Row: Loan Amount + Processing Fee */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <div>
               <label style={labelSty}>Loan Amount (₹)</label>
@@ -264,7 +257,6 @@ function FinanceModal({
             </div>
           </div>
 
-          {/* Row: EMI × count */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr auto 80px", gap: 10, alignItems: "end" }}>
             <div>
               <label style={labelSty}>EMI Amount (₹)</label>
@@ -277,7 +269,6 @@ function FinanceModal({
             </div>
           </div>
 
-          {/* Row: Extra EMI × count */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr auto 80px", gap: 10, alignItems: "end" }}>
             <div>
               <label style={labelSty}>Extra EMI (₹)</label>
@@ -290,7 +281,6 @@ function FinanceModal({
             </div>
           </div>
 
-          {/* Row: DBD Charges */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <div>
               <label style={labelSty}>DBD Charges (₹)</label>
@@ -302,7 +292,6 @@ function FinanceModal({
             </div>
           </div>
 
-          {/* Row: Agent Name + Agent Contact */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <div>
               <label style={labelSty}>Agent Name</label>
@@ -315,7 +304,6 @@ function FinanceModal({
           </div>
         </div>
 
-        {/* Footer */}
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, padding: "14px 20px", borderTop: "1px solid #f3f4f6", flexShrink: 0 }}>
           <button onClick={onClose} style={{ padding: "8px 20px", border: "1.5px solid #e5e7eb", background: "#fff", borderRadius: 8, fontSize: 13, cursor: "pointer", color: "#374151", fontWeight: 500, fontFamily: "inherit" }}>Cancel</button>
           <button onClick={() => { onSave(form); onClose(); }} style={{ padding: "8px 22px", background: "#4f46e5", color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Save Finance Details</button>
@@ -325,17 +313,17 @@ function FinanceModal({
   );
 }
 
-// ─── Payment Summary Card (shows after details are filled) ────────────────────
+// ─── Payment Summary Card ─────────────────────────────────────────────────────
 function PaymentSummaryCard({ details, onEdit }: { details: PaymentDetails; onEdit: () => void }) {
   const fields = MODE_FIELDS[details.method] ?? {};
   const rows: { label: string; value: string }[] = [];
 
-  if (fields.refNo    && details.refNo)      rows.push({ label: fields.refNo,      value: details.refNo });
-  if (fields.authNo   && details.authNo)     rows.push({ label: "Auth No.",         value: details.authNo });
-  if (fields.bankName && details.bankName)   rows.push({ label: fields.bankName,    value: details.bankName });
-  if (fields.cardType && details.cardType)   rows.push({ label: "Card Type",        value: details.cardType });
-  if (fields.chequeDate && details.chequeDate) rows.push({ label: "Cheque Date",   value: details.chequeDate });
-  if (fields.branchName && details.branchName) rows.push({ label: "Branch",        value: details.branchName });
+  if (fields.refNo    && details.refNo)        rows.push({ label: fields.refNo,    value: details.refNo });
+  if (fields.authNo   && details.authNo)       rows.push({ label: "Auth No.",       value: details.authNo });
+  if (fields.bankName && details.bankName)     rows.push({ label: fields.bankName,  value: details.bankName });
+  if (fields.cardType && details.cardType)     rows.push({ label: "Card Type",      value: details.cardType });
+  if (fields.chequeDate && details.chequeDate) rows.push({ label: "Cheque Date",    value: details.chequeDate });
+  if (fields.branchName && details.branchName) rows.push({ label: "Branch",         value: details.branchName });
 
   if (rows.length === 0) return null;
 
@@ -357,12 +345,12 @@ function PaymentSummaryCard({ details, onEdit }: { details: PaymentDetails; onEd
 // ─── Finance Summary Card ─────────────────────────────────────────────────────
 function FinanceSummaryCard({ details, onEdit }: { details: FinanceDetails; onEdit: () => void }) {
   const rows: { label: string; value: string }[] = [];
-  if (details.financerName)  rows.push({ label: "Financer",      value: details.financerName });
-  if (details.loanRefNo)     rows.push({ label: "Loan Ref",      value: details.loanRefNo });
-  if (details.loanAmount)    rows.push({ label: "Loan Amount",   value: `₹${details.loanAmount.toLocaleString("en-IN")}` });
-  if (details.emi)           rows.push({ label: "EMI",           value: `₹${details.emi} × ${details.emiCount ?? 1}` });
-  if (details.extraEmi)      rows.push({ label: "Extra EMI",     value: `₹${details.extraEmi} × ${details.extraEmiCount ?? 1}` });
-  if (details.agentName)     rows.push({ label: "Agent",         value: details.agentName });
+  if (details.financerName)  rows.push({ label: "Financer",    value: details.financerName });
+  if (details.loanRefNo)     rows.push({ label: "Loan Ref",    value: details.loanRefNo });
+  if (details.loanAmount)    rows.push({ label: "Loan Amount", value: `₹${details.loanAmount.toLocaleString("en-IN")}` });
+  if (details.emi)           rows.push({ label: "EMI",         value: `₹${details.emi} × ${details.emiCount ?? 1}` });
+  if (details.extraEmi)      rows.push({ label: "Extra EMI",   value: `₹${details.extraEmi} × ${details.extraEmiCount ?? 1}` });
+  if (details.agentName)     rows.push({ label: "Agent",       value: details.agentName });
 
   return (
     <div style={{ marginTop: 8, padding: "10px 12px", background: "#eff6ff", borderRadius: 8, border: "1px solid #bfdbfe", fontSize: 12 }}>
@@ -378,7 +366,6 @@ function FinanceSummaryCard({ details, onEdit }: { details: FinanceDetails; onEd
     </div>
   );
 }
-
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 interface Props {
@@ -466,27 +453,26 @@ export default function SISummary(p: Props) {
   // ═══════════════════════════════════════════════════════════════════════════
   // CALCULATION ENGINE
   //
-  // Correct GST invoice flow (matches Image 2):
+  // Per line item (computed in SIItemsTable / calcBillItemAmount):
+  //   lineGross  = qty × price         (price = pre-tax base)
+  //   lineDisc   = lineGross × discPct% (or flat ₹)
+  //   taxable    = lineGross − lineDisc
+  //   lineTax    = taxable × taxRate%
+  //   lineTotal  = taxable + lineTax
   //
-  //   Per line item (done in SIItemsTable / calcBillItemAmount):
-  //     lineGross  = qty × price         (price = pre-tax base)
-  //     lineDisc   = lineGross × discPct% (or flat)
-  //     taxable    = lineGross − lineDisc
-  //     lineTax    = taxable × taxRate%
-  //     lineTotal  = taxable + lineTax
+  // Summary panel:
+  //   itemsTaxableSum = Σ taxable per line   → "Taxable Amount" row (NEVER changes)
+  //   itemsTaxSum     = Σ lineTax per line   → SGST/CGST rows     (NEVER changes)
+  //   preTotalAmount  = itemsTaxableSum + itemsTaxSum + chargesTotal
   //
-  //   In summary panel:
-  //     itemsTaxableSum = Σ taxable per line   → shown as "Taxable Amount"
-  //     itemsTaxSum     = Σ lineTax per line   → split into SGST/CGST rows
-  //     chargesBase     = Σ additionalCharge amounts
-  //     chargesTax      = Σ charge × chargeRate%
-  //     preTotalAmount  = itemsTaxableSum + itemsTaxSum + chargesBase + chargesTax
-  //                     = sum of all lineTotal + charge totals
+  // "Add Discount" (Discount After Tax):
+  //   invoiceDiscAmt = preTotalAmount × discPct%  OR flat ₹ entered
+  //   totalAmount    = preTotalAmount − invoiceDiscAmt
   //
-  //   "Add Discount" (Discount After Tax) — applied on preTotalAmount:
-  //     invoiceDiscAmt  = preTotalAmount × discPct%   (or flat discAmt)
-  //     totalAmount     = preTotalAmount − invoiceDiscAmt
-  //
+  //   ⚠ Taxable Amount and SGST/CGST rows DO NOT CHANGE.
+  //      Only the final Total Amount line is reduced by the discount.
+  //      This matches the "Discount After Tax" concept — tax has already
+  //      been computed; the seller is simply giving a post-tax concession.
   // ═══════════════════════════════════════════════════════════════════════════
 
   function chargeRate(taxLabel: string): number {
@@ -494,10 +480,9 @@ export default function SISummary(p: Props) {
     return m ? Number(m[1]) : 0;
   }
 
-  // ── Per-item taxable and tax amounts ──────────────────────────────────────
   const billItems = p.billItems ?? [];
 
-  // Sum of all per-line taxable amounts (pre-tax, post-item-discount)
+  // ── Per-item sums (STATIC — never affected by invoice-level discount) ──────
   const itemsTaxableSum = billItems.reduce((s: number, item: typeof billItems[number]) => {
     const lineGross = item.qty * item.price;
     const discByPct = lineGross * (item.discountPct / 100);
@@ -505,7 +490,6 @@ export default function SISummary(p: Props) {
     return s + Math.max(0, lineGross - discByPct - discFlat);
   }, 0);
 
-  // Sum of all per-line tax amounts
   const itemsTaxSum = billItems.reduce((s: number, item: typeof billItems[number]) => {
     const lineGross = item.qty * item.price;
     const discByPct = lineGross * (item.discountPct / 100);
@@ -522,46 +506,25 @@ export default function SISummary(p: Props) {
   }, 0);
   const chargesTotal = chargesBase + chargesTax;
 
-  // ── Pre-discount total (all items + charges, tax already included) ─────────
-  //    = itemsTaxableSum + itemsTaxSum + chargesBase + chargesTax
+  // ── GST-inclusive total before invoice-level discount ─────────────────────
   const preTotalAmount = Math.round((itemsTaxableSum + itemsTaxSum + chargesTotal) * 100) / 100;
 
-  // ── Invoice-level discount (Discount After Tax = on preTotalAmount) ────────
-  //    % → ₹: invoiceDiscAmt = preTotalAmount × discPct / 100
-  //    ₹ → %: invoiceDiscPct = (discAmt / preTotalAmount) × 100
+  // ── Invoice-level discount (Discount After Tax) ───────────────────────────
+  //    Simply reduces the final total. Taxable Amount and tax rows are unchanged.
+  //    % mode:  invoiceDiscAmt = preTotalAmount × discPct / 100
+  //    ₹ mode:  invoiceDiscAmt = discAmt (entered directly)
+  //    Bidirectional sync: editing one field auto-computes the other.
   const invoiceDiscAmt = p.showDiscount
     ? (p.discountPct > 0
         ? Math.round(preTotalAmount * (p.discountPct / 100) * 100) / 100
         : (Number(p.discountAmt) || 0))
     : 0;
 
-  // ── Final total ────────────────────────────────────────────────────────────
   const afterInvoiceDisc = Math.max(0, Math.round((preTotalAmount - invoiceDiscAmt) * 100) / 100);
 
-  // ── Reverse-calculate taxable and tax after invoice-level discount ──────────
-  //
-  // When an invoice-level discount is applied on the GST-inclusive total, the
-  // displayed "Taxable Amount" and the SGST/CGST rows must reflect the reduced
-  // values. We do NOT change the base price in the table rows — only the summary
-  // panel shows the scaled-down taxable and tax.
-  //
-  // scaleFactor   = afterInvoiceDisc / preTotalAmount
-  // adjustedTaxable = itemsTaxableSum × scaleFactor
-  // Each tax group is also multiplied by scaleFactor inline in the SGST/CGST loop.
-  //
-  // Example: total ₹95 (base ₹80.51, tax ₹14.49), disc ₹5 → afterDisc ₹90
-  //   scaleFactor     = 90 / 95         = 0.9474
-  //   adjustedTaxable = 80.51 × 0.9474 = 76.27
-  //   scaledTax       = 14.49 × 0.9474 = 13.73
-  //   check: 76.27 + 13.73             = 90.00 ✓
-  //   The table row still shows base price ₹84.75 — it does NOT change.
-  const discountScaleFactor = preTotalAmount > 0 && invoiceDiscAmt > 0
-    ? afterInvoiceDisc / preTotalAmount
-    : 1;
-  const adjustedTaxable = Math.round(itemsTaxableSum * discountScaleFactor * 100) / 100;
-
   // ── TCS ───────────────────────────────────────────────────────────────────
-  const tcsBaseAmt = p.tcsBase === "Total Amount" ? afterInvoiceDisc : adjustedTaxable;
+  // TCS base uses the unscaled taxable sum (discount does not change taxable amount)
+  const tcsBaseAmt = p.tcsBase === "Total Amount" ? afterInvoiceDisc : itemsTaxableSum;
   const tcsValue   = p.applyTCS ? Math.round(tcsBaseAmt * (p.tcsRate / 100) * 100) / 100 : 0;
   const preRound   = Math.round((afterInvoiceDisc + tcsValue) * 100) / 100;
 
@@ -586,11 +549,7 @@ export default function SISummary(p: Props) {
     }
   }, [preRound, p.roundOff]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── SGST / CGST / IGST breakdown (scaled by discount factor) ─────────────
-  //
-  // When an invoice-level discount is applied, each tax group is scaled down
-  // proportionally so the displayed SGST/CGST values match the reduced total.
-  // Without a discount, discountScaleFactor = 1 so nothing changes.
+  // ── SGST / CGST / IGST breakdown (STATIC — not affected by invoice discount) ──
   interface TaxGroup { sgst: number; cgst: number; igst: number }
   const taxGroups: Record<string, TaxGroup> = {};
 
@@ -599,8 +558,8 @@ export default function SISummary(p: Props) {
     const discByPct = lineGross * (item.discountPct / 100);
     const discFlat  = item.discountPct > 0 ? 0 : item.discountAmt;
     const taxable   = Math.max(0, lineGross - discByPct - discFlat);
-    // Scale the per-line tax by the invoice-level discount factor
-    const taxAmt    = taxable * item.taxRate / 100 * discountScaleFactor;
+    // No discountScaleFactor — invoice-level discount does NOT change per-line tax
+    const taxAmt    = taxable * item.taxRate / 100;
     if (taxAmt <= 0 || item.taxRate <= 0) return;
     const key = item.taxLabel;
     if (!taxGroups[key]) taxGroups[key] = { sgst: 0, cgst: 0, igst: 0 };
@@ -615,7 +574,6 @@ export default function SISummary(p: Props) {
   p.additionalCharges.forEach((c: AdditionalCharge) => {
     const rate = chargeRate(c.taxLabel);
     if (rate <= 0) return;
-    // Additional charges are NOT affected by invoice-level discount (charges are separate)
     const taxAmt = (Number(c.amount) || 0) * rate / 100;
     const key    = c.taxLabel;
     if (!taxGroups[key]) taxGroups[key] = { sgst: 0, cgst: 0, igst: 0 };
@@ -691,16 +649,13 @@ export default function SISummary(p: Props) {
         )}
       </div>
 
-      {/* ── Taxable Amount ──────────────────────────────────────────────────────────
-           Shows the REVERSE-CALCULATED taxable amount after applying the
-           invoice-level discount on the GST-inclusive total.
-           When no discount: adjustedTaxable = itemsTaxableSum (unchanged).
-           When discount applied: adjustedTaxable = itemsTaxableSum × scaleFactor.
-           Base price in the table rows NEVER changes.
+      {/* ── Taxable Amount ─────────────────────────────────────────────────────
+           Always shows the sum of per-line taxable amounts.
+           Invoice-level "Add Discount" does NOT change this value.
       ── */}
       <div className="si-sum-row">
         <span className="si-sum-lbl">Taxable Amount</span>
-        <span className="si-sum-val">₹ {fmt(adjustedTaxable)}</span>
+        <span className="si-sum-val">₹ {fmt(itemsTaxableSum)}</span>
       </div>
 
       {/* ── Additional charges total (if any) ── */}
@@ -711,7 +666,10 @@ export default function SISummary(p: Props) {
         </div>
       )}
 
-      {/* ── SGST / CGST / IGST breakdown ── */}
+      {/* ── SGST / CGST / IGST breakdown ─────────────────────────────────────
+           These values are computed from per-line items and are NOT affected
+           by the invoice-level "Add Discount". Discount only reduces the total.
+      ── */}
       {Object.entries(taxGroups).map(([label, grp]) => {
         const rate   = label.match(/(\d+)%/)?.[1] ?? "";
         const isIGST = label.startsWith("IGST");
@@ -744,9 +702,12 @@ export default function SISummary(p: Props) {
         );
       })}
 
-      {/* ── Invoice-level Discount (Discount After Tax) ──────────────────────
-           Applied on the total amount AFTER all item taxes.
-           % ↔ ₹ are linked: editing one auto-updates the other.
+      {/* ── Invoice-level Discount (Discount After Tax) ───────────────────────
+           Reduces only the final Total Amount.
+           Taxable Amount and SGST/CGST rows above are NOT affected.
+           % ↔ ₹ are bidirectionally linked:
+             Typing % → ₹ field shows computed equivalent (read-only)
+             Typing ₹ → % field shows computed equivalent (read-only)
       ── */}
       {!p.showDiscount ? (
         <div className="si-sum-row">
@@ -758,7 +719,7 @@ export default function SISummary(p: Props) {
       ) : (
         <div className="si-disc-section">
           <div className="si-disc-type-row">
-            {/* Label + remove */}
+            {/* Label + remove button */}
             <span className="si-sum-lbl" style={{ display: "flex", alignItems: "center", gap: 6 }}>
               Discount After Tax
               <button
@@ -772,60 +733,82 @@ export default function SISummary(p: Props) {
               >✕</button>
             </span>
 
-            {/* % input and ₹ input — linked bidirectionally */}
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              {/* Percentage input */}
+
+              {/*
+               * % input:
+               *   - Editable when % is the active mode (discountPct > 0 or both are 0)
+               *   - Read-only (computed %) when ₹ is the active mode (discountAmt > 0, discountPct === 0)
+               */}
               <span style={{ fontSize: 13, color: "#6b7280" }}>%</span>
               <input
                 type="number"
                 className="si-disc-pct"
-                value={p.discountPct || ""}
                 placeholder="0"
                 min={0}
                 max={100}
+                value={
+                  p.discountPct > 0
+                    ? p.discountPct
+                    : p.discountAmt > 0 && preTotalAmount > 0
+                      ? Math.round(p.discountAmt / preTotalAmount * 100 * 100) / 100
+                      : ""
+                }
+                readOnly={p.discountPct === 0 && p.discountAmt > 0}
+                style={p.discountPct === 0 && p.discountAmt > 0
+                  ? { background: "#f3f4f6", color: "#6b7280" }
+                  : {}}
                 onChange={e => {
                   const pct = Math.min(100, Math.max(0, Number(e.target.value) || 0));
+                  // Typing % activates % mode — clears any flat ₹ discount
                   p.onDiscountPctChange(pct);
-                  // auto-compute ₹ from % so the ₹ field stays in sync
-                  if (pct > 0) {
-                    p.onDiscountAmtChange(Math.round(preTotalAmount * pct / 100 * 100) / 100);
-                  } else {
-                    p.onDiscountAmtChange(0);
-                  }
+                  p.onDiscountAmtChange(
+                    pct > 0
+                      ? Math.round(preTotalAmount * pct / 100 * 100) / 100
+                      : 0
+                  );
                 }}
               />
 
               <span style={{ color: "#d1d5db", fontSize: 16 }}>/</span>
 
-              {/* Rupee input */}
+              {/*
+               * ₹ input:
+               *   - Editable when ₹ is the active mode (discountAmt > 0, discountPct === 0)
+               *   - Read-only (computed ₹) when % is the active mode (discountPct > 0)
+               */}
               <span style={{ fontSize: 13, color: "#6b7280" }}>₹</span>
               <input
                 type="number"
                 className="si-disc-pct"
-                style={{ width: 72 }}
+                 style={{
+    width: 72,
+    ...(p.discountPct > 0
+      ? { background: "#f3f4f6", color: "#6b7280" }
+      : {})
+  }}
+                placeholder="0"
+                min={0}
                 value={
-                  // When % is active, show the computed ₹ amount (read-only feel)
                   p.discountPct > 0
                     ? Math.round(preTotalAmount * p.discountPct / 100 * 100) / 100
                     : (p.discountAmt || "")
                 }
-                placeholder="0"
-                min={0}
+                readOnly={p.discountPct > 0}
+                
                 onChange={e => {
                   const amt = Math.max(0, Number(e.target.value) || 0);
+                  // Typing ₹ activates ₹ mode — clears any % discount
                   p.onDiscountAmtChange(amt);
-                  // auto-compute % from ₹ so the % field stays in sync
-                  if (preTotalAmount > 0) {
-                    p.onDiscountPctChange(
-                      Math.round(amt / preTotalAmount * 100 * 100) / 100
-                    );
-                  } else {
-                    p.onDiscountPctChange(0);
-                  }
+                  p.onDiscountPctChange(
+                    amt > 0 && preTotalAmount > 0
+                      ? Math.round(amt / preTotalAmount * 100 * 100) / 100
+                      : 0
+                  );
                 }}
               />
 
-              {/* Effective discount in ₹ */}
+              {/* Effective discount amount */}
               <span className="si-sum-neg" style={{ fontSize: 13, fontWeight: 600, minWidth: 60, textAlign: "right" }}>
                 - ₹ {fmt(invoiceDiscAmt)}
               </span>
@@ -1036,7 +1019,7 @@ export default function SISummary(p: Props) {
         </span>
       </div>
 
-      {/* ── Authorized Signatory ───────────────────────────── */}
+      {/* ── Authorized Signatory ── */}
       <div className="si-signatory">
         <div className="si-signatory-text">Authorized signatory</div>
         <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }}
@@ -1070,7 +1053,7 @@ export default function SISummary(p: Props) {
         )}
       </div>
 
-      {/* ── Signature Modal ────────────────────────────────── */}
+      {/* ── Signature Modal ── */}
       {showSigModal && (
         <div className="si-sig-modal-overlay" onClick={() => setShowSigModal(false)}>
           <div className="si-sig-modal" onClick={e => e.stopPropagation()}>
@@ -1101,7 +1084,7 @@ export default function SISummary(p: Props) {
         </div>
       )}
 
-      {/* ── Payment Details Modal ──────────────────────────── */}
+      {/* ── Payment Details Modal ── */}
       {showPayModal && (
         <PaymentDetailsModal
           method={p.paymentMethod}
@@ -1112,20 +1095,19 @@ export default function SISummary(p: Props) {
         />
       )}
 
-      {/* ── Finance Modal ──────────────────────────────────── */}
+      {/* ── Finance Modal ── */}
       {showFinanceModal && (
         <FinanceModal
           details={finDetails}
           onSave={handleFinanceSave}
           onClose={() => {
             setShowFinanceModal(false);
-            // If modal closed without saving and finance was never enabled, uncheck
             if (!finDetails.financerName) setFinEnabled(false);
           }}
         />
       )}
 
-      {/* ── Add TCS Rate Modal ─────────────────────────────── */}
+      {/* ── Add TCS Rate Modal ── */}
       {showAddTcsModal && (
         <AddTcsRateModal
           onClose={() => setShowAddTcsModal(false)}
@@ -1137,4 +1119,5 @@ export default function SISummary(p: Props) {
         />
       )}
     </div>
-  );}
+  );
+}
