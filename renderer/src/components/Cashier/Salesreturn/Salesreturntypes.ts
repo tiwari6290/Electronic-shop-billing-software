@@ -51,6 +51,23 @@ export interface LinkedInvoice {
   termsConditions?: string;
   amountReceived: number;
   status: string;
+
+  // ── Meta fields from the source invoice ───────────────────────────────────
+  // Populated when the user selects an invoice so the form reflects the
+  // actual values (e.g. challan=23, salesman="wer", WWW=90) saved on it.
+  challanNo?:         string;
+  financedBy?:        string;
+  salesman?:          string;
+  emailId?:           string;
+  warrantyPeriod?:    string;
+  eWayBillNo?:        string;
+  poNumber?:          string;
+  vehicleNo?:         string;
+  dispatchedThrough?: string;
+  transportName?:     string;
+
+  /** Custom fields JSON saved on the invoice, e.g. { "WWW": "90" } */
+  customFieldValues?: Record<string, string>;
 }
 
 export interface AdditionalCharge {

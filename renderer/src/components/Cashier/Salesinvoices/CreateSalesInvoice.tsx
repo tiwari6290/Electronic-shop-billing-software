@@ -14,6 +14,7 @@ import {
   toCreatePayload,
   getInvoiceSettings,
   saveInvoiceSettings,
+  getInvoiceDetailsSettings,
   buildInvoiceNo,
   type InvoiceSettings,
 } from "../../../api/salesInvoiceApi";
@@ -466,6 +467,29 @@ export default function CreateSalesInvoice({
   const [savingNew,     setSavingNew]     = useState(false);  // "Save & New" button
   const [saveError,    setSaveError]    = useState<string | null>(null);
 
+  // ── Invoice details settings (for snapshotMetaFields at save time) ─────────
+  // Holds the current builder settings fetched from the DB. Used to freeze
+  // field visibility into snapshotMetaFields when the invoice is saved.
+  const [detSettings, setDetSettings] = useState<{
+    showChallan: boolean;
+    showDispatchedThrough: boolean;
+    showEmailId: boolean;
+    showFinancedBy: boolean;
+    showSalesman: boolean;
+    showTransportName: boolean;
+    showWarranty: boolean;
+    showPO: boolean;
+    showEwayBill: boolean;
+    showVehicle: boolean;
+    customFields: { label: string; value: string }[];
+  } | null>(null);
+
+  useEffect(() => {
+    getInvoiceDetailsSettings()
+      .then(data => setDetSettings(data))
+      .catch(() => {/* non-critical — snapshot will fall back to customFieldValues keys */});
+  }, []);
+
   /*────────────────────────────
    ON MOUNT: load invoice number from backend settings.
    Applies to new invoices AND converted docs (quotation/challan/proforma)
@@ -541,6 +565,28 @@ export default function CreateSalesInvoice({
     try {
       const payload = toCreatePayload(form as any);
 
+      // ── Build snapshotMetaFields: freeze field visibility at save time ──────
+      // This ensures the invoice view always shows the fields that were visible
+      // when the invoice was created, even if builder settings change later.
+      const customFieldLabels = Object.keys(form.customFieldValues ?? {});
+      const snapshot = detSettings
+        ? {
+            showSalesman:          detSettings.showSalesman,
+            showVehicle:           detSettings.showVehicle,
+            showChallan:           detSettings.showChallan,
+            showFinancedBy:        detSettings.showFinancedBy,
+            showWarranty:          detSettings.showWarranty,
+            showEwayBill:          detSettings.showEwayBill,
+            showPO:                detSettings.showPO,
+            showDispatchedThrough: detSettings.showDispatchedThrough,
+            showTransportName:     detSettings.showTransportName,
+            showEmailId:           detSettings.showEmailId,
+            customFieldLabels,
+          }
+        : { customFieldLabels };   // fallback when settings fetch failed
+
+      payload.snapshotMetaFields = snapshot;
+
       // Inject server-side-matching computed totals so the DB row
       // exactly matches what the user sees on screen.
       payload.subTotal               = subtotal;
@@ -570,6 +616,12 @@ export default function CreateSalesInvoice({
           termsConditions:      payload.termsConditions,
           signatureUrl:         payload.signatureUrl,
           showEmptySignatureBox: payload.showEmptySignatureBox,
+          poNumber:             payload.poNumber,
+          vehicleNo:            payload.vehicleNo,
+          dispatchedThrough:    payload.dispatchedThrough,
+          transportName:        payload.transportName,
+          customFieldValues:    payload.customFieldValues,
+          snapshotMetaFields:   payload.snapshotMetaFields,
         } as any);
       } else {
         await createInvoice(payload);
