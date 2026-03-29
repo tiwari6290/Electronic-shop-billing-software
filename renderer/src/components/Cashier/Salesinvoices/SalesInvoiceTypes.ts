@@ -187,8 +187,8 @@ export function fmtDisplayDate(dateStr: string): string {
  * LINE-ITEM AMOUNT CALCULATION (Mandatory GST Invoice Order)
  * ════════════════════════════════════════════════════════════════
  *
- * This is the calculation for the PER-LINE discount in SIItemsTable
- * (the discount column in the table rows, NOT the "Add Discount" at the bottom).
+ * This is the calculation for the PER-LINE discount in SIItemsTable.
+ * The base price on the invoice row is ALWAYS the pre-tax base price.
  *
  * Step 1 — lineGross   = qty × price          (price is ALWAYS pre-tax base)
  * Step 2 — discAmt     = lineGross × discPct% OR flat discountAmt (not both)
@@ -196,12 +196,19 @@ export function fmtDisplayDate(dateStr: string): string {
  * Step 4 — taxAmt      = taxableAmt × taxRate%
  * Step 5 — lineTotal   = taxableAmt + taxAmt
  *
- * Example: 1 unit × ₹84.75 base price, 5% line-discount, 18% GST
+ * Example: 1 unit × ₹84.75 base price, 5% per-line discount, 18% GST
  *   lineGross  = 84.75
  *   discAmt    = 84.75 × 5%  = 4.24
  *   taxable    = 84.75 − 4.24 = 80.51
  *   taxAmt     = 80.51 × 18% = 14.49
- *   lineTotal  = 80.51 + 14.49 = 95.00  ✓
+ *   lineTotal  = 80.51 + 14.49 = 95.00
+ *
+ * NOTE — Invoice-level "Add Discount" is SEPARATE:
+ *   It applies on the GST-inclusive preTotalAmount (sum of all lineTotals).
+ *   That reduction is then reverse-calculated to split into taxable + GST.
+ *   Example: total=100, disc=₹10 → afterDisc=90
+ *     Reverse: taxable = 90/1.18 = 76.27, GST = 90−76.27 = 13.73
+ *   The base price shown in the table (84.75) does NOT change.
  */
 export function calcBillItemAmount(item: BillItem): number {
   const lineGross = item.qty * item.price;
@@ -215,7 +222,6 @@ export function calcBillItemAmount(item: BillItem): number {
 
 /**
  * Return the taxable portion of a bill item (pre-tax, post-line-discount).
- * Used by SISummary to build the SGST/CGST breakdown.
  */
 export function calcBillItemTaxable(item: BillItem): number {
   const lineGross = item.qty * item.price;
@@ -249,6 +255,46 @@ export function parseGstRate(gstRate?: string | null): number {
 export function buildTaxLabel(rate: number): string {
   if (rate <= 0) return "None";
   return `GST ${rate}%`;
+}
+
+/**
+ * ════════════════════════════════════════════════════════════════
+ * INVOICE-LEVEL DISCOUNT — REVERSE CALCULATION
+ * ════════════════════════════════════════════════════════════════
+ *
+ * When an invoice-level discount is applied on the GST-inclusive total,
+ * the reduced total must be reverse-split into taxable and GST components.
+ *
+ * For a single tax rate R%:
+ *   gstInclusiveTotal = taxable × (1 + R/100)
+ *   → taxable = gstInclusiveTotal / (1 + R/100)
+ *   → gstAmt  = gstInclusiveTotal − taxable
+ *
+ * For mixed rates (multiple items at different rates), we scale each
+ * group's taxable and tax proportionally using a discount scale factor:
+ *   discountScaleFactor = afterDiscTotal / preTotalAmount
+ *   adjustedGroupTaxable = groupTaxable × discountScaleFactor
+ *   adjustedGroupTax     = groupTax     × discountScaleFactor
+ *
+ * Result: adjustedTaxableSum + adjustedTaxSum = afterDiscTotal  ✓
+ *
+ * @param preTotalAmount  - GST-inclusive total before invoice discount
+ * @param afterDiscTotal  - GST-inclusive total after invoice discount
+ * @param itemsTaxableSum - sum of per-line taxable amounts (before invoice disc)
+ * @param itemsTaxSum     - sum of per-line tax amounts (before invoice disc)
+ * @returns { adjustedTaxable, adjustedTax }
+ */
+export function reverseCalcAfterDiscount(
+  preTotalAmount: number,
+  afterDiscTotal: number,
+  itemsTaxableSum: number,
+  itemsTaxSum: number,
+): { adjustedTaxable: number; adjustedTax: number } {
+  if (preTotalAmount <= 0) return { adjustedTaxable: 0, adjustedTax: 0 };
+  const scaleFactor       = afterDiscTotal / preTotalAmount;
+  const adjustedTaxable   = Math.round(itemsTaxableSum * scaleFactor * 100) / 100;
+  const adjustedTax       = Math.round(itemsTaxSum     * scaleFactor * 100) / 100;
+  return { adjustedTaxable, adjustedTax };
 }
 
 const DEFAULT_TERMS = `*Delivery received after full Satisfaction. Goods once sold cannot be taken back or exchanged. *For any type of complaint, please contact the 

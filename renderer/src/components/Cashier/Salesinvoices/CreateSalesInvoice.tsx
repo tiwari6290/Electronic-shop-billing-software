@@ -4,6 +4,7 @@ import { useLocation } from "react-router-dom";   // ← FIX: read convert state
 import {
   SalesInvoice,
   makeBlankInvoice,
+  reverseCalcAfterDiscount,
 } from "./SalesInvoiceTypes";
 
 import {
@@ -638,32 +639,32 @@ export default function CreateSalesInvoice({
   }
 
   /*════════════════════════════════════════════════════════════════
-   CALCULATIONS — mirrors SISummary exactly so the payload stored
-   in the DB matches what the user sees on screen.
+   CALCULATIONS — mirrors SISummary exactly.
+   Must be kept in sync with SISummary's engine.
 
-   Correct GST invoice flow:
-     Per line item (in SIItemsTable / calcBillItemAmount):
-       lineGross  = qty × price         (price = pre-tax base)
-       lineDisc   = lineGross × discPct%  (or flat discAmt, not both)
+   NEW MODEL — "Discount on GST-inclusive total, then reverse-calculate":
+     Per line item (unchanged in SIItemsTable):
+       lineGross  = qty × price         (price = pre-tax base, NEVER changes)
+       lineDisc   = lineGross × discPct%  (or flat)
        taxable    = lineGross − lineDisc
        lineTax    = taxable × taxRate%
        lineTotal  = taxable + lineTax
 
-     In the summary panel:
-       itemsTaxableSum = Σ taxable per line
-       itemsTaxSum     = Σ lineTax per line
-       chargesBase     = Σ additional charge base amounts
-       chargesTax      = Σ charge × chargeRate%
-       preTotalAmount  = itemsTaxableSum + itemsTaxSum + chargesBase + chargesTax
-                       = all lineTotal + all charge totals
+     Invoice-level discount (Discount After Tax):
+       preTotalAmount  = Σ lineTotal + chargesTotal   (GST-inclusive)
+       invoiceDiscAmt  = preTotalAmount × discPct%    (or flat ₹)
+       afterDiscTotal  = preTotalAmount − invoiceDiscAmt
 
-     Invoice-level discount (Discount After Tax) on preTotalAmount:
-       invoiceDiscAmt  = preTotalAmount × discPct%   (or flat discAmt)
-       totalAmount     = preTotalAmount − invoiceDiscAmt + TCS + roundOff
+     Reverse-calculation for stored taxable / tax:
+       discountScaleFactor = afterDiscTotal / preTotalAmount
+       storedTaxable = itemsTaxableSum × scaleFactor
+       storedTax     = itemsTaxSum     × scaleFactor
+
+     This is what we send to the backend so the DB matches the display.
+     The base price in the table rows DOES NOT change.
   ════════════════════════════════════════════════════════════════*/
 
-  // ── Per-line taxable and tax ────────────────────────────────────────────────
-  // itemsTaxableSum: sum of per-line taxable amounts (pre-tax, post-item-discount)
+  // ── Per-line taxable and tax (before invoice-level discount) ───────────────
   const itemsTaxableSum = form.billItems.reduce((s, i) => {
     const lineGross = (Number(i.qty) || 0) * (Number(i.price) || 0);
     const discByPct = lineGross * ((Number(i.discountPct) || 0) / 100);
@@ -671,7 +672,6 @@ export default function CreateSalesInvoice({
     return s + Math.max(0, lineGross - discByPct - discFlat);
   }, 0);
 
-  // itemsTaxSum: sum of per-line tax amounts (each on its own taxable)
   const itemsTaxSum = form.billItems.reduce((s, i) => {
     const lineGross = (Number(i.qty) || 0) * (Number(i.price) || 0);
     const discByPct = lineGross * ((Number(i.discountPct) || 0) / 100);
@@ -692,10 +692,10 @@ export default function CreateSalesInvoice({
   }, 0);
   const chargesTotal = chargesBase + chargesTax;
 
-  // ── Pre-discount total (items + charges, tax already included per-line) ─────
+  // ── GST-inclusive pre-discount total ──────────────────────────────────────
   const preTotalAmount = Math.round((itemsTaxableSum + itemsTaxSum + chargesTotal) * 100) / 100;
 
-  // ── Invoice-level discount (Discount After Tax — applied on preTotalAmount) ─
+  // ── Invoice-level discount on GST-inclusive total ─────────────────────────
   const invoiceDiscAmt = showDiscount
     ? (form.discountPct > 0
         ? Math.round(preTotalAmount * (form.discountPct / 100) * 100) / 100
@@ -704,8 +704,17 @@ export default function CreateSalesInvoice({
 
   const afterInvoiceDisc = Math.max(0, Math.round((preTotalAmount - invoiceDiscAmt) * 100) / 100);
 
-  // ── TCS ─────────────────────────────────────────────────────────────────────
-  const tcsBaseAmt = form.tcsBase === "Total Amount" ? afterInvoiceDisc : itemsTaxableSum;
+  // ── REVERSE-CALCULATE: get adjusted taxable and tax to store in DB ─────────
+  // Mirrors SISummary exactly. When no discount, values are unchanged.
+  const { adjustedTaxable, adjustedTax } = reverseCalcAfterDiscount(
+    preTotalAmount,
+    afterInvoiceDisc,
+    itemsTaxableSum,
+    itemsTaxSum,
+  );
+
+  // ── TCS (applied on adjusted taxable or total) ─────────────────────────────
+  const tcsBaseAmt = form.tcsBase === "Total Amount" ? afterInvoiceDisc : adjustedTaxable;
   const tcsValue   = form.applyTCS
     ? Math.round(tcsBaseAmt * (form.tcsRate / 100) * 100) / 100
     : 0;
@@ -724,12 +733,12 @@ export default function CreateSalesInvoice({
     Math.round((computedTotal - (Number(form.amountReceived) || 0)) * 100) / 100
   );
 
-  // ── Legacy aliases kept for the payload block below ─────────────────────────
-  const subtotal     = itemsTaxableSum;          // pre-tax taxable sum
-  const totalTax     = itemsTaxSum;              // total tax sum
-  const discValue    = invoiceDiscAmt;           // invoice-level discount ₹
-  const effectiveTax = itemsTaxSum;              // same as totalTax (no scale factor needed)
-  const afterTax     = afterInvoiceDisc;         // after invoice discount
+  // ── Payload aliases — use ADJUSTED values so DB stores correct taxable/tax ─
+  const subtotal     = adjustedTaxable;   // reverse-calculated taxable after discount
+  const totalTax     = adjustedTax;       // reverse-calculated tax after discount
+  const discValue    = invoiceDiscAmt;    // invoice-level discount ₹
+  const effectiveTax = adjustedTax;
+  const afterTax     = afterInvoiceDisc;
 
   /*────────────────────────────
    BANNER: shown when this invoice was pre-filled from a challan/proforma

@@ -538,8 +538,30 @@ export default function SISummary(p: Props) {
   // ── Final total ────────────────────────────────────────────────────────────
   const afterInvoiceDisc = Math.max(0, Math.round((preTotalAmount - invoiceDiscAmt) * 100) / 100);
 
+  // ── Reverse-calculate taxable and tax after invoice-level discount ──────────
+  //
+  // When an invoice-level discount is applied on the GST-inclusive total, the
+  // displayed "Taxable Amount" and the SGST/CGST rows must reflect the reduced
+  // values. We do NOT change the base price in the table rows — only the summary
+  // panel shows the scaled-down taxable and tax.
+  //
+  // scaleFactor   = afterInvoiceDisc / preTotalAmount
+  // adjustedTaxable = itemsTaxableSum × scaleFactor
+  // Each tax group is also multiplied by scaleFactor inline in the SGST/CGST loop.
+  //
+  // Example: total ₹95 (base ₹80.51, tax ₹14.49), disc ₹5 → afterDisc ₹90
+  //   scaleFactor     = 90 / 95         = 0.9474
+  //   adjustedTaxable = 80.51 × 0.9474 = 76.27
+  //   scaledTax       = 14.49 × 0.9474 = 13.73
+  //   check: 76.27 + 13.73             = 90.00 ✓
+  //   The table row still shows base price ₹84.75 — it does NOT change.
+  const discountScaleFactor = preTotalAmount > 0 && invoiceDiscAmt > 0
+    ? afterInvoiceDisc / preTotalAmount
+    : 1;
+  const adjustedTaxable = Math.round(itemsTaxableSum * discountScaleFactor * 100) / 100;
+
   // ── TCS ───────────────────────────────────────────────────────────────────
-  const tcsBaseAmt = p.tcsBase === "Total Amount" ? afterInvoiceDisc : itemsTaxableSum;
+  const tcsBaseAmt = p.tcsBase === "Total Amount" ? afterInvoiceDisc : adjustedTaxable;
   const tcsValue   = p.applyTCS ? Math.round(tcsBaseAmt * (p.tcsRate / 100) * 100) / 100 : 0;
   const preRound   = Math.round((afterInvoiceDisc + tcsValue) * 100) / 100;
 
@@ -564,7 +586,11 @@ export default function SISummary(p: Props) {
     }
   }, [preRound, p.roundOff]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── SGST / CGST / IGST breakdown ──────────────────────────────────────────
+  // ── SGST / CGST / IGST breakdown (scaled by discount factor) ─────────────
+  //
+  // When an invoice-level discount is applied, each tax group is scaled down
+  // proportionally so the displayed SGST/CGST values match the reduced total.
+  // Without a discount, discountScaleFactor = 1 so nothing changes.
   interface TaxGroup { sgst: number; cgst: number; igst: number }
   const taxGroups: Record<string, TaxGroup> = {};
 
@@ -573,7 +599,8 @@ export default function SISummary(p: Props) {
     const discByPct = lineGross * (item.discountPct / 100);
     const discFlat  = item.discountPct > 0 ? 0 : item.discountAmt;
     const taxable   = Math.max(0, lineGross - discByPct - discFlat);
-    const taxAmt    = taxable * item.taxRate / 100;
+    // Scale the per-line tax by the invoice-level discount factor
+    const taxAmt    = taxable * item.taxRate / 100 * discountScaleFactor;
     if (taxAmt <= 0 || item.taxRate <= 0) return;
     const key = item.taxLabel;
     if (!taxGroups[key]) taxGroups[key] = { sgst: 0, cgst: 0, igst: 0 };
@@ -588,6 +615,7 @@ export default function SISummary(p: Props) {
   p.additionalCharges.forEach((c: AdditionalCharge) => {
     const rate = chargeRate(c.taxLabel);
     if (rate <= 0) return;
+    // Additional charges are NOT affected by invoice-level discount (charges are separate)
     const taxAmt = (Number(c.amount) || 0) * rate / 100;
     const key    = c.taxLabel;
     if (!taxGroups[key]) taxGroups[key] = { sgst: 0, cgst: 0, igst: 0 };
@@ -663,10 +691,16 @@ export default function SISummary(p: Props) {
         )}
       </div>
 
-      {/* ── Taxable Amount = sum of per-line taxables (pre-tax, post-item-discount) ── */}
+      {/* ── Taxable Amount ──────────────────────────────────────────────────────────
+           Shows the REVERSE-CALCULATED taxable amount after applying the
+           invoice-level discount on the GST-inclusive total.
+           When no discount: adjustedTaxable = itemsTaxableSum (unchanged).
+           When discount applied: adjustedTaxable = itemsTaxableSum × scaleFactor.
+           Base price in the table rows NEVER changes.
+      ── */}
       <div className="si-sum-row">
         <span className="si-sum-lbl">Taxable Amount</span>
-        <span className="si-sum-val">₹ {fmt(itemsTaxableSum)}</span>
+        <span className="si-sum-val">₹ {fmt(adjustedTaxable)}</span>
       </div>
 
       {/* ── Additional charges total (if any) ── */}
