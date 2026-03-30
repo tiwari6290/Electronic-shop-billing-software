@@ -4,7 +4,7 @@ import "./InvoiceViewModal.css";
 // ─── Static assets — always shown on every invoice ────────────────────────────
 import BILL_LOGO      from "../../../assets/bill_logo.jpeg";
 import BILL_SIGNATURE from "../../../assets/bill_signature.png";
-
+import BILL_QR from "../../../assets/qr_code.jpeg"
 // ─── Convert image URL to base64 so it survives PDF/download export ───────────
 async function toBase64DataUrl(src: string): Promise<string> {
   try {
@@ -641,16 +641,17 @@ function GreatEasternLayout({ invoice, business, template, printRef, themeColor,
             {companyName}
           </div>
           {address && <div style={{ fontSize: 9.5, color: "#333", lineHeight: 1.5 }}>{address}</div>}
-          {(phone || email) && (
-            <div style={{ fontSize: 9.5, color: "#333" }}>
-              {phone && <span>Phone: {phone}</span>}
-              {phone && email && <span>{"  "}Email: {email}</span>}
-              {!phone && email && <span>Email: {email}</span>}
-            </div>
-          )}
+          {/* ── STATIC contact details — Phone, Mobile, PAN (no email) ── */}
+          <div style={{ fontSize: 9.5, color: "#333" }}>
+            <span>Phone: 2646 1320</span>
+            <span>{"  "}Mobile: 9831789022</span>
+            <span>{"  "}PAN No.: AFTPM0665H</span>
+          </div>
           {gstin && <div style={{ fontSize: 9.5, fontWeight: 700, color: "#111", marginTop: 1 }}>GSTIN NO : {gstin}</div>}
         </div>
-        <div style={{ width: 90, height: 90, border: "1px dashed #aaa", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 8, color: "#aaa", flexShrink: 0, marginLeft: "auto" }} />
+        <div style={{ width: 90, height: 90, flexShrink: 0, marginLeft: "auto", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <img src={BILL_QR} alt="QR Code" style={{ width: 88, height: 88, objectFit: "contain", display: "block" }} />
+        </div>
       </div>
 
       {/* ── Row 2: Transport / Invoice Meta ── */}
@@ -658,25 +659,29 @@ function GreatEasternLayout({ invoice, business, template, printRef, themeColor,
 
         {/* LEFT — transport info */}
         <div style={{ borderRight: B, padding: "5px 10px", fontSize: 9.5 }}>
-          <div style={{ display: "flex", gap: 4, marginBottom: 2 }}>
-            <span style={{ fontWeight: 700, minWidth: 120 }}>Transportation Mode</span>
-            <span>: {snap.showDispatchedThrough && invoice.dispatchedThrough ? invoice.dispatchedThrough : "By Road"}</span>
-          </div>
-          <div style={{ display: "flex", gap: 4, marginBottom: 2 }}>
-            <span style={{ fontWeight: 700, minWidth: 120 }}>Vehicle No.</span>
-            {/* KEY FIX: removed snap.showVehicle gate — always show the field row,
-                show actual value or dash. The snap gate caused it to show "-" even
-                when the user had entered a value. */}
-            <span>: {invoice.vehicleNo ? invoice.vehicleNo : "-"}</span>
-          </div>
-          <div style={{ display: "flex", gap: 4, marginBottom: 2 }}>
+          {/* Transportation Mode */}
+{invoice.dispatchedThrough && (
+  <div style={{ display: "flex", gap: 4, marginBottom: 2 }}>
+    <span style={{ fontWeight: 700, minWidth: 120 }}>Transportation Mode</span>
+    <span>: {invoice.dispatchedThrough}</span>
+  </div>
+)}
+
+{/* Vehicle No */}
+{invoice.vehicleNo && (
+  <div style={{ display: "flex", gap: 4, marginBottom: 2 }}>
+    <span style={{ fontWeight: 700, minWidth: 120 }}>Vehicle No.</span>
+    <span>: {invoice.vehicleNo}</span>
+  </div>
+)}
+          {/* <div style={{ display: "flex", gap: 4, marginBottom: 2 }}>
             <span style={{ fontWeight: 700, minWidth: 120 }}>Date &amp; Time of Supply</span>
             <span>: {fmtDateSlash(invoice.invoiceDate)}</span>
-          </div>
-          <div style={{ display: "flex", gap: 4, marginBottom: 2 }}>
+          </div> */}
+          {/* <div style={{ display: "flex", gap: 4, marginBottom: 2 }}>
             <span style={{ fontWeight: 700, minWidth: 120 }}>Place of Supply</span>
             <span>: {invoice.party?.billingAddress?.split(",").pop()?.trim() || "-"}</span>
-          </div>
+          </div> */}
           {snap.showFinancedBy && invoice.financedBy && (
             <div style={{ display: "flex", gap: 4 }}>
               <span style={{ fontWeight: 700, minWidth: 120 }}>Financer's Name</span>
@@ -770,8 +775,8 @@ function GreatEasternLayout({ invoice, business, template, printRef, themeColor,
                 <span style={{ fontWeight: 700 }}>Contact No</span>
                 <span>: {invoice.party.mobile}</span>
               </>}
-              <span style={{ fontWeight: 700 }}>State</span>
-              <span>: WEST BENGAL</span>
+              {/* <span style={{ fontWeight: 700 }}>State</span>
+              <span>: WEST BENGAL</span> */}
               <span style={{ fontWeight: 700 }}>GSTIN</span>
               <span>: {invoice.party.gstin || "Un-Registered"}</span>
             </div>
@@ -795,10 +800,10 @@ function GreatEasternLayout({ invoice, business, template, printRef, themeColor,
                 <span style={{ fontWeight: 700 }}>Contact No</span>
                 <span>: {invoice.shipTo?.mobile || invoice.party?.mobile}</span>
               </>}
-              <span style={{ fontWeight: 700 }}>State</span>
-              <span>: WEST BENGAL</span>
+              {/* <span style={{ fontWeight: 700 }}>State</span>
+              <span>: WEST BENGAL</span> */}
               <span style={{ fontWeight: 700 }}>GSTIN</span>
-              <span>: Un-Registered</span>
+              <span>: {invoice.party?.billingAddress?.split(",").pop()?.trim() || "-"}</span>
             </div>
           ) : (
             <div style={{ color: "#aaa" }}>–</div>
@@ -965,63 +970,81 @@ function GreatEasternLayout({ invoice, business, template, printRef, themeColor,
       )}
 
       {/* ── Payment Table ── */}
-      {pd?.method && <div style={{ borderBottom: B }}>
-        <div style={{ padding: "5px 12px", fontWeight: 800, fontSize: 11.5, letterSpacing: "0.22em", borderBottom: B, fontFamily: "'Times New Roman', serif" }}>
-          P A Y M E N T
-        </div>
-        <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 9.5 }}>
-          <thead>
-            <tr>
-              <th style={{ ...TD, fontWeight: 700, fontSize: 9, textAlign: "center" as const, background: "#f5f5f5", border: B }}>Payment<br />Type</th>
-              {(["UPI","Netbanking","Bank Transfer","Cheque"] as string[]).includes(pd.method) && (
-                <th style={{ ...TD, fontWeight: 700, fontSize: 9, textAlign: "center" as const, background: "#f5f5f5", border: B }}>Ref. No</th>
-              )}
-              {pd.method === "Cheque" && (
-                <th style={{ ...TD, fontWeight: 700, fontSize: 9, textAlign: "center" as const, background: "#f5f5f5", border: B }}>Cheque<br />Date</th>
-              )}
-              {pd.method === "Card" && (
-                <th style={{ ...TD, fontWeight: 700, fontSize: 9, textAlign: "center" as const, background: "#f5f5f5", border: B }}>Auth No.</th>
-              )}
-              {(["Cheque","Netbanking","Bank Transfer"] as string[]).includes(pd.method) && (
-                <th style={{ ...TD, fontWeight: 700, fontSize: 9, textAlign: "center" as const, background: "#f5f5f5", border: B }}>Bank Name</th>
-              )}
-              {pd.method === "Card" && (
-                <th style={{ ...TD, fontWeight: 700, fontSize: 9, textAlign: "center" as const, background: "#f5f5f5", border: B }}>Card Type</th>
-              )}
-              {(["Cheque","Bank Transfer"] as string[]).includes(pd.method) && (
-                <th style={{ ...TD, fontWeight: 700, fontSize: 9, textAlign: "center" as const, background: "#f5f5f5", border: B }}>Branch Name</th>
-              )}
-              <th style={{ ...TD, fontWeight: 700, fontSize: 9, textAlign: "right" as const, background: "#f5f5f5", border: B }}>Amount</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td style={{ ...TD, textAlign: "center" as const }}>{pd.method}</td>
-              {(["UPI","Netbanking","Bank Transfer","Cheque"] as string[]).includes(pd.method) && (
-                <td style={{ ...TD, textAlign: "center" as const }}>{pd.refNo || ""}</td>
-              )}
-              {pd.method === "Cheque" && (
-                <td style={{ ...TD, textAlign: "center" as const }}>{pd.chequeDate ? fmtDateSlash(pd.chequeDate) : ""}</td>
-              )}
-              {pd.method === "Card" && (
-                <td style={{ ...TD, textAlign: "center" as const }}>{pd.authNo || ""}</td>
-              )}
-              {(["Cheque","Netbanking","Bank Transfer"] as string[]).includes(pd.method) && (
-                <td style={{ ...TD, textAlign: "center" as const }}>{pd.bankName || ""}</td>
-              )}
-              {pd.method === "Card" && (
-                <td style={{ ...TD, textAlign: "center" as const }}>{pd.cardType || ""}</td>
-              )}
-              {(["Cheque","Bank Transfer"] as string[]).includes(pd.method) && (
-                <td style={{ ...TD, textAlign: "center" as const }}>{pd.branchName || ""}</td>
-              )}
-              <td style={{ ...TD, textAlign: "right" as const, fontWeight: 600 }}>
-                {fmtN(Number(pd.amount) || receivedAmt)}
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>}
+      {pd?.method && (() => {
+        // ── Build the column list dynamically based on:
+        //    1. Which payment method is selected
+        //    2. Which optional fields the user actually filled in
+        // For Cash: only Payment Type + Amount are shown.
+        // For every other method: show all fields that are relevant to that
+        //    method AND have a non-empty value.
+
+        const isCash        = pd.method === "Cash";
+        const isUPI         = pd.method === "UPI";
+        const isCard        = pd.method === "Card";
+        const isNetbanking  = pd.method === "Netbanking";
+        const isBankTransfer= pd.method === "Bank Transfer";
+        const isCheque      = pd.method === "Cheque";
+
+        // Determine which columns to show (only when the field is relevant AND filled)
+        const showRef    = !isCash && (isUPI || isNetbanking || isBankTransfer || isCheque) && !!pd.refNo;
+        const showAuth   = isCard  && !!pd.authNo;
+        const showBank   = !isCash && !isUPI && (isCard || isNetbanking || isBankTransfer || isCheque) && !!pd.bankName;
+        const showUPIApp = isUPI   && !!pd.bankName;   // UPI "bank" field is labelled "UPI App"
+        const showCard   = isCard  && !!pd.cardType;
+        const showCheque = isCheque && !!pd.chequeDate;
+        const showBranch = (isCheque || isBankTransfer) && !!pd.branchName;
+
+        // Ref column label changes per method
+        const refLabel =
+          isUPI         ? "UPI / Txn ID"   :
+          isBankTransfer? "UTR Number"      :
+          isNetbanking  ? "Transaction ID"  :
+          isCheque      ? "Cheque No."      : "Ref. No";
+
+        const TH9 = {
+          ...TD, fontWeight: 700, fontSize: 9,
+          textAlign: "center" as const,
+          background: "#f5f5f5", border: B,
+        };
+
+        return (
+          <div style={{ borderBottom: B }}>
+            <div style={{ padding: "5px 12px", fontWeight: 800, fontSize: 11.5, letterSpacing: "0.22em", borderBottom: B, fontFamily: "'Times New Roman', serif" }}>
+              P A Y M E N T
+            </div>
+            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 9.5 }}>
+              <thead>
+                <tr>
+                  <th style={TH9}>Payment<br />Type</th>
+                  {showRef    && <th style={TH9}>{refLabel}</th>}
+                  {showAuth   && <th style={TH9}>Auth No.</th>}
+                  {showUPIApp && <th style={TH9}>UPI App</th>}
+                  {showBank   && <th style={TH9}>Bank Name</th>}
+                  {showCard   && <th style={TH9}>Card Type</th>}
+                  {showCheque && <th style={TH9}>Cheque<br />Date</th>}
+                  {showBranch && <th style={TH9}>Branch Name</th>}
+                  <th style={{ ...TH9, textAlign: "right" as const }}>Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td style={{ ...TD, textAlign: "center" as const }}>{pd.method}</td>
+                  {showRef    && <td style={{ ...TD, textAlign: "center" as const }}>{pd.refNo}</td>}
+                  {showAuth   && <td style={{ ...TD, textAlign: "center" as const }}>{pd.authNo}</td>}
+                  {showUPIApp && <td style={{ ...TD, textAlign: "center" as const }}>{pd.bankName}</td>}
+                  {showBank   && <td style={{ ...TD, textAlign: "center" as const }}>{pd.bankName}</td>}
+                  {showCard   && <td style={{ ...TD, textAlign: "center" as const }}>{pd.cardType}</td>}
+                  {showCheque && <td style={{ ...TD, textAlign: "center" as const }}>{fmtDateSlash(pd.chequeDate!)}</td>}
+                  {showBranch && <td style={{ ...TD, textAlign: "center" as const }}>{pd.branchName}</td>}
+                  <td style={{ ...TD, textAlign: "right" as const, fontWeight: 600 }}>
+                    {fmtN(Number(pd.amount) || receivedAmt)}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        );
+      })()}
 
       {/* ── Amount Received & Balance ── */}
       {receivedAmt > 0 && (
@@ -1365,6 +1388,78 @@ export default function InvoiceViewModal({
                 <div className="ivm-ph-entry">
                   <div className="ivm-ph-entry-top"><span>Payment Received</span><strong style={{ color:"#16a34a" }}>₹{alreadyReceived.toLocaleString("en-IN")}</strong></div>
                   <div className="ivm-ph-entry-date">{fmtDate(invoice.createdAt)}</div>
+                </div>
+              )}
+
+              {/* ── FIX 5: Show paymentDetails in sidebar if present ── */}
+              {invoice.paymentDetails && invoice.paymentDetails.method && invoice.paymentDetails.method !== "Cash" && (
+                <div style={{ marginTop: 10, padding: "8px 10px", background: "#f9fafb", borderRadius: 8, border: "1px solid #e5e7eb", fontSize: 12 }}>
+                  <div style={{ fontWeight: 700, color: "#374151", marginBottom: 4, fontSize: 12 }}>Payment Details</div>
+                  <div style={{ display: "flex", justifyContent: "space-between", color: "#6b7280", marginBottom: 2 }}>
+                    <span>Method</span><span style={{ color: "#111827", fontWeight: 500 }}>{invoice.paymentDetails.method}</span>
+                  </div>
+                  {invoice.paymentDetails.refNo && (
+                    <div style={{ display: "flex", justifyContent: "space-between", color: "#6b7280", marginBottom: 2 }}>
+                      <span>Ref No.</span><span style={{ color: "#111827", fontWeight: 500 }}>{invoice.paymentDetails.refNo}</span>
+                    </div>
+                  )}
+                  {invoice.paymentDetails.bankName && (
+                    <div style={{ display: "flex", justifyContent: "space-between", color: "#6b7280", marginBottom: 2 }}>
+                      <span>Bank</span><span style={{ color: "#111827", fontWeight: 500 }}>{invoice.paymentDetails.bankName}</span>
+                    </div>
+                  )}
+                  {invoice.paymentDetails.authNo && (
+                    <div style={{ display: "flex", justifyContent: "space-between", color: "#6b7280", marginBottom: 2 }}>
+                      <span>Auth No.</span><span style={{ color: "#111827", fontWeight: 500 }}>{invoice.paymentDetails.authNo}</span>
+                    </div>
+                  )}
+                  {invoice.paymentDetails.cardType && (
+                    <div style={{ display: "flex", justifyContent: "space-between", color: "#6b7280", marginBottom: 2 }}>
+                      <span>Card Type</span><span style={{ color: "#111827", fontWeight: 500 }}>{invoice.paymentDetails.cardType}</span>
+                    </div>
+                  )}
+                  {invoice.paymentDetails.chequeDate && (
+                    <div style={{ display: "flex", justifyContent: "space-between", color: "#6b7280", marginBottom: 2 }}>
+                      <span>Cheque Date</span><span style={{ color: "#111827", fontWeight: 500 }}>{invoice.paymentDetails.chequeDate}</span>
+                    </div>
+                  )}
+                  {invoice.paymentDetails.branchName && (
+                    <div style={{ display: "flex", justifyContent: "space-between", color: "#6b7280" }}>
+                      <span>Branch</span><span style={{ color: "#111827", fontWeight: 500 }}>{invoice.paymentDetails.branchName}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ── FIX 5b: Show financeDetails in sidebar if present ── */}
+              {invoice.financeDetails && (invoice.financeDetails.financerName || invoice.financeDetails.loanRefNo) && (
+                <div style={{ marginTop: 10, padding: "8px 10px", background: "#eff6ff", borderRadius: 8, border: "1px solid #bfdbfe", fontSize: 12 }}>
+                  <div style={{ fontWeight: 700, color: "#1d4ed8", marginBottom: 4, fontSize: 12 }}>Finance Details</div>
+                  {invoice.financeDetails.financerName && (
+                    <div style={{ display: "flex", justifyContent: "space-between", color: "#6b7280", marginBottom: 2 }}>
+                      <span>Financer</span><span style={{ color: "#111827", fontWeight: 500 }}>{invoice.financeDetails.financerName}</span>
+                    </div>
+                  )}
+                  {invoice.financeDetails.loanRefNo && (
+                    <div style={{ display: "flex", justifyContent: "space-between", color: "#6b7280", marginBottom: 2 }}>
+                      <span>Loan Ref</span><span style={{ color: "#111827", fontWeight: 500 }}>{invoice.financeDetails.loanRefNo}</span>
+                    </div>
+                  )}
+                  {invoice.financeDetails.loanAmount != null && (
+                    <div style={{ display: "flex", justifyContent: "space-between", color: "#6b7280", marginBottom: 2 }}>
+                      <span>Loan Amt</span><span style={{ color: "#111827", fontWeight: 500 }}>₹{Number(invoice.financeDetails.loanAmount).toLocaleString("en-IN")}</span>
+                    </div>
+                  )}
+                  {invoice.financeDetails.emi != null && (
+                    <div style={{ display: "flex", justifyContent: "space-between", color: "#6b7280", marginBottom: 2 }}>
+                      <span>EMI</span><span style={{ color: "#111827", fontWeight: 500 }}>₹{invoice.financeDetails.emi} × {invoice.financeDetails.emiCount ?? 1}</span>
+                    </div>
+                  )}
+                  {invoice.financeDetails.agentName && (
+                    <div style={{ display: "flex", justifyContent: "space-between", color: "#6b7280" }}>
+                      <span>Agent</span><span style={{ color: "#111827", fontWeight: 500 }}>{invoice.financeDetails.agentName}</span>
+                    </div>
+                  )}
                 </div>
               )}
               <div style={{ flex:1 }}/>

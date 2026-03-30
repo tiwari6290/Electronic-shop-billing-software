@@ -134,7 +134,6 @@ interface InvoiceData {
   city: string;
   gstin: string;
   phone: string;
-  email: string;
   pan: string;
   invoiceNo: string;
   date: string;
@@ -184,8 +183,7 @@ const DEFAULT_INVOICE: InvoiceData = {
   slogan: "",
   address: "Kumillapara, P.O.: Sauipara, Bally, Howrah - 711227",
   state: "West Bengal", city: "Howrah",
-  gstin: "19AFTPM0665H1ZY", phone: "2646 1320, Mobile: 9831789022",
-  email: "mondal@electronics.in", pan: "AFTPM0665H",
+  gstin: "19AFTPM0665H1ZY", phone: "2646 1320, Mobile: 9831789022", pan: "AFTPM0665H",
   invoiceNo: "MONDAL/2026/00013", date: "19/03/2026",
   dueDate: "18/04/2026", placeOfSupply: "West Bengal", poNo: "",
   billTo: { name: "Rohit Kumar Jha", address: "1/2 Mankundu", mobile: "6207941417", gstin: "" },
@@ -1970,7 +1968,7 @@ const BusinessPanel: React.FC<{ inv: InvoiceData; setInv: React.Dispatch<React.S
       {vis.pan && <IBInput value={inv.pan} onChange={(v) => setInv((i) => ({ ...i, pan: v }))} />}
     </SettingRow>
     <SettingRow label="Email" checked={vis.email} onChange={(v) => setVis((s) => ({ ...s, email: v }))}>
-      {vis.email && <IBInput value={inv.email} onChange={(v) => setInv((i) => ({ ...i, email: v }))} />}
+   
     </SettingRow>
   </div>
 );

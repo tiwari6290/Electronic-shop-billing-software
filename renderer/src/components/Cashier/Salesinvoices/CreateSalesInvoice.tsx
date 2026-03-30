@@ -509,6 +509,10 @@ export default function CreateSalesInvoice({
   /*────────────────────────────
    LOAD INVOICE FOR EDIT
   ────────────────────────────*/
+  // ── FIX: track a remount key for SISummary so its internal payDetails /
+  // finDetails state is re-initialised every time we load a different invoice.
+  const [summaryKey, setSummaryKey] = useState(0);
+
   useEffect(() => {
     if (!editId) return;
     let active = true;
@@ -516,7 +520,27 @@ export default function CreateSalesInvoice({
     async function loadInvoice() {
       try {
         const res = await getInvoiceById(editId!);
-        if (active) setForm(mapBackendInvoice(res));
+        if (!active) return;
+
+        const mapped = mapBackendInvoice(res);
+        setForm(mapped);
+
+        // ── FIX 1: Explicitly restore paymentDetails and financeDetails
+        // into the form so SISummary receives them as fresh props on mount.
+        // mapBackendInvoice already puts them in `mapped`, so the setForm
+        // above covers the form-level state. The additional step below
+        // bumps `summaryKey` so SISummary re-mounts and re-reads its
+        // initialiser (p.paymentDetails / p.financeDetails) from those props.
+        if (mapped.paymentDetails) {
+          setForm(prev => ({ ...prev, paymentDetails: mapped.paymentDetails }));
+        }
+        if (mapped.financeDetails) {
+          setForm(prev => ({ ...prev, financeDetails: mapped.financeDetails }));
+        }
+
+        // Bump the key → SISummary unmounts & remounts, picking up the
+        // correct paymentDetails / financeDetails from props on first render.
+        setSummaryKey(k => k + 1);
       } catch (err) {
         console.error("Failed to load invoice for edit:", err);
       }
@@ -564,6 +588,16 @@ export default function CreateSalesInvoice({
 
     try {
       const payload = toCreatePayload(form as any);
+
+      // ── FIX 4: Always include paymentDetails and financeDetails in the
+      // create payload. toCreatePayload may not map these fields if they
+      // were added after it was written. Explicit override is safe.
+      if ((form as any).paymentDetails) {
+        (payload as any).paymentDetails = (form as any).paymentDetails;
+      }
+      if ((form as any).financeDetails?.enabled === true) {
+        (payload as any).financeDetails = (form as any).financeDetails;
+      }
 
       // ── Build snapshotMetaFields: freeze field visibility at save time ──────
       // This ensures the invoice view always shows the fields that were visible
@@ -622,6 +656,11 @@ export default function CreateSalesInvoice({
           transportName:        payload.transportName,
           customFieldValues:    payload.customFieldValues,
           snapshotMetaFields:   payload.snapshotMetaFields,
+          // ── FIX 2: Persist paymentDetails and financeDetails on edit-save ──
+          paymentDetails:       (form as any).paymentDetails ?? null,
+          financeDetails:       (form as any).financeDetails?.enabled === true
+                                  ? (form as any).financeDetails
+                                  : null,
         } as any);
       } else {
         await createInvoice(payload);
@@ -926,6 +965,7 @@ export default function CreateSalesInvoice({
 
           <div className="csi-summary-col">
             <SISummary
+              key={summaryKey}
               subtotal={subtotal}
               totalTax={totalTax}
               billItems={form.billItems}

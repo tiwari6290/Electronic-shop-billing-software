@@ -311,19 +311,12 @@ export function reverseCalcAfterDiscount(
 }
 const DEFAULT_TERMS = `
 Diclamer:-
-1. Delivery has been received in full satisfaction and in good condition.
-2. Goods once sold will not be taken back or exchanged under any circumstances.
-3. For any type of manufacturing defect or complaint, please contact the respective manufacturer directly.
-4. The dealer shall not be responsible for any complaints or issues after the delivery of goods.
-5. Warranty, if applicable, is strictly provided by the manufacturer as per their terms and conditions.
-6. No guarantee or warranty is provided by the seller unless explicitly mentioned.
-7. Cheque return charges of Rs. 200/- will be applicable along with any legal liabilities.
-8. Interest may be charged on overdue payments as per applicable norms.
-9. All payments once made are non-refundable.
-10. Goods are dispatched at the buyer’s risk unless otherwise specified.
-11. Any damage or shortage must be reported within 24 hours of delivery.
-12. Disputes, if any, shall be subject to Kolkata jurisdiction only.
-13. By purchasing, the buyer agrees to all the above terms and conditions.
+*Delivery received after full Satisfaction. Goods once sold cannot be taken back or exchanged. 
+*For any type of complaint, please contact the Manufacturer. 
+*Dealer is not liable for any complaint after delivery. 
+*Warranty is given by manufacturer only. 
+*Cheque return charge Rs.200/- besides legal liability. 
+*All disputes subject to Kolkata Jurisdiction.
 `;
 
 export function makeBlankInvoice(nextNo: string): SalesInvoice {

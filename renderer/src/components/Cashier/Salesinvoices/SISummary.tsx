@@ -98,7 +98,18 @@ function PaymentDetailsModal({
   onClose:  () => void;
 }) {
   const fields = MODE_FIELDS[method] ?? {};
-  const [form, setForm] = useState<PaymentDetails>({ ...details, method, amount });
+
+  // ── FIX: For Cheque, default chequeDate to today if not already set ──────
+  const todayIso = new Date().toISOString().split("T")[0];
+  const initialDetails: PaymentDetails = {
+    ...details,
+    method,
+    amount,
+    chequeDate: method === "Cheque"
+      ? (details.chequeDate || todayIso)
+      : details.chequeDate,
+  };
+  const [form, setForm] = useState<PaymentDetails>(initialDetails);
 
   const f = (key: keyof PaymentDetails) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm(p => ({ ...p, [key]: e.target.value }));
@@ -176,7 +187,32 @@ function PaymentDetailsModal({
               {fields.chequeDate && (
                 <div>
                   <label style={labelSty}>Cheque Date</label>
-                  <input type="date" value={form.chequeDate ?? ""} onChange={f("chequeDate")} style={inpSty} />
+                  {/* ── FIX: Show both a calendar picker and a formatted display.
+                      The date picker sets the value; the text box shows it
+                      formatted (DD/MM/YYYY) and lets the user type a custom date.
+                      Defaults to today so it is never blank. ── */}
+                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                    {/* Calendar picker */}
+                    <input
+                      type="date"
+                      value={form.chequeDate ?? todayIso}
+                      onChange={f("chequeDate")}
+                      style={{ ...inpSty, width: "auto", flex: "0 0 auto", cursor: "pointer" }}
+                    />
+                    {/* Readable display — formatted DD/MM/YYYY */}
+                    <div style={{
+                      flex: 1, padding: "9px 11px", border: "1.5px solid #e5e7eb",
+                      borderRadius: 7, fontSize: 13, background: "#f9fafb",
+                      color: "#374151", fontWeight: 500,
+                    }}>
+                      {form.chequeDate
+                        ? (() => {
+                            const d = new Date(form.chequeDate);
+                            return `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${d.getFullYear()}`;
+                          })()
+                        : "dd/mm/yyyy"}
+                    </div>
+                  </div>
                 </div>
               )}
               {fields.branchName && (
@@ -355,7 +391,7 @@ function FinanceSummaryCard({ details, onEdit }: { details: FinanceDetails; onEd
   return (
     <div style={{ marginTop: 8, padding: "10px 12px", background: "#eff6ff", borderRadius: 8, border: "1px solid #bfdbfe", fontSize: 12 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-        <span style={{ fontWeight: 600, color: "#1d4ed8", fontSize: 12 }}>🏦 Finance Details</span>
+        <span style={{ fontWeight: 600, color: "#1d4ed8", fontSize: 12 }}>Finance Details</span>
         <button onClick={onEdit} style={{ background: "none", border: "none", color: "#6366f1", fontSize: 12, fontWeight: 600, cursor: "pointer", padding: 0, fontFamily: "inherit" }}>Edit</button>
       </div>
       {rows.map(r => (
@@ -449,6 +485,23 @@ export default function SISummary(p: Props) {
   useEffect(() => {
     setPayDetails(prev => ({ ...prev, method: p.paymentMethod, amount: p.amountReceived }));
   }, [p.paymentMethod, p.amountReceived]);
+
+  // ── FIX 3: Re-sync paymentDetails and financeDetails from props whenever
+  // they change externally (e.g. after edit-load restores saved invoice data).
+  // Without this, SISummary's local state stays at its initial empty value
+  // even after the parent updates the form with data fetched from the backend.
+  useEffect(() => {
+    if (p.paymentDetails) {
+      setPayDetails(p.paymentDetails);
+    }
+  }, [p.paymentDetails]);
+
+  useEffect(() => {
+    if (p.financeDetails) {
+      setFinDetails(p.financeDetails);
+      setFinEnabled(p.financeDetails.enabled ?? false);
+    }
+  }, [p.financeDetails]);
 
   // ═══════════════════════════════════════════════════════════════════════════
   // CALCULATION ENGINE

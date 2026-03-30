@@ -419,6 +419,27 @@ export default function DeliveryChallanModel() {
       onBack={() => { setView("list"); setActiveChallan(null); fetchChallans(); }}
       onEdit={() => setView("edit")}
       onConvertToInvoice={() => handleConvertToInvoice(activeChallan)}
+      onDelete={async (id) => {
+        if (!window.confirm("Delete this challan?")) return;
+        try {
+          await apiDeleteChallan(id);
+          setView("list");
+          setActiveChallan(null);
+          await fetchChallans();
+        } catch (err: any) {
+          alert("Delete failed: " + err.message);
+        }
+      }}
+      onDuplicate={async (id) => {
+        try {
+          await apiDuplicateChallan(id);
+          await Promise.all([fetchChallans(), loadNextNumber()]);
+          setView("list");
+          setActiveChallan(null);
+        } catch (err: any) {
+          alert("Duplicate failed: " + err.message);
+        }
+      }}
     />;
   }
 

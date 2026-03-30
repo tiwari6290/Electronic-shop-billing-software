@@ -10,7 +10,7 @@
 .si-items-row:hover { background: #fafaff; }
 .si-td { padding: 8px 10px; vertical-align: top; }
 .si-td--no { color: #6b7280; font-size: 13px; padding-top: 12px; }
-.si-td--item {}
+
 .si-td--amt { text-align: right; padding-top: 12px; }
 .si-td--del { padding-top: 10px; }
 .si-item-name { font-size: 13.5px; font-weight: 600; color: #111827; margin-bottom: 4px; }
