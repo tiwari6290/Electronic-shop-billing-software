@@ -235,8 +235,8 @@ function App() {
           <Route path="purchase-orders"         element={<PurchaseOrdersPage />} />
 
           {/* Payment Out */}
-          <Route path="payment-out"             element={<PaymentOut />} />
-          <Route path="payment-out-list"        element={<PaymentOutList />} />
+          {/* <Route path="payment-out"             element={<PaymentOut />} />
+          <Route path="payment-out-list"        element={<PaymentOutList />} /> */}
 
           {/* Other */}
           <Route path="quotation-estimate"      element={<QuotationEstimate />} />

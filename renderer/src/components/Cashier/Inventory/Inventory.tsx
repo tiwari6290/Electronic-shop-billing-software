@@ -1,5 +1,6 @@
 import api from "../../../lib/axios";
 import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import "./Inventory.css";
 
 
@@ -868,6 +869,7 @@ const ItemsListPage = ({ items, onItemClick, onDelete, search, setSearch,
 }) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
   useEffect(()=>{
     const h=(e:MouseEvent)=>{if(menuRef.current&&!menuRef.current.contains(e.target as Node))setMenuOpen(false);};
     document.addEventListener("mousedown",h); return()=>document.removeEventListener("mousedown",h);
@@ -924,7 +926,7 @@ const ItemsListPage = ({ items, onItemClick, onDelete, search, setSearch,
               <IcAlert /> {lowStockFilter ? "Show All Stock" : "Low Stock"}
             </button>
             <button className="btn-bulk"><IcLayers /> Bulk Actions <IcChevDown /></button>
-            <button className="btn-create" onClick={()=>{ window.location.href="/create-item"; }}><IcPlus /> Create Item</button>
+            <button className="btn-create" onClick={()=>navigate("/cashier/create-item")}><IcPlus /> Create Item</button>
           </div>
         </div>
         <div className="table-wrap">
