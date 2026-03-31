@@ -1,15 +1,15 @@
-/* ─── ChallanViewPage — Invoice-Modal Style ──────────────────────────────── */
+/* ─── ChallanViewPage ────────────────────────────────────────────────────────── */
 
-/* ── Shell ── */
+/* ── Shell — flows inside the page, NOT fixed/full-screen ── */
 .cvp-shell {
-  position: fixed;
-  inset: 0;
-  background: #f5f7fb;
-  z-index: 400;
   display: flex;
   flex-direction: column;
+  width: 100%;
+  height: 100%;            /* fill whatever container the parent gives */
+  min-height: 0;
+  background: #f5f7fb;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  overflow: hidden;
+  overflow: hidden;        /* clip; children scroll independently */
 }
 
 /* ── Top Bar ── */
@@ -28,6 +28,7 @@
 .cvp-topbar-left  { display: flex; align-items: center; gap: 12px; }
 .cvp-topbar-right { display: flex; align-items: center; gap: 8px; }
 
+/* ── Back button ── */
 .cvp-back-btn {
   width: 34px; height: 34px;
   display: flex; align-items: center; justify-content: center;
@@ -37,10 +38,9 @@
 .cvp-back-btn svg { width: 18px; height: 18px; }
 .cvp-back-btn:hover { background: #f3f4f6; }
 
-.cvp-title-text {
-  font-size: 15px; font-weight: 600; color: #111827;
-}
+.cvp-title-text { font-size: 15px; font-weight: 600; color: #111827; }
 
+/* ── Status badge ── */
 .cvp-status-badge {
   display: inline-flex; align-items: center;
   padding: 3px 10px; border-radius: 20px;
@@ -78,12 +78,12 @@
   font-size: 14px; color: #374151; font-weight: 500;
   text-align: left; transition: background 0.1s;
 }
-.cvp-dot-item:hover { background: #f9fafb; }
-.cvp-dot-danger { color: #dc2626 !important; }
+.cvp-dot-item:hover  { background: #f9fafb; }
+.cvp-dot-danger      { color: #dc2626 !important; }
 .cvp-dot-danger:hover { background: #fee2e2 !important; }
 .cvp-dot-sep { height: 1px; background: #f3f4f6; margin: 2px 0; }
 
-/* ── Convert / Close buttons ── */
+/* ── Convert / close ── */
 .cvp-convert-btn {
   background: #4f46e5; color: #fff; border: none;
   border-radius: 8px; padding: 8px 16px;
@@ -92,6 +92,7 @@
 }
 .cvp-convert-btn:hover:not(:disabled) { background: #4338ca; }
 .cvp-convert-btn:disabled { background: #a5b4fc; cursor: not-allowed; }
+
 .cvp-converted-badge {
   font-size: 13px; color: #166534;
   background: #dcfce7; padding: 6px 12px;
@@ -150,14 +151,23 @@
 
 /* ── Body Layout ── */
 .cvp-body {
-  display: flex; flex: 1; overflow: hidden;
+  display: flex;
+  flex: 1;
+  overflow: hidden;   /* children scroll independently */
+  min-height: 0;
 }
 
-/* ── Preview Area ── */
+/* ── Preview Area (left — the actual bill) ── */
 .cvp-preview-area {
-  flex: 1; overflow-y: auto; padding: 24px;
-  display: flex; flex-direction: column; gap: 12px;
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;       /* allow shrinking below content size */
 }
+
 .cvp-preview-label {
   font-size: 11px; font-weight: 600; color: #6b7280;
   text-transform: uppercase; letter-spacing: 0.05em;
@@ -170,13 +180,19 @@
   letter-spacing: 0.03em;
 }
 
-/* ── Sidebar ── */
+/* ── Sidebar (right panel — always visible) ── */
 .cvp-sidebar {
-  width: 280px; flex-shrink: 0;
-  background: #fff; border-left: 1px solid #e5e7eb;
-  overflow-y: auto; padding: 20px 18px;
-  display: flex; flex-direction: column; gap: 6px;
+  width: 280px;
+  flex-shrink: 0;
+  background: #fff;
+  border-left: 1px solid #e5e7eb;
+  overflow-y: auto;
+  padding: 20px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
+
 .cvp-sidebar-title {
   font-size: 13px; font-weight: 700; color: #111827;
   margin-bottom: 6px;
@@ -184,7 +200,8 @@
 .cvp-sidebar-section-title {
   font-size: 11px; font-weight: 700; color: #6b7280;
   text-transform: uppercase; letter-spacing: 0.05em;
-  margin: 12px 0 4px; border-top: 1px solid #f3f4f6;
+  margin: 12px 0 4px;
+  border-top: 1px solid #f3f4f6;
   padding-top: 10px;
 }
 .cvp-ph-row {
@@ -193,6 +210,7 @@
   border-bottom: 1px solid #f9fafb;
 }
 .cvp-ph-row span { color: #6b7280; }
+
 .cvp-ph-entry {
   background: #f9fafb; border-radius: 8px;
   border: 1px solid #e5e7eb; padding: 8px 10px; margin-top: 4px;
@@ -202,11 +220,13 @@
   font-size: 13px; color: #374151; margin-bottom: 2px;
 }
 .cvp-ph-entry-date { font-size: 11px; color: #9ca3af; }
+
 .cvp-ph-total-row {
   display: flex; justify-content: space-between;
   font-size: 14px; color: #374151; padding: 10px 0;
   border-top: 2px solid #e5e7eb; margin-top: 8px; font-weight: 600;
 }
+
 .cvp-convert-sidebar-btn {
   width: 100%; background: #4f46e5; color: #fff; border: none;
   border-radius: 8px; padding: 10px; font-size: 14px;
@@ -216,10 +236,13 @@
 .cvp-convert-sidebar-btn:hover:not(:disabled) { background: #4338ca; }
 .cvp-convert-sidebar-btn:disabled { background: #a5b4fc; cursor: not-allowed; }
 
-/* ── Print ── */
+/* ── Print — hide chrome, show only the bill paper ── */
 @media print {
-  .cvp-topbar, .cvp-actionbar, .cvp-sidebar { display: none !important; }
-  .cvp-shell { position: static; overflow: visible; background: #fff; }
-  .cvp-body  { overflow: visible; }
+  .cvp-topbar,
+  .cvp-actionbar,
+  .cvp-sidebar  { display: none !important; }
+
+  .cvp-shell        { display: block; overflow: visible; background: #fff; height: auto; }
+  .cvp-body         { display: block; overflow: visible; }
   .cvp-preview-area { padding: 0; overflow: visible; }
 }

@@ -1,7 +1,9 @@
 {
   "name": "electronapp",
+  "productName": "Mondal Electronics Concern",
   "version": "1.0.0",
   "main": "dist/electron/main/index.js",
+
   "scripts": {
     "dev": "concurrently \"vite\" \"npm:electron\"",
     "electron": "tsc -p . && electron .",
@@ -9,10 +11,33 @@
     "build": "npm run build:renderer && tsc -p . && electron-builder",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
+
+  "build": {
+    "appId": "com.mondal.electronics",
+    "productName": "Mondal Electronics Concern",
+
+    "directories": {
+      "output": "dist"
+    },
+
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "assets/**/*",
+      "package.json"
+    ],
+
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.ico"
+    }
+  },
+
   "keywords": [],
   "author": "",
   "license": "ISC",
   "description": "",
+
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.4",
     "@tailwindcss/vite": "^4.1.18",
@@ -29,6 +54,7 @@
     "tailwindcss": "^4.1.18",
     "tw-animate-css": "^1.4.0"
   },
+
   "devDependencies": {
     "@types/react": "^18.0.0",
     "@types/react-dom": "^18.0.0",

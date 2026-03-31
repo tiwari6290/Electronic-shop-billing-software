@@ -3,7 +3,7 @@ import {
   QuotationData, BillItem, AdditionalCharge,
   apiGetQuotationById, apiCreateQuotation, apiUpdateQuotation,
   apiGetQuotationSettings, formDataToApiPayload, apiToFormData,
-  todayStr, addDays, QuotationSettings,
+  todayStr, addDays, QuotationSettings, calcBillItemAmount,
 } from "./Quotationtypes";
 import QuotationHeader     from "./Quotationheader";
 import PartySelector       from "./Partyselector";
@@ -50,7 +50,7 @@ function makeBlank(nextNo: number, prefix = ""): QuotationData {
     vehicleNo:         "",
     dispatchedThrough: "",
     transportName:     "",
-    customFieldValues: {},   // ← always initialise as empty map
+    customFieldValues: {},
     validFor:          30,
     validityDate:      addDays(today, 30),
     showDueDate:       false,
@@ -99,16 +99,13 @@ export default function CreateQuotation({ editId, onBack, onSaveAndNew }: Create
     }
   }, [editId]);
 
-  // ── Central field change handler — routes customField_* into customFieldValues map
+  // ── Central field change handler ──────────────────────────────────────────
   function handleMetaChange(field: string, value: string | number | boolean) {
     if (field.startsWith("customField_")) {
       const label = field.replace("customField_", "");
       setForm(prev => ({
         ...prev,
-        customFieldValues: {
-          ...(prev.customFieldValues ?? {}),
-          [label]: String(value),
-        },
+        customFieldValues: { ...(prev.customFieldValues ?? {}), [label]: String(value) },
       }));
     } else {
       setForm(prev => ({ ...prev, [field]: value }));
@@ -120,10 +117,16 @@ export default function CreateQuotation({ editId, onBack, onSaveAndNew }: Create
   }
 
   function handleAddItemsToBill(newItems: BillItem[]) {
+    // newItems already have price=baseSalesPrice and amount computed via
+    // calcBillItemAmount inside AddItemsModal — just append them.
     setForm(prev => ({ ...prev, billItems: [...prev.billItems, ...newItems] }));
   }
 
-  const subtotal = form.billItems.reduce((s, i) => s + i.amount, 0);
+  // subtotal = sum of all line amounts (post-discount, inclusive of item GST)
+  // This is the single source of truth passed into QuotationSummary.
+  const subtotal = parseFloat(
+    form.billItems.reduce((s, i) => s + calcBillItemAmount(i).amount, 0).toFixed(2)
+  );
 
   async function handleSave() {
     if (saving) return;
@@ -155,7 +158,7 @@ export default function CreateQuotation({ editId, onBack, onSaveAndNew }: Create
         await apiCreateQuotation(payload);
       }
       const currentNo = settings?.sequenceNumber ?? Number(String(form.quotationNo).replace(/\D/g, ""));
-      const nextNo = currentNo + 1;
+      const nextNo    = currentNo + 1;
       if (settings) setSettings(s => s ? { ...s, sequenceNumber: nextNo } : s);
       setForm(makeBlank(nextNo, settings?.prefix ?? ""));
       setShowDiscount(false);
@@ -235,6 +238,7 @@ export default function CreateQuotation({ editId, onBack, onSaveAndNew }: Create
           <div className="cq-summary-col">
             <QuotationSummary
               subtotal={subtotal}
+              billItems={form.billItems}
               additionalCharges={form.additionalCharges}
               discountType={form.discountType}
               discountPct={form.discountPct}

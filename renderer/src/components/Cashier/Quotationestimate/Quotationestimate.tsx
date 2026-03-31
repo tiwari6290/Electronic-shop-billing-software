@@ -728,17 +728,38 @@ function CreateQuotationPage({
   });
   const selectedItemCount = Object.values(itemSelections).filter(q => q > 0).length;
 
-  function handleAddToBill() {
-    const newRows: any[] = [];
-    Object.entries(itemSelections).forEach(([id, qty]) => {
-      if (qty <= 0) return;
-      const item = allItems.find((i: any) => i.id === Number(id));
-      if (!item) return;
-      newRows.push({ rowId: `row-${Date.now()}-${id}`, itemId: item.id, name: item.name, description: "", hsn: "", qty, unit: item.unit, price: item.salesPrice, discountPct: 0, discountAmt: 0, taxLabel: "None", taxRate: 0, amount: item.salesPrice * qty });
+function handleAddToBill() {
+  const newRows: any[] = [];
+  Object.entries(itemSelections).forEach(([id, qty]) => {
+    if (qty <= 0) return;
+    const item = allItems.find((i: any) => i.id === Number(id));
+    if (!item) return;
+    const basePrice = item.baseSalesPrice ?? 0;
+    const discountPct = item.discountPct || 0;
+    const discountAmt = item.discountAmt || 0;
+    const gstRate = item.gstRate || 0;
+    const lineBase = basePrice * qty;
+    const discountValue = discountPct > 0 ? (lineBase * discountPct) / 100 : discountAmt;
+    const amount = (lineBase - discountValue) * (1 + gstRate / 100);
+    newRows.push({
+      rowId: `row-${Date.now()}-${id}`,
+      itemId: item.id,
+      name: item.name,
+      description: "",
+      hsn: "",
+      qty,
+      unit: item.unit,
+      price: basePrice,
+      discountPct,
+      discountAmt,
+      taxLabel: item.taxLabel ?? "None",
+      taxRate: gstRate,
+      amount,
     });
-    setForm(p => ({ ...p, billItems: [...p.billItems, ...newRows] }));
-    setItemSelections({}); setShowAddItems(false);
-  }
+  });
+  setForm(p => ({ ...p, billItems: [...p.billItems, ...newRows] }));
+  setItemSelections({}); setShowAddItems(false);
+}
 
   function updateBillItem(rowId: string, field: string, value: any) {
     setForm(p => ({ ...p, billItems: p.billItems.map((item: any) => {

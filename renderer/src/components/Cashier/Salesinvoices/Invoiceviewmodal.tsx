@@ -635,7 +635,7 @@ function GreatEasternLayout({ invoice, business, template, printRef, themeColor,
         </div>
         <div style={{ textAlign: "center" }}>
           <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: "0.12em", color: "#111", marginBottom: 2, fontFamily: "'Times New Roman', Georgia, serif" }}>
-            TAX INVOICE CUM DELIVERY CHALLAN
+            TAX INVOICE
           </div>
           <div style={{ fontSize: 20, fontWeight: 900, color: "#111", fontFamily: "'Georgia', 'Times New Roman', serif", letterSpacing: "0.02em", lineHeight: 1.1, marginBottom: 3 }}>
             {companyName}
@@ -802,8 +802,8 @@ function GreatEasternLayout({ invoice, business, template, printRef, themeColor,
               </>}
               {/* <span style={{ fontWeight: 700 }}>State</span>
               <span>: WEST BENGAL</span> */}
-              <span style={{ fontWeight: 700 }}>GSTIN</span>
-              <span>: {invoice.party?.billingAddress?.split(",").pop()?.trim() || "-"}</span>
+              {/* <span style={{ fontWeight: 700 }}>GSTIN</span> */}
+              {/* <span>: {invoice.party?.billingAddress?.split(",").pop()?.trim() || "-"}</span> */}
             </div>
           ) : (
             <div style={{ color: "#aaa" }}>–</div>
@@ -1366,7 +1366,7 @@ export default function InvoiceViewModal({
           <div className="ivm-body">
             <div className="ivm-preview-area">
               <div className="ivm-preview-label">
-                TAX INVOICE CUM DELIVERY CHALLAN <span className="ivm-original-tag">ORIGINAL FOR RECIPIENT</span>
+                TAX INVOICE<span className="ivm-original-tag">ORIGINAL FOR RECIPIENT</span>
               </div>
               <InvoicePaper
                 invoice={invoice}

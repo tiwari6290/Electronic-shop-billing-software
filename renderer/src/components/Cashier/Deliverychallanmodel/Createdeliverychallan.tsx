@@ -37,10 +37,12 @@ interface ItemData {
   itemCode?: string;
   currentStock?: number | null;
   salesPrice: number;
+  baseSalesPrice?: number | null;   // pre-tax base price (preferred)
   purchasePrice?: number;
   unit?: string;
   hsn?: string;
   category?: string;
+  taxRate?: number;                  // default GST rate from product
 }
 
 interface BankAccount {
@@ -109,17 +111,70 @@ function mapPartyRecord(p: PartyRecord): Party {
 }
 
 function mapProductRecord(p: ProductRecord): ItemData {
+  // Prefer baseSalesPrice (always pre-tax), fall back to salesPrice
+  const base = p.baseSalesPrice != null ? Number(p.baseSalesPrice) : (p.salesPrice ? Number(p.salesPrice) : 0);
+  const gstRate = p.gstRate ? Number(String(p.gstRate).replace("%", "")) : 0;
   return {
     id: p.id,
     name: p.name,
     itemCode: p.itemCode || "",
-    salesPrice: p.salesPrice ? Number(p.salesPrice) : 0,
+    salesPrice: base,           // always store pre-tax base price here
+    baseSalesPrice: base,
     purchasePrice: p.purchasePrice ? Number(p.purchasePrice) : 0,
     unit: p.unit || "PCS",
     hsn: p.hsnCode || p.sacCode || "",
     category: p.category || "",
     currentStock: p.currentStock ?? null,
+    taxRate: gstRate,
   };
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+//  CORE PRICING HELPER — mirrors Sales Invoice calcBillItemAmount exactly
+//  GST standard order: lineGross → discount → taxable → tax → total
+// ════════════════════════════════════════════════════════════════════════════
+interface CalcResult {
+  taxable: number;
+  taxAmount: number;
+  total: number;
+}
+
+/**
+ * calcBillItemAmount
+ *
+ * Rules (same as Sales Invoice):
+ *  1. Use base (pre-tax) price only — NEVER treat price as GST-inclusive here.
+ *  2. lineGross = qty × price
+ *  3. discount: if discountPct > 0 → use percentage, ignore flat amount.
+ *               if discountPct === 0 → use flat discountAmt.
+ *  4. taxable = lineGross − discount
+ *  5. taxAmount = taxable × (taxRate / 100)
+ *  6. total = taxable + taxAmount
+ */
+function calcBillItemAmount(
+  qty: number,
+  price: number,
+  discountPct: number,
+  discountAmt: number,
+  taxRate: number
+): CalcResult {
+  const lineGross  = qty * price;
+  // Only one discount mode at a time (pct wins over flat)
+  const discValue  = discountPct > 0 ? (lineGross * discountPct) / 100 : discountAmt;
+  const taxable    = Math.max(0, lineGross - discValue);
+  const taxAmount  = (taxable * taxRate) / 100;
+  const total      = taxable + taxAmount;
+  return { taxable, taxAmount, total: Math.max(0, total) };
+}
+
+// Convenience wrapper that reads from a BillItem (partial or full) + an override object
+function recalcItem(base: BillItem, overrides: Partial<BillItem> = {}): number {
+  const qty        = overrides.qty         ?? base.qty;
+  const price      = overrides.pricePerItem ?? base.pricePerItem;
+  const discPct    = overrides.discount?.percent ?? base.discount.percent;
+  const discAmt    = overrides.discount?.amount  ?? base.discount.amount;
+  const taxRate    = overrides.taxRate     ?? base.taxRate;
+  return calcBillItemAmount(qty, price, discPct, discAmt, taxRate).total;
 }
 
 // ─── Toggle ────────────────────────────────────────────────────────────────────
@@ -352,7 +407,7 @@ function AddItemsModal({ onAddItems, onClose }: { onAddItems: (items: { item: It
             <div style={{ padding: 24, textAlign: "center", color: "#dc2626", fontSize: 13 }}>{error}</div>
           ) : (
             <table className="aim-table">
-              <thead><tr><th>Item Name</th><th>Item Code</th><th>Stock</th><th>Sales Price</th><th>Purchase Price</th><th>Quantity</th></tr></thead>
+              <thead><tr><th>Item Name</th><th>Item Code</th><th>Stock</th><th>Sales Price (Base)</th><th>Purchase Price</th><th>Quantity</th></tr></thead>
               <tbody>
                 {filtered.length === 0 ? (
                   <tr><td colSpan={6} className="aim-empty">No items found</td></tr>
@@ -361,6 +416,7 @@ function AddItemsModal({ onAddItems, onClose }: { onAddItems: (items: { item: It
                     <td className="aim-item-name">{item.name}</td>
                     <td>{item.itemCode || "-"}</td>
                     <td>{item.currentStock!=null ? `${item.currentStock} ${item.unit||"PCS"}` : "-"}</td>
+                    {/* Show the pre-tax base price in the modal */}
                     <td>₹ {Number(item.salesPrice).toLocaleString()}</td>
                     <td>{item.purchasePrice ? `₹ ${Number(item.purchasePrice).toLocaleString()}` : "-"}</td>
                     <td>
@@ -547,39 +603,122 @@ function SignatorySection({ businessName }: { businessName: string }) {
 }
 
 // ─── Bill Item Row ─────────────────────────────────────────────────────────────
+// Uses calcBillItemAmount for all recalculations — matches Sales Invoice exactly
 function BillItemRow({ item, index, onChange, onDelete, showPrice, showQty }: {
-  item: BillItem; index: number; onChange: (id: number, updates: Partial<BillItem>) => void; onDelete: (id: number) => void; showPrice: boolean; showQty: boolean;
+  item: BillItem; index: number;
+  onChange: (id: number, updates: Partial<BillItem>) => void;
+  onDelete: (id: number) => void;
+  showPrice: boolean; showQty: boolean;
 }) {
   const [editingAmount, setEditingAmount] = useState(false);
-  const recalc = (updates: Partial<BillItem>, base: BillItem): number => {
-    const qty = updates.qty!==undefined?updates.qty:base.qty;
-    const price = updates.pricePerItem!==undefined?updates.pricePerItem:base.pricePerItem;
-    const discPct = updates.discount?.percent!==undefined?updates.discount.percent:base.discount.percent;
-    const discAmt = updates.discount?.amount!==undefined?updates.discount.amount:base.discount.amount;
-    const raw = qty*price; const afterDisc = raw-(raw*discPct/100)-discAmt;
-    const taxRate = updates.taxRate!==undefined?updates.taxRate:base.taxRate;
-    return Math.max(0, afterDisc+afterDisc*taxRate/100);
+
+  // ── TAX DISPLAY: show tax on taxable value (after discount), not on lineGross ──
+  const lineGross = item.qty * item.pricePerItem;
+  const discPct   = item.discount.percent;
+  const discAmt   = item.discount.amount;
+  const discValue = discPct > 0 ? (lineGross * discPct) / 100 : discAmt;
+  const taxable   = Math.max(0, lineGross - discValue);
+  const taxDisplayAmt = (taxable * item.taxRate) / 100;
+
+  // ── DISCOUNT HANDLERS ──────────────────────────────────────────────────────
+  // When pct changes → pct wins, zero out flat amount
+  const handleDiscPct = (percent: number) => {
+    const disc = { percent, amount: 0 };
+    const amount = recalcItem(item, { discount: disc });
+    onChange(item.id, { discount: disc, amount });
   };
-  const raw = item.qty*item.pricePerItem;
-  const handleDiscPct = (percent: number) => { const amount = parseFloat((raw*percent/100).toFixed(2)); const disc = {percent,amount}; onChange(item.id, {discount:disc,amount:recalc({discount:disc},item)}); };
-  const handleDiscAmt = (amount: number) => { const percent = raw>0?parseFloat(((amount/raw)*100).toFixed(2)):0; const disc = {percent,amount}; onChange(item.id, {discount:disc,amount:recalc({discount:disc},item)}); };
+  // When flat amount changes → flat wins, zero out pct
+  const handleDiscAmt = (amount: number) => {
+    const disc = { percent: 0, amount };
+    const newAmt = recalcItem(item, { discount: disc });
+    onChange(item.id, { discount: disc, amount: newAmt });
+  };
+
+  // ── QTY CHANGE ─────────────────────────────────────────────────────────────
+  const handleQtyChange = (qty: number) => {
+    const amount = recalcItem(item, { qty });
+    onChange(item.id, { qty, amount });
+  };
+
+  // ── PRICE CHANGE ───────────────────────────────────────────────────────────
+  const handlePriceChange = (pricePerItem: number) => {
+    const amount = recalcItem(item, { pricePerItem });
+    onChange(item.id, { pricePerItem, amount });
+  };
+
+  // ── TAX CHANGE ─────────────────────────────────────────────────────────────
+  const handleTaxChange = (tax: string) => {
+    const taxRate = tax === "None" ? 0 : tax === "GST 5%" ? 5 : tax === "GST 12%" ? 12 : tax === "GST 18%" ? 18 : 28;
+    const amount  = recalcItem(item, { taxRate });
+    onChange(item.id, { tax, taxRate, amount });
+  };
+
   return (
     <tr className="bill-item-row">
-      <td className="td-no">{index+1}</td>
+      <td className="td-no">{index + 1}</td>
       <td className="td-name">
         <div className="bill-item-name">{item.name}</div>
-        <input className="bill-item-desc" placeholder="Enter Description (optional)" value={item.description||""} onChange={e => onChange(item.id,{description:e.target.value})} />
+        <input className="bill-item-desc" placeholder="Enter Description (optional)" value={item.description||""} onChange={e => onChange(item.id, { description: e.target.value })} />
       </td>
-      <td><input className="bill-mini-input bill-hsn-input" placeholder="—" value={item.hsnSac||""} onChange={e => onChange(item.id,{hsnSac:e.target.value})} /></td>
-      {showQty && <td><div className="qty-display"><input className="bill-mini-input qty-in" type="number" min="0" value={item.qty} onChange={e => { const qty=Number(e.target.value); onChange(item.id,{qty,amount:recalc({qty},item)}); }}/><span className="qty-unit-badge">{item.unit}</span></div></td>}
-      {showPrice && <td><input className="bill-mini-input bill-price-input" type="number" min="0" value={item.pricePerItem} onChange={e => { const pricePerItem=Number(e.target.value); onChange(item.id,{pricePerItem,amount:recalc({pricePerItem},item)}); }}/></td>}
-      <td><div className="discount-inputs"><div className="disc-row"><span className="disc-label">%</span><input className="bill-mini-input" type="number" min="0" max="100" value={item.discount.percent} onChange={e => handleDiscPct(Number(e.target.value))}/></div><div className="disc-row"><span className="disc-label">₹</span><input className="bill-mini-input" type="number" min="0" value={item.discount.amount} onChange={e => handleDiscAmt(Number(e.target.value))}/></div></div></td>
-      <td><div className="tax-cell"><select className="tax-select" value={item.tax} onChange={e => { const tax=e.target.value; const taxRate=tax==="None"?0:tax==="GST 5%"?5:tax==="GST 12%"?12:tax==="GST 18%"?18:28; onChange(item.id,{tax,taxRate,amount:recalc({taxRate},item)}); }}><option>None</option><option>GST 5%</option><option>GST 12%</option><option>GST 18%</option><option>GST 28%</option></select><span className="tax-sub">(₹ {(item.qty*item.pricePerItem*item.taxRate/100).toFixed(0)})</span></div></td>
+      <td>
+        <input className="bill-mini-input bill-hsn-input" placeholder="—" value={item.hsnSac||""} onChange={e => onChange(item.id, { hsnSac: e.target.value })} />
+      </td>
+      {showQty && (
+        <td>
+          <div className="qty-display">
+            <input className="bill-mini-input qty-in" type="number" min="0"
+              value={item.qty}
+              onChange={e => handleQtyChange(Number(e.target.value))} />
+            <span className="qty-unit-badge">{item.unit}</span>
+          </div>
+        </td>
+      )}
+      {showPrice && (
+        <td>
+          <input className="bill-mini-input bill-price-input" type="number" min="0"
+            value={item.pricePerItem}
+            onChange={e => handlePriceChange(Number(e.target.value))} />
+        </td>
+      )}
+      <td>
+        {/* Two-row discount: pct and flat are mutually exclusive */}
+        <div className="discount-inputs">
+          <div className="disc-row">
+            <span className="disc-label">%</span>
+            <input className="bill-mini-input" type="number" min="0" max="100"
+              value={item.discount.percent}
+              onChange={e => handleDiscPct(Number(e.target.value))} />
+          </div>
+          <div className="disc-row">
+            <span className="disc-label">₹</span>
+            <input className="bill-mini-input" type="number" min="0"
+              value={item.discount.amount}
+              onChange={e => handleDiscAmt(Number(e.target.value))} />
+          </div>
+        </div>
+      </td>
+      <td>
+        <div className="tax-cell">
+          <select className="tax-select" value={item.tax} onChange={e => handleTaxChange(e.target.value)}>
+            <option>None</option>
+            <option>GST 5%</option>
+            <option>GST 12%</option>
+            <option>GST 18%</option>
+            <option>GST 28%</option>
+          </select>
+          {/* Tax amount shown on taxable (post-discount) value */}
+          <span className="tax-sub">(₹ {taxDisplayAmt.toFixed(2)})</span>
+        </div>
+      </td>
       <td onClick={() => setEditingAmount(true)} className="td-amount-cell">
-        {editingAmount ? <div className="amount-cell"><span className="amount-currency">₹</span><input className="bill-mini-input amount-edit-input" type="number" autoFocus value={item.amount} onChange={e => onChange(item.id,{amount:Number(e.target.value)})} onBlur={() => setEditingAmount(false)}/></div>
-        : <div className="amount-cell amount-cell--clickable"><span className="amount-currency">₹</span><span className="amount-val">{item.amount.toFixed(0)}</span></div>}
+        {editingAmount
+          ? <div className="amount-cell"><span className="amount-currency">₹</span><input className="bill-mini-input amount-edit-input" type="number" autoFocus value={item.amount} onChange={e => onChange(item.id, { amount: Number(e.target.value) })} onBlur={() => setEditingAmount(false)}/></div>
+          : <div className="amount-cell amount-cell--clickable"><span className="amount-currency">₹</span><span className="amount-val">{item.amount.toFixed(2)}</span></div>
+        }
       </td>
-      <td><button className="delete-row-btn" onClick={() => onDelete(item.id)} type="button"><Trash2 size={14}/></button></td>
+      <td>
+        <button className="delete-row-btn" onClick={() => onDelete(item.id)} type="button"><Trash2 size={14}/></button>
+      </td>
     </tr>
   );
 }
@@ -633,16 +772,16 @@ export default function CreateDeliveryChallan({ challan, nextNumber, settings, o
     return () => { clearInterval(timer); window.removeEventListener("storage", onStorage); };
   }, []);
 
-  const [eWayBillNo, setEWayBillNo] = useState(challan?.eWayBillNo||"");
-  const [challanNoRef, setChallanNoRef] = useState(challan?.challanNoRef||"");
-  const [financedBy, setFinancedBy] = useState(challan?.financedBy||"");
-  const [salesman, setSalesman] = useState(challan?.salesman||"");
-  const [emailId, setEmailId] = useState(challan?.emailId||"");
-  const [warrantyPeriod, setWarrantyPeriod] = useState(challan?.warrantyPeriod||"");
-  const [poNumber, setPoNumber] = useState((challan as any)?.poNumber||"");
-  const [vehicleNo, setVehicleNo] = useState((challan as any)?.vehicleNo||"");
+  const [eWayBillNo, setEWayBillNo]             = useState(challan?.eWayBillNo||"");
+  const [challanNoRef, setChallanNoRef]         = useState(challan?.challanNoRef||"");
+  const [financedBy, setFinancedBy]             = useState(challan?.financedBy||"");
+  const [salesman, setSalesman]                 = useState(challan?.salesman||"");
+  const [emailId, setEmailId]                   = useState(challan?.emailId||"");
+  const [warrantyPeriod, setWarrantyPeriod]     = useState(challan?.warrantyPeriod||"");
+  const [poNumber, setPoNumber]                 = useState((challan as any)?.poNumber||"");
+  const [vehicleNo, setVehicleNo]               = useState((challan as any)?.vehicleNo||"");
   const [dispatchedThrough, setDispatchedThrough] = useState((challan as any)?.dispatchedThrough||"");
-  const [transportName, setTransportName] = useState((challan as any)?.transportName||"");
+  const [transportName, setTransportName]       = useState((challan as any)?.transportName||"");
   const [customFieldValues, setCustomFieldValues] = useState<Record<string,string>>((challan as any)?.customFieldValues||{});
 
   useEffect(() => {
@@ -658,32 +797,37 @@ export default function CreateDeliveryChallan({ challan, nextNumber, settings, o
   const [billItems, setBillItems] = useState<BillItem[]>(challan?.items||[]);
   const [showAddItems, setShowAddItems] = useState(false);
   const [showHideColumns, setShowHideColumns] = useState(false);
-  const [showPrice, setShowPrice] = useState(true); const [showQty, setShowQty] = useState(true);
+  const [showPrice, setShowPrice] = useState(true);
+  const [showQty, setShowQty] = useState(true);
 
   const [notes, setNotes] = useState(challan?.notes||"");
   const [termsAndConditions, setTermsAndConditions] = useState(challan?.termsAndConditions||"1. Goods once sold will not be taken back or exchanged\n2. All disputes are subject to [ENTER_YOUR_CITY_NAME] jurisdiction only");
-  const [showNotes, setShowNotes] = useState(!!challan?.notes); const [showTerms, setShowTerms] = useState(true);
+  const [showNotes, setShowNotes] = useState(!!challan?.notes);
+  const [showTerms, setShowTerms] = useState(true);
 
   const [additionalCharges, setAdditionalCharges] = useState<AdditionalCharge[]>(challan?.additionalCharges||[]);
   const [showAdditionalCharges, setShowAdditionalCharges] = useState((challan?.additionalCharges?.length||0)>0);
 
   const [discountType, setDiscountType] = useState<"After Tax"|"Before Tax">(challan?.discountType||"After Tax");
-  const [discountPct, setDiscountPct] = useState(challan?.discountPct||0);
-  const [discountAmt, setDiscountAmt] = useState(challan?.discountAmt||0);
+  const [discountPct, setDiscountPct]   = useState(challan?.discountPct||0);
+  const [discountAmt, setDiscountAmt]   = useState(challan?.discountAmt||0);
   const [showDiscount, setShowDiscount] = useState(!!(challan?.discountPct||challan?.discountAmt));
   const [showDiscountMenu, setShowDiscountMenu] = useState(false);
 
-  const [autoRoundOff, setAutoRoundOff] = useState(challan?.autoRoundOff||false);
-  const [roundOffAmt, setRoundOffAmt] = useState(challan?.roundOffAmt||0);
-  const [roundOffType, setRoundOffType] = useState<"+ Add"|"Reduce">("+ Add");
+  const [autoRoundOff, setAutoRoundOff]         = useState(challan?.autoRoundOff||false);
+  const [roundOffAmt, setRoundOffAmt]           = useState(challan?.roundOffAmt||0);
+  const [roundOffType, setRoundOffType]         = useState<"+ Add"|"Reduce">("+ Add");
   const [showRoundOffMenu, setShowRoundOffMenu] = useState(false);
 
-  const [selectedBank, setSelectedBank] = useState<BankAccount|null>(null);
-  const [showBankModal, setShowBankModal] = useState(false); const [showAddBankModal, setShowAddBankModal] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
-  const [saving, setSaving] = useState(false); const [saveError, setSaveError] = useState<string|null>(null);
+  const [selectedBank, setSelectedBank]         = useState<BankAccount|null>(null);
+  const [showBankModal, setShowBankModal]       = useState(false);
+  const [showAddBankModal, setShowAddBankModal] = useState(false);
+  const [showSettings, setShowSettings]         = useState(false);
+  const [saving, setSaving]                     = useState(false);
+  const [saveError, setSaveError]               = useState<string|null>(null);
 
-  const dateRef = useRef<HTMLDivElement>(null); const partySelectorRef = useRef<HTMLDivElement>(null);
+  const dateRef          = useRef<HTMLDivElement>(null);
+  const partySelectorRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const h = (e: MouseEvent) => {
       if (dateRef.current&&!dateRef.current.contains(e.target as Node)) setShowDatePicker(false);
@@ -692,57 +836,174 @@ export default function CreateDeliveryChallan({ challan, nextNumber, settings, o
     document.addEventListener("mousedown",h); return () => document.removeEventListener("mousedown",h);
   }, []);
 
-  // Calculations
-  const subtotal = billItems.reduce((s,i)=>s+i.qty*i.pricePerItem,0);
-  const totalDiscountItems = billItems.reduce((s,i)=>s+(i.qty*i.pricePerItem*i.discount.percent/100)+i.discount.amount,0);
-  const chargesSum = additionalCharges.reduce((s,c)=>s+c.amount,0);
-  const taxableAmount = subtotal-totalDiscountItems+chargesSum;
-  const discValueFromPct = taxableAmount*discountPct/100;
-  const effectiveDiscount = showDiscount?(discountPct>0?discValueFromPct:discountAmt):0;
-  const totalAmount = taxableAmount-effectiveDiscount+(autoRoundOff?(roundOffType==="Reduce"?-roundOffAmt:roundOffAmt):0);
+  // ════════════════════════════════════════════════════════════════════════
+  //  SUMMARY CALCULATIONS  — mirrors Sales Invoice exactly
+  //
+  //  • itemSubtotal  = sum of (qty × base price) for all items (before discount/tax)
+  //  • totalItemDisc = sum of each item's discount value
+  //  • totalItemTax  = sum of each item's tax (on post-discount taxable)
+  //  • Each item's `amount` already includes its own tax (set by recalcItem)
+  //  • chargesSum    = additional charges (no tax applied at this level in DC)
+  //  • taxableAmount = itemSubtotal − totalItemDisc + chargesSum
+  //  • effectiveDiscount = invoice-level discount (pct or flat, After/Before Tax)
+  //  • totalAmount   = sum of item amounts + chargesSum − invoiceDiscount ± roundOff
+  // ════════════════════════════════════════════════════════════════════════
 
-  const handleDiscountPctChange = (v: number) => { setDiscountPct(v); setDiscountAmt(v>0?parseFloat((taxableAmount*v/100).toFixed(2)):0); };
-  const handleDiscountAmtChange = (v: number) => { setDiscountAmt(v); setDiscountPct(v>0&&taxableAmount>0?parseFloat(((v/taxableAmount)*100).toFixed(2)):0); };
+  // Per-item values derived from the canonical calcBillItemAmount
+  const itemCalcs = billItems.map(item => {
+    const lineGross = item.qty * item.pricePerItem;
+    const discPct   = item.discount.percent;
+    const discAmt_  = item.discount.amount;
+    const discValue = discPct > 0 ? (lineGross * discPct) / 100 : discAmt_;
+    const taxable   = Math.max(0, lineGross - discValue);
+    const taxAmt    = (taxable * item.taxRate) / 100;
+    return { lineGross, discValue, taxable, taxAmt };
+  });
 
-  const handleAddCharge = () => { setAdditionalCharges(prev=>[...prev,{id:Date.now(),label:"",amount:0,tax:"No Tax Applicable"}]); setShowAdditionalCharges(true); };
-  const handleAddItemsFromModal = (selected: {item:ItemData;qty:number}[]) => {
-    const newItems: BillItem[] = selected.map(({item,qty}) => ({ id:Date.now()+Math.random(), name:item.name, hsnSac:item.hsn||"", qty, unit:item.unit||"PCS", pricePerItem:item.salesPrice, discount:{percent:0,amount:0}, tax:"None", taxRate:0, amount:qty*item.salesPrice }));
-    setBillItems(prev=>[...prev,...newItems]); setShowAddItems(false);
+  // Subtotal = sum of all line grosses (before item discounts/tax)
+  const itemSubtotal  = itemCalcs.reduce((s, c) => s + c.lineGross, 0);
+  // Total discount from items
+  const totalItemDisc = itemCalcs.reduce((s, c) => s + c.discValue, 0);
+  // Total tax from items
+  const totalItemTax  = itemCalcs.reduce((s, c) => s + c.taxAmt,   0);
+
+  // Additional charges (flat, no tax calc here)
+  const chargesSum = additionalCharges.reduce((s, c) => s + c.amount, 0);
+
+  // Taxable amount shown in summary  = subtotal − item discounts + charges
+  const taxableAmount = itemSubtotal - totalItemDisc + chargesSum;
+
+  // Invoice-level discount (After Tax or Before Tax)
+  const discValueFromPct = taxableAmount * discountPct / 100;
+  const effectiveDiscount = showDiscount ? (discountPct > 0 ? discValueFromPct : discountAmt) : 0;
+
+  // SUBTOTAL row in the table header (shown as "SUBTOTAL" row)
+  // = sum of all item `amount` fields (each already includes item-level tax)
+  const subtotal = billItems.reduce((s, i) => s + i.amount, 0);
+
+  // Round-off
+  const roundOffValue = autoRoundOff
+    ? (roundOffType === "Reduce" ? -roundOffAmt : roundOffAmt)
+    : 0;
+
+  // Grand total
+  const totalAmount = subtotal + chargesSum - effectiveDiscount + roundOffValue;
+
+  // ── Discount sync helpers ─────────────────────────────────────────────────
+  const handleDiscountPctChange = (v: number) => {
+    setDiscountPct(v);
+    setDiscountAmt(v > 0 ? parseFloat((taxableAmount * v / 100).toFixed(2)) : 0);
   };
-  const handleItemChange = (id: number, updates: Partial<BillItem>) => setBillItems(prev=>prev.map(i=>i.id===id?{...i,...updates}:i));
-  const handleDeleteItem = (id: number) => setBillItems(prev=>prev.filter(i=>i.id!==id));
+  const handleDiscountAmtChange = (v: number) => {
+    setDiscountAmt(v);
+    setDiscountPct(v > 0 && taxableAmount > 0 ? parseFloat(((v / taxableAmount) * 100).toFixed(2)) : 0);
+  };
 
+  const handleAddCharge = () => {
+    setAdditionalCharges(prev => [...prev, { id: Date.now(), label: "", amount: 0, tax: "No Tax Applicable" }]);
+    setShowAdditionalCharges(true);
+  };
+
+  // ── When items are added from the modal, use base price + product taxRate ──
+  const handleAddItemsFromModal = (selected: { item: ItemData; qty: number }[]) => {
+    const newItems: BillItem[] = selected.map(({ item, qty }) => {
+      const price    = item.baseSalesPrice ?? item.salesPrice; // always pre-tax base
+      const taxRate  = item.taxRate ?? 0;
+      const { total } = calcBillItemAmount(qty, price, 0, 0, taxRate);
+      return {
+        id:          Date.now() + Math.random(),
+        name:        item.name,
+        hsnSac:      item.hsn || "",
+        qty,
+        unit:        item.unit || "PCS",
+        pricePerItem: price,
+        discount:    { percent: 0, amount: 0 },
+        tax:         taxRate === 0 ? "None" : taxRate === 5 ? "GST 5%" : taxRate === 12 ? "GST 12%" : taxRate === 18 ? "GST 18%" : "GST 28%",
+        taxRate,
+        amount:      total,
+      };
+    });
+    setBillItems(prev => [...prev, ...newItems]);
+    setShowAddItems(false);
+  };
+
+  const handleItemChange = (id: number, updates: Partial<BillItem>) =>
+    setBillItems(prev => prev.map(i => i.id === id ? { ...i, ...updates } : i));
+  const handleDeleteItem = (id: number) =>
+    setBillItems(prev => prev.filter(i => i.id !== id));
+
+  // ── Save ──────────────────────────────────────────────────────────────────
   const handleSave = async () => {
-    if (!selectedParty&&!challan?.partyId) { setSaveError("Please select a party before saving."); return; }
-    if (billItems.length===0) { setSaveError("Please add at least one item before saving."); return; }
+    if (!selectedParty && !challan?.partyId) { setSaveError("Please select a party before saving."); return; }
+    if (billItems.length === 0) { setSaveError("Please add at least one item before saving."); return; }
     setSaving(true); setSaveError(null);
     const payload: CreateChallanPayload = {
-      partyId: selectedParty?.id||challan?.partyId||0, challanDate,
-      eWayBillNo:eWayBillNo||undefined, challanNoRef:challanNoRef||undefined, financedBy:financedBy||undefined,
-      salesman:salesman||undefined, emailId:emailId||undefined, warrantyPeriod:warrantyPeriod||undefined,
-      poNumber:poNumber||undefined, vehicleNo:vehicleNo||undefined, dispatchedThrough:dispatchedThrough||undefined,
-      transportName:transportName||undefined, shippingAddress:shippingAddress||undefined,
-      discountType, discountPct:showDiscount?discountPct:0, discountAmt:showDiscount?discountAmt:0,
-      autoRoundOff, roundOffAmt:autoRoundOff?roundOffAmt:0,
-      customFieldValues:Object.keys(customFieldValues).length>0?customFieldValues:undefined,
-      notes:notes||undefined, termsConditions:termsAndConditions||undefined,
-      items: billItems.map(i=>({ productName:i.name, hsnSac:i.hsnSac||undefined, description:i.description||undefined, quantity:i.qty, unit:i.unit, price:i.pricePerItem, discountPct:i.discount.percent, discountAmt:i.discount.amount, taxLabel:i.tax, taxRate:i.taxRate })),
-      additionalCharges: additionalCharges.map(c=>({ label:c.label, amount:c.amount, taxLabel:c.tax })),
+      partyId:         selectedParty?.id || challan?.partyId || 0,
+      challanDate,
+      eWayBillNo:      eWayBillNo        || undefined,
+      challanNoRef:    challanNoRef      || undefined,
+      financedBy:      financedBy        || undefined,
+      salesman:        salesman          || undefined,
+      emailId:         emailId           || undefined,
+      warrantyPeriod:  warrantyPeriod    || undefined,
+      poNumber:        poNumber          || undefined,
+      vehicleNo:       vehicleNo         || undefined,
+      dispatchedThrough: dispatchedThrough || undefined,
+      transportName:   transportName     || undefined,
+      shippingAddress: shippingAddress   || undefined,
+      discountType,
+      discountPct:     showDiscount ? discountPct : 0,
+      discountAmt:     showDiscount ? discountAmt : 0,
+      autoRoundOff,
+      roundOffAmt:     autoRoundOff ? roundOffAmt : 0,
+      customFieldValues: Object.keys(customFieldValues).length > 0 ? customFieldValues : undefined,
+      notes:           notes              || undefined,
+      termsConditions: termsAndConditions || undefined,
+      // Send price as pre-tax base price so backend stores the correct value
+      items: billItems.map(i => ({
+        productName: i.name,
+        hsnSac:      i.hsnSac    || undefined,
+        description: i.description || undefined,
+        quantity:    i.qty,
+        unit:        i.unit,
+        price:       i.pricePerItem,   // already the pre-tax base price
+        discountPct: i.discount.percent,
+        discountAmt: i.discount.amount,
+        taxLabel:    i.tax,
+        taxRate:     i.taxRate,
+      })),
+      additionalCharges: additionalCharges.map(c => ({ label: c.label, amount: c.amount, taxLabel: c.tax })),
     };
     try {
-      const result: any = isEditMode&&challan?.id ? await updateChallan(challan.id,payload) : await createChallan(payload);
+      const result: any = isEditMode && challan?.id
+        ? await updateChallan(challan.id, payload)
+        : await createChallan(payload);
       const saved: ChallanItem = {
-        id:result.id, date:result.challanDate, challanNumber:result.challanNo,
-        partyName:result.party?.name||selectedParty?.name||"", partyId:result.partyId,
-        amount:Number(result.totalAmount), status:result.status,
-        items:billItems, notes, termsAndConditions, additionalCharges,
-        discountPct, discountAmt, discountType, autoRoundOff, roundOffAmt,
+        id:            result.id,
+        date:          result.challanDate,
+        challanNumber: result.challanNo,
+        partyName:     result.party?.name || selectedParty?.name || "",
+        partyId:       result.partyId,
+        amount:        Number(result.totalAmount),
+        status:        result.status,
+        items:         billItems,
+        notes,
+        termsAndConditions,
+        additionalCharges,
+        discountPct,
+        discountAmt,
+        discountType,
+        autoRoundOff,
+        roundOffAmt,
         eWayBillNo, challanNoRef, financedBy, salesman, emailId, warrantyPeriod,
         shippingAddress, poNumber, vehicleNo, dispatchedThrough, transportName, customFieldValues,
       };
       onSave(saved);
-    } catch (err: any) { setSaveError(err.message||"Failed to save. Please try again."); }
-    finally { setSaving(false); }
+    } catch (err: any) {
+      setSaveError(err.message || "Failed to save. Please try again.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handlePartySelect = (p: Party) => {
@@ -750,9 +1011,10 @@ export default function CreateDeliveryChallan({ challan, nextNumber, settings, o
     if (!shippingAddress) setShippingAddress(`${p.name}\nPhone Number: ${p.mobile}`);
     setShowPartySelector(false);
   };
-  const handleCreateNewParty = (p: Party) => { setParties(prev=>[...prev,p]); handlePartySelect(p); setShowCreateParty(false); };
+  const handleCreateNewParty = (p: Party) => { setParties(prev => [...prev, p]); handlePartySelect(p); setShowCreateParty(false); };
 
-  type ExtraField = { kind:"standard";key:string;label:string;value:string;setter:(v:string)=>void } | { kind:"custom";label:string;defaultVal:string };
+  type ExtraField = { kind: "standard"; key: string; label: string; value: string; setter: (v: string) => void }
+                 | { kind: "custom"; label: string; defaultVal: string };
   const standardFields: ExtraField[] = [
     ...(det.showEwayBill?[{kind:"standard"as const,key:"eWayBillNo",label:"E-Way Bill No.",value:eWayBillNo,setter:setEWayBillNo}]:[]),
     ...(det.showChallan?[{kind:"standard"as const,key:"challanNoRef",label:"Challan No.",value:challanNoRef,setter:setChallanNoRef}]:[]),
@@ -770,7 +1032,7 @@ export default function CreateDeliveryChallan({ challan, nextNumber, settings, o
   const extraRows: ExtraField[][] = [];
   for (let i=0;i<allExtraFields.length;i+=4) extraRows.push(allExtraFields.slice(i,i+4));
 
-  const businessName = (() => { try { return JSON.parse(localStorage.getItem("businessInfo")||"{}").name||"scratchweb.solutions"; } catch { return "scratchweb.solutions"; } })();
+  const businessName = (() => { try { return JSON.parse(localStorage.getItem("businessInfo")||"{}").name||""; } catch { return ""; } })();
 
   return (
     <div className="cdc-page">
@@ -780,15 +1042,15 @@ export default function CreateDeliveryChallan({ challan, nextNumber, settings, o
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
           </button>
           <div className="topnav-divider"/>
-          <span className="cdc-page-title">{isEditMode?"Edit Delivery Challan":"Create Delivery Challan"}</span>
+          <span className="cdc-page-title">{isEditMode ? "Edit Delivery Challan" : "Create Delivery Challan"}</span>
         </div>
         <div className="cdc-topnav-right">
           <button className="cdc-icon-btn" title="Keyboard Shortcuts">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="16" height="16"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h8"/></svg>
           </button>
           <button className="cdc-settings-btn" onClick={() => setShowSettings(true)}><Settings size={14}/> Settings <span className="notif-dot-sm"/></button>
-          <button className="btn-save-new" onClick={handleSave} disabled={saving}>{saving?"Saving…":"Save & New"}</button>
-          <button className="btn-save-main" onClick={handleSave} disabled={saving}>{saving?"Saving…":"Save"}</button>
+          <button className="btn-save-new" onClick={handleSave} disabled={saving}>{saving ? "Saving…" : "Save & New"}</button>
+          <button className="btn-save-main" onClick={handleSave} disabled={saving}>{saving ? "Saving…" : "Save"}</button>
         </div>
       </div>
 
@@ -800,7 +1062,7 @@ export default function CreateDeliveryChallan({ challan, nextNumber, settings, o
       )}
 
       <div className="cdc-body">
-        <div className={"cdc-top-split"+(selectedParty?" has-party":"")}>
+        <div className={"cdc-top-split" + (selectedParty ? " has-party" : "")}>
           {/* Bill To */}
           <div className="cdc-bill-section">
             <div className="bill-to-header">
@@ -830,8 +1092,9 @@ export default function CreateDeliveryChallan({ challan, nextNumber, settings, o
                 <button className="change-party-btn" onClick={() => setShowShippingModal(true)}>Change Shipping Address</button>
               </div>
               <div className="party-info-box">
-                {shippingAddress ? shippingAddress.split("\n").map((line,i) => <div key={i} className={i===0?"party-info-name":"party-info-detail"}>{line}</div>)
-                : <div className="party-info-detail" style={{color:"#9ca3af"}}>No shipping address</div>}
+                {shippingAddress
+                  ? shippingAddress.split("\n").map((line, i) => <div key={i} className={i === 0 ? "party-info-name" : "party-info-detail"}>{line}</div>)
+                  : <div className="party-info-detail" style={{color:"#9ca3af"}}>No shipping address</div>}
               </div>
             </div>
           )}
@@ -851,14 +1114,14 @@ export default function CreateDeliveryChallan({ challan, nextNumber, settings, o
                 {showDatePicker && <InlineDatePicker value={challanDate} onChange={setChallanDate} onClose={() => setShowDatePicker(false)}/>}
               </div>
             </div>
-            {allExtraFields.length>0 && (
+            {allExtraFields.length > 0 && (
               <div className="cdc-extra-fields-wrap">
-                {extraRows.map((row,ri) => (
+                {extraRows.map((row, ri) => (
                   <div key={ri} className="meta-row-4" style={{gridTemplateColumns:`repeat(${Math.min(row.length,4)},1fr)`}}>
-                    {row.map(field => field.kind==="standard" ? (
+                    {row.map(field => field.kind === "standard" ? (
                       <div className="meta-field" key={field.key}><label>{field.label}:</label><input className="meta-input" value={field.value} onChange={e => field.setter(e.target.value)}/></div>
                     ) : (
-                      <div className="meta-field" key={`custom_${field.label}`}><label>{field.label}:</label><input className="meta-input" placeholder={field.defaultVal?`e.g. ${field.defaultVal}`:`Enter ${field.label}`} value={customFieldValues[field.label]!==undefined?customFieldValues[field.label]:field.defaultVal} onChange={e => setCustomFieldValues(prev=>({...prev,[field.label]:e.target.value}))}/></div>
+                      <div className="meta-field" key={`custom_${field.label}`}><label>{field.label}:</label><input className="meta-input" placeholder={field.defaultVal ? `e.g. ${field.defaultVal}` : `Enter ${field.label}`} value={customFieldValues[field.label]!==undefined?customFieldValues[field.label]:field.defaultVal} onChange={e => setCustomFieldValues(prev=>({...prev,[field.label]:e.target.value}))}/></div>
                     ))}
                     {Array.from({length:(4-row.length)%4}).map((_,i) => <div key={`pad-${ri}-${i}`} className="meta-field"/>)}
                   </div>
@@ -874,27 +1137,35 @@ export default function CreateDeliveryChallan({ challan, nextNumber, settings, o
             <thead>
               <tr>
                 <th>NO</th><th>ITEMS / SERVICES</th><th>HSN / SAC</th>
-                {showQty && <th>QTY</th>}{showPrice && <th>PRICE/ITEM (₹)</th>}
+                {showQty && <th>QTY</th>}
+                {showPrice && <th>PRICE/ITEM (₹)</th>}
                 <th>DISCOUNT</th><th>TAX</th><th>AMOUNT (₹)</th>
                 <th><button className="add-col-btn" onClick={() => setShowHideColumns(true)} type="button"><Plus size={14}/></button></th>
               </tr>
             </thead>
             <tbody>
-              {billItems.map((item,idx) => <BillItemRow key={item.id} item={item} index={idx} onChange={handleItemChange} onDelete={handleDeleteItem} showPrice={showPrice} showQty={showQty}/>)}
+              {billItems.map((item, idx) => (
+                <BillItemRow
+                  key={item.id} item={item} index={idx}
+                  onChange={handleItemChange} onDelete={handleDeleteItem}
+                  showPrice={showPrice} showQty={showQty}
+                />
+              ))}
             </tbody>
           </table>
           <div className="add-item-row">
             <div className="add-item-dashed" onClick={() => setShowAddItems(true)}>+ Add Item</div>
             <div className="scan-barcode-btn" onClick={() => setShowAddItems(true)}>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="20" height="20"><path d="M3 9V5a2 2 0 0 1 2-2h4M3 15v4a2 2 0 0 0 2 2h4M21 9V5a2 2 0 0 0-2-2h-4M21 15v4a2 2 0 0 1-2 2h-4"/><line x1="7" y1="8" x2="7" y2="16"/><line x1="10" y1="8" x2="10" y2="16"/><line x1="14" y1="8" x2="14" y2="16"/><line x1="17" y1="8" x2="17" y2="16"/></svg>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" width="20" height="20"><path d="M3 9V5a2 2 0 0 1 2-2h4M3 15v4a2 2 0 0 0 2 2h4M21 9V5a2 2 0 0-2-2h-4M21 15v4a2 2 0 0 1-2 2h-4"/><line x1="7" y1="8" x2="7" y2="16"/><line x1="10" y1="8" x2="10" y2="16"/><line x1="14" y1="8" x2="14" y2="16"/><line x1="17" y1="8" x2="17" y2="16"/></svg>
               Scan Barcode
             </div>
           </div>
+          {/* SUBTOTAL row: discount | (unused) | item amounts total */}
           <div className="subtotal-row">
             <span className="subtotal-label">SUBTOTAL</span>
-            <span className="subtotal-val">₹ {totalDiscountItems.toFixed(0)}</span>
-            <span className="subtotal-val">₹ 0</span>
-            <span className="subtotal-val">₹ {subtotal.toFixed(0)}</span>
+            <span className="subtotal-val">- ₹ {totalItemDisc.toFixed(2)}</span>
+            <span className="subtotal-val">₹ {totalItemTax.toFixed(2)}</span>
+            <span className="subtotal-val">₹ {subtotal.toFixed(2)}</span>
           </div>
         </div>
 
@@ -921,8 +1192,9 @@ export default function CreateDeliveryChallan({ challan, nextNumber, settings, o
             ) : <button className="link-action-btn" onClick={() => setShowAddBankModal(true)}>+ Add Bank Account</button>}
           </div>
 
+          {/* Summary panel */}
           <div className="cdc-summary">
-            {showAdditionalCharges && additionalCharges.map((charge,i) => (
+            {showAdditionalCharges && additionalCharges.map((charge, i) => (
               <div key={charge.id} className="charge-row">
                 <input className="charge-label-input" placeholder="Enter charge (ex. Transport Charge)" value={charge.label} onChange={e => setAdditionalCharges(prev=>prev.map((c,ci)=>ci===i?{...c,label:e.target.value}:c))}/>
                 <div className="charge-amount-area">
@@ -938,52 +1210,81 @@ export default function CreateDeliveryChallan({ challan, nextNumber, settings, o
               </div>
             ))}
             <div className="summary-line">
-              <button className="link-action-btn summary-link" onClick={handleAddCharge}>{showAdditionalCharges&&additionalCharges.length>0?"+ Add Another Charge":"+ Add Additional Charges"}</button>
-              <span className="summary-val">₹ {chargesSum.toFixed(0)}</span>
+              <button className="link-action-btn summary-link" onClick={handleAddCharge}>
+                {showAdditionalCharges && additionalCharges.length > 0 ? "+ Add Another Charge" : "+ Add Additional Charges"}
+              </button>
+              <span className="summary-val">₹ {chargesSum.toFixed(2)}</span>
             </div>
-            <div className="summary-line"><span>Taxable Amount</span><span className="summary-val">₹ {taxableAmount.toFixed(0)}</span></div>
+            <div className="summary-line"><span>Taxable Amount</span><span className="summary-val">₹ {taxableAmount.toFixed(2)}</span></div>
             {showDiscount ? (
               <div className="discount-row">
                 <div className="discount-type-wrapper">
-                  <button className="discount-type-btn" onClick={() => setShowDiscountMenu(!showDiscountMenu)}>Discount {discountType} <ChevronDown size={12}/></button>
-                  {showDiscountMenu && <div className="discount-menu"><div className={discountType==="Before Tax"?"discount-menu-active":""} onClick={() => { setDiscountType("Before Tax"); setShowDiscountMenu(false); }}>Discount Before Tax</div><div className={discountType==="After Tax"?"discount-menu-active":""} onClick={() => { setDiscountType("After Tax"); setShowDiscountMenu(false); }}>Discount After Tax</div></div>}
+                  <button className="discount-type-btn" onClick={() => setShowDiscountMenu(!showDiscountMenu)}>
+                    Discount {discountType} <ChevronDown size={12}/>
+                  </button>
+                  {showDiscountMenu && (
+                    <div className="discount-menu">
+                      <div className={discountType==="Before Tax"?"discount-menu-active":""} onClick={() => { setDiscountType("Before Tax"); setShowDiscountMenu(false); }}>Discount Before Tax</div>
+                      <div className={discountType==="After Tax"?"discount-menu-active":""} onClick={() => { setDiscountType("After Tax"); setShowDiscountMenu(false); }}>Discount After Tax</div>
+                    </div>
+                  )}
                 </div>
                 <div className="discount-inputs-summary">
-                  <span className="disc-pct-label">%</span><input type="number" min="0" max="100" className="disc-pct-input" value={discountPct} onChange={e => handleDiscountPctChange(Number(e.target.value))}/>
-                  <span className="disc-sep">/</span><span className="disc-cur">₹</span><input type="number" min="0" className="disc-amt-input" value={discountAmt} onChange={e => handleDiscountAmtChange(Number(e.target.value))}/>
+                  <span className="disc-pct-label">%</span>
+                  <input type="number" min="0" max="100" className="disc-pct-input" value={discountPct} onChange={e => handleDiscountPctChange(Number(e.target.value))}/>
+                  <span className="disc-sep">/</span>
+                  <span className="disc-cur">₹</span>
+                  <input type="number" min="0" className="disc-amt-input" value={discountAmt} onChange={e => handleDiscountAmtChange(Number(e.target.value))}/>
                   <button className="disc-remove" onClick={() => { setShowDiscount(false); setDiscountPct(0); setDiscountAmt(0); }}>⊗</button>
                 </div>
               </div>
             ) : (
-              <div className="summary-line"><button className="link-action-btn summary-link" onClick={() => setShowDiscount(true)}>+ Add Discount</button><span className="summary-val summary-discount-val">- ₹ {effectiveDiscount.toFixed(0)}</span></div>
+              <div className="summary-line">
+                <button className="link-action-btn summary-link" onClick={() => setShowDiscount(true)}>+ Add Discount</button>
+                <span className="summary-val summary-discount-val">- ₹ {effectiveDiscount.toFixed(2)}</span>
+              </div>
             )}
-            {showDiscount&&effectiveDiscount>0 && <div className="summary-line discount-val"><span></span><span>- ₹ {effectiveDiscount.toFixed(2)}</span></div>}
+            {showDiscount && effectiveDiscount > 0 && (
+              <div className="summary-line discount-val"><span></span><span>- ₹ {effectiveDiscount.toFixed(2)}</span></div>
+            )}
             <div className="roundoff-section">
               <div className="roundoff-row">
-                <label className="check-label"><input type="checkbox" checked={autoRoundOff} onChange={e => setAutoRoundOff(e.target.checked)}/> Auto Round Off</label>
+                <label className="check-label">
+                  <input type="checkbox" checked={autoRoundOff} onChange={e => setAutoRoundOff(e.target.checked)}/> Auto Round Off
+                </label>
                 <div className="roundoff-right">
                   <div className="roundoff-type-wrap">
-                    <button className="roundoff-add-btn" onClick={() => setShowRoundOffMenu(!showRoundOffMenu)}>{roundOffType} <ChevronDown size={12}/></button>
-                    {showRoundOffMenu && <div className="roundoff-menu"><div onClick={() => { setRoundOffType("+ Add"); setShowRoundOffMenu(false); }}>+ Add</div><div onClick={() => { setRoundOffType("Reduce"); setShowRoundOffMenu(false); }}>− Reduce</div></div>}
+                    <button className="roundoff-add-btn" onClick={() => setShowRoundOffMenu(!showRoundOffMenu)}>
+                      {roundOffType} <ChevronDown size={12}/>
+                    </button>
+                    {showRoundOffMenu && (
+                      <div className="roundoff-menu">
+                        <div onClick={() => { setRoundOffType("+ Add"); setShowRoundOffMenu(false); }}>+ Add</div>
+                        <div onClick={() => { setRoundOffType("Reduce"); setShowRoundOffMenu(false); }}>− Reduce</div>
+                      </div>
+                    )}
                   </div>
                   <span className="roundoff-currency">₹</span>
                   <input className="roundoff-input" type="number" value={roundOffAmt} onChange={e => setRoundOffAmt(Number(e.target.value))}/>
                 </div>
               </div>
             </div>
-            <div className="summary-total-row"><span className="total-label">Total Amount</span><span className="total-value">₹ {totalAmount.toFixed(2)}</span></div>
+            <div className="summary-total-row">
+              <span className="total-label">Total Amount</span>
+              <span className="total-value">₹ {totalAmount.toFixed(2)}</span>
+            </div>
             <SignatorySection businessName={businessName}/>
           </div>
         </div>
       </div>
 
-      {showCreateParty && <CreatePartyModal onSave={handleCreateNewParty} onClose={() => setShowCreateParty(false)}/>}
+      {showCreateParty   && <CreatePartyModal onSave={handleCreateNewParty} onClose={() => setShowCreateParty(false)}/>}
       {showShippingModal && selectedParty && <ChangeShippingModal partyName={selectedParty.name} addresses={[selectedParty.billingAddress||"",selectedParty.shippingAddress||""].filter(Boolean)} onDone={addr => { setShippingAddress(addr); setShowShippingModal(false); }} onClose={() => setShowShippingModal(false)}/>}
-      {showAddItems && <AddItemsModal onAddItems={handleAddItemsFromModal} onClose={() => setShowAddItems(false)}/>}
-      {showHideColumns && <ShowHideColumnsModal showPrice={showPrice} showQty={showQty} onSave={(p,q) => { setShowPrice(p); setShowQty(q); }} onClose={() => setShowHideColumns(false)}/>}
-      {showBankModal && <SelectBankModal onClose={() => setShowBankModal(false)} onAdd={() => { setShowBankModal(false); setShowAddBankModal(true); }} onSelect={b => setSelectedBank(b)}/>}
-      {showAddBankModal && <AddBankModal onClose={() => setShowAddBankModal(false)} onSaved={b => { setSelectedBank(b); setShowAddBankModal(false); }}/>}
-      {showSettings && <QuickSettingsModal settings={settings} onSave={() => {}} onClose={() => setShowSettings(false)}/>}
+      {showAddItems      && <AddItemsModal onAddItems={handleAddItemsFromModal} onClose={() => setShowAddItems(false)}/>}
+      {showHideColumns   && <ShowHideColumnsModal showPrice={showPrice} showQty={showQty} onSave={(p,q) => { setShowPrice(p); setShowQty(q); }} onClose={() => setShowHideColumns(false)}/>}
+      {showBankModal     && <SelectBankModal onClose={() => setShowBankModal(false)} onAdd={() => { setShowBankModal(false); setShowAddBankModal(true); }} onSelect={b => setSelectedBank(b)}/>}
+      {showAddBankModal  && <AddBankModal onClose={() => setShowAddBankModal(false)} onSaved={b => { setSelectedBank(b); setShowAddBankModal(false); }}/>}
+      {showSettings      && <QuickSettingsModal settings={settings} onSave={() => {}} onClose={() => setShowSettings(false)}/>}
     </div>
   );
 }

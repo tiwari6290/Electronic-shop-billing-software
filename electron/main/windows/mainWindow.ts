@@ -11,6 +11,10 @@ export function createMainWindow() {
   const win = new BrowserWindow({
     width: 1200,
     height: 800,
+
+    // ✅ ADD THIS LINE
+    icon: path.join(process.cwd(), "assets/icon.ico"),
+
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
