@@ -34,7 +34,7 @@ const Login: React.FC = () => {
         {/* Header */}
         <div className="text-center mb-[52px]">
           <h1 className="text-[44px] font-bold text-[#212529] mb-[10px] leading-tight tracking-[-0.5px]">
-            Welcome Back
+            Mondal Electronics Concern
           </h1>
           <p className="text-[#6c757d] text-[16.5px] font-normal leading-relaxed">
             Sign in to access your dashboard
@@ -48,47 +48,30 @@ const Login: React.FC = () => {
             <label className="block text-[#212529] font-semibold mb-[18px] text-[15px]">
               Login As
             </label>
-            <div className="grid grid-cols-3 gap-[18px]">
+
+            {/* ✅ FIXED GRID */}
+            <div className="grid grid-cols-1 gap-[18px] justify-items-center">
+
               {/* Admin Card */}
-              {/* <button
+              {/*
+              <button
                 type="button"
                 onClick={() => setSelectedRole('Admin')}
-                className={`w-full h-full py-[26px] rounded-[18px] border-2 transition-all duration-200 ${
+                className={`w-full py-[26px] rounded-[18px] border-2 ${
                   selectedRole === 'Admin'
-                    ? 'border-[#7c3aed] bg-white shadow-[0_2px_8px_rgba(124,58,237,0.12)]'
-                    : 'border-[#e9ecef] bg-[#f8f9fa] hover:bg-white hover:border-[#dee2e6]'
+                    ? 'border-[#7c3aed] bg-white'
+                    : 'border-[#e9ecef] bg-[#f8f9fa]'
                 }`}
               >
-                <div className="flex flex-col items-center justify-center space-y-[14px]">
-                  <div
-                    className={`w-[60px] h-[60px] rounded-full flex items-center justify-center transition-all duration-200 ${
-                      selectedRole === 'Admin'
-                        ? 'bg-[#7c3aed]'
-                        : 'bg-[#e9ecef]'
-                    }`}
-                  >
-                    <Shield
-                      className={`w-[28px] h-[28px] ${
-                        selectedRole === 'Admin' ? 'text-white' : 'text-[#adb5bd]'
-                      }`}
-                      strokeWidth={2.5}
-                    />
-                  </div>
-                  <span
-                    className={`font-semibold text-[15px] ${
-                      selectedRole === 'Admin' ? 'text-[#212529]' : 'text-[#6c757d]'
-                    }`}
-                  >
-                    Admin
-                  </span>
-                </div>
-              </button> */}
+                Admin
+              </button>
+              */}
 
               {/* Cashier Card */}
               <button
                 type="button"
                 onClick={() => setSelectedRole('Cashier')}
-                className={`w-full h-full py-[26px] rounded-[18px] border-2 transition-all duration-200 ${
+                className={`w-full max-w-[240px] py-[26px] rounded-[18px] border-2 transition-all duration-200 ${
                   selectedRole === 'Cashier'
                     ? 'border-[#7c3aed] bg-white shadow-[0_2px_8px_rgba(124,58,237,0.12)]'
                     : 'border-[#e9ecef] bg-[#f8f9fa] hover:bg-white hover:border-[#dee2e6]'
@@ -96,7 +79,7 @@ const Login: React.FC = () => {
               >
                 <div className="flex flex-col items-center justify-center space-y-[14px]">
                   <div
-                    className={`w-[60px] h-[60px] rounded-full flex items-center justify-center transition-all duration-200 ${
+                    className={`w-[60px] h-[60px] rounded-full flex items-center justify-center ${
                       selectedRole === 'Cashier'
                         ? 'bg-[#7c3aed]'
                         : 'bg-[#e9ecef]'
@@ -104,14 +87,18 @@ const Login: React.FC = () => {
                   >
                     <FileText
                       className={`w-[28px] h-[28px] ${
-                        selectedRole === 'Cashier' ? 'text-white' : 'text-[#adb5bd]'
+                        selectedRole === 'Cashier'
+                          ? 'text-white'
+                          : 'text-[#adb5bd]'
                       }`}
-                      strokeWidth={2.5}
                     />
                   </div>
+
                   <span
                     className={`font-semibold text-[15px] ${
-                      selectedRole === 'Cashier' ? 'text-[#212529]' : 'text-[#6c757d]'
+                      selectedRole === 'Cashier'
+                        ? 'text-[#212529]'
+                        : 'text-[#6c757d]'
                     }`}
                   >
                     Cashier
@@ -120,39 +107,19 @@ const Login: React.FC = () => {
               </button>
 
               {/* Accountant Card */}
-              {/* <button
+              {/*
+              <button
                 type="button"
                 onClick={() => setSelectedRole('Accountant')}
-                className={`w-full h-full py-[26px] rounded-[18px] border-2 transition-all duration-200 ${
+                className={`w-full py-[26px] rounded-[18px] border-2 ${
                   selectedRole === 'Accountant'
-                    ? 'border-[#7c3aed] bg-white shadow-[0_2px_8px_rgba(124,58,237,0.12)]'
-                    : 'border-[#e9ecef] bg-[#f8f9fa] hover:bg-white hover:border-[#dee2e6]'
+                    ? 'border-[#7c3aed] bg-white'
+                    : 'border-[#e9ecef] bg-[#f8f9fa]'
                 }`}
               >
-                <div className="flex flex-col items-center justify-center space-y-[14px]">
-                  <div
-                    className={`w-[60px] h-[60px] rounded-full flex items-center justify-center transition-all duration-200 ${
-                      selectedRole === 'Accountant'
-                        ? 'bg-[#7c3aed]'
-                        : 'bg-[#e9ecef]'
-                    }`}
-                  >
-                    <Calculator
-                      className={`w-[28px] h-[28px] ${
-                        selectedRole === 'Accountant' ? 'text-white' : 'text-[#adb5bd]'
-                      }`}
-                      strokeWidth={2.5}
-                    />
-                  </div>
-                  <span
-                    className={`font-semibold text-[15px] ${
-                      selectedRole === 'Accountant' ? 'text-[#212529]' : 'text-[#6c757d]'
-                    }`}
-                  >
-                    Accountant
-                  </span>
-                </div>
-              </button> */}
+                Accountant
+              </button>
+              */}
             </div>
           </div>
 

@@ -1,5 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
 
+/* ── Wrapper ──────────────────────────────────────────────────────────────── */
 .it-wrap {
   font-family: 'DM Sans', sans-serif;
   border: 1px solid #e5e7eb;
@@ -15,27 +16,30 @@
 .it-table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 900px;
+  min-width: 860px;
 }
 
+/* ── Header ───────────────────────────────────────────────────────────────── */
 .it-th {
   background: #f9fafb;
   padding: 10px 12px;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 11.5px;
+  font-weight: 700;
   color: #6b7280;
   text-align: left;
   border-bottom: 1px solid #e5e7eb;
   white-space: nowrap;
+  letter-spacing: 0.03em;
 }
-.it-th--no     { width: 40px; }
+.it-th--no     { width: 44px; }
 .it-th--center { text-align: center; }
 .it-th--right  { text-align: right; }
 .it-th--add    { width: 40px; text-align: center; }
 
+/* Add-column button (circle +) */
 .it-add-col-btn {
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
   border: none;
   background: #4338ca;
@@ -50,6 +54,7 @@
 .it-add-col-btn svg { width: 16px; height: 16px; }
 .it-add-col-btn:hover { background: #3730a3; }
 
+/* ── Data rows ────────────────────────────────────────────────────────────── */
 .it-tr {
   border-bottom: 1px solid #f3f4f6;
 }
@@ -59,501 +64,268 @@
   padding: 10px 12px;
   font-size: 13.5px;
   color: #111827;
-  vertical-align: top;
+  vertical-align: middle;
 }
-.it-td--no     { color: #6b7280; font-size: 13px; width: 40px; }
+.it-td--no     { color: #6b7280; font-size: 13px; width: 44px; text-align: center; }
 .it-td--center { text-align: center; }
 .it-td--right  { text-align: right; }
-.it-td--amount { font-weight: 600; white-space: nowrap; }
-.it-td--del    { width: 36px; padding: 8px 6px; }
-
-.it-td--name {
-  min-width: 200px;
-}
-
-.it-name {
-  font-size: 13.5px;
-  font-weight: 500;
-  color: #111827;
-  margin-bottom: 4px;
-}
-
-.it-desc {
-  width: 100%;
-  border: none;
-  border-radius: 4px;
-  padding: 5px 8px;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 12.5px;
-  color: #6b7280;
-  background: #f3f4f6;
-  outline: none;
-  box-sizing: border-box;
-}
-.it-desc:focus { background: #fff; border: 1px solid #c7d2fe; }
-
-.it-cell-input {
-  border: none;
-  border-radius: 4px;
-  padding: 5px 7px;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 13px;
-  color: #111827;
-  background: #f3f4f6;
-  outline: none;
-  width: 80px;
-  text-align: center;
-}
-.it-cell-input--right { text-align: right; }
-.it-cell-input:focus { background: #fff; border: 1px solid #c7d2fe; }
-
-.it-qty-row {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  justify-content: center;
-}
-
-.it-qty-input {
-  width: 52px;
-  border: none;
-  border-radius: 4px;
-  padding: 5px 6px;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 13px;
-  color: #111827;
-  background: #f3f4f6;
-  outline: none;
-  text-align: center;
-}
-.it-qty-input:focus { background: #fff; border: 1px solid #c7d2fe; }
-.it-qty-input::-webkit-inner-spin-button { -webkit-appearance: none; }
-
-.it-unit {
-  font-size: 12px;
-  color: #6b7280;
-}
-
-/* Discount */
-.it-td--discount { min-width: 110px; }
-
-.it-discount-col {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.it-discount-row {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.it-pct-symbol,
-.it-rs-symbol {
-  font-size: 12px;
-  color: #6b7280;
-  width: 14px;
-  text-align: right;
-  flex-shrink: 0;
-}
-
-.it-disc-input {
-  width: 60px;
-  border: none;
-  border-radius: 4px;
-  padding: 4px 6px;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 12.5px;
-  background: #f3f4f6;
-  outline: none;
-  text-align: right;
-}
-.it-disc-input:focus { background: #fff; border: 1px solid #c7d2fe; }
-.it-disc-input::-webkit-inner-spin-button { -webkit-appearance: none; }
-
-/* Tax */
-.it-td--tax { min-width: 120px; }
-
-.it-tax-col {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.it-tax-select {
-  font-family: 'DM Sans', sans-serif;
-  font-size: 12.5px;
-  border: none;
-  border-radius: 4px;
-  padding: 4px 6px;
-  background: #f3f4f6;
-  color: #374151;
-  outline: none;
-  width: 100%;
-}
-.it-tax-select:focus { background: #fff; border: 1px solid #c7d2fe; }
-
-.it-tax-amt {
-  font-size: 11.5px;
-  color: #9ca3af;
-}
-
-/* Delete */
-.it-del-btn {
-  width: 28px;
-  height: 28px;
-  border: none;
-  border-radius: 4px;
-  background: transparent;
-  cursor: pointer;
-  color: #9ca3af;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.12s, color 0.12s;
-}
-.it-del-btn svg { width: 15px; height: 15px; }
-.it-del-btn:hover { background: #fee2e2; color: #dc2626; }
-
-/* Add Item row */
-.it-add-item-btn {
-  width: 100%;
-  border: 2px dashed #93c5fd;
-  border-radius: 6px;
-  padding: 12px;
-  background: transparent;
-  color: #4338ca;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 13.5px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.12s;
-  margin: 4px 0;
-}
-.it-add-item-btn:hover { background: #eef2ff; }
-
-.it-barcode-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  background: #f9fafb;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 13px;
-  color: #374151;
-  cursor: pointer;
-  transition: background 0.12s;
-}
-.it-barcode-btn svg { width: 22px; height: 22px; }
-.it-barcode-btn:hover { background: #f3f4f6; }
-
-/* Subtotal */
-.it-subtotal-row {
-  background: #f9fafb;
-  border-top: 1px solid #e5e7eb;
-}
-
-.it-subtotal-label {
-  padding: 10px 12px;
-  font-size: 12px;
-  font-weight: 700;
-  color: #6b7280;
-  text-align: right;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.it-subtotal-val {
-  padding: 10px 12px;
-  font-size: 13.5px;
-  font-weight: 600;
-  color: #111827;
-}
-
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
-
-.it-wrap {
-  font-family: 'DM Sans', sans-serif;
-  border: 1px solid #e5e7eb;
-  border-radius: 8px;
-  overflow: hidden;
-  background: #ffffff;
-}
-
-.it-table-scroll {
-  overflow-x: auto;
-}
-
-.it-table {
-  width: 100%;
-  border-collapse: collapse;
-  min-width: 900px;
-}
-
-.it-th {
-  background: #f9fafb;
-  padding: 10px 12px;
-  font-size: 12px;
-  font-weight: 600;
-  color: #6b7280;
-  text-align: left;
-  border-bottom: 1px solid #e5e7eb;
-  white-space: nowrap;
-}
-.it-th--no     { width: 40px; }
-.it-th--center { text-align: center; }
-.it-th--right  { text-align: right; }
-.it-th--add    { width: 40px; text-align: center; }
-
-.it-add-col-btn {
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  border: none;
-  background: #4338ca;
-  color: #ffffff;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 0 auto;
-  transition: background 0.12s;
-}
-.it-add-col-btn svg { width: 16px; height: 16px; }
-.it-add-col-btn:hover { background: #3730a3; }
-
-.it-tr {
-  border-bottom: 1px solid #f3f4f6;
-}
-.it-tr:hover { background: #fafafe; }
-
-.it-td {
-  padding: 10px 12px;
-  font-size: 13.5px;
-  color: #111827;
-  vertical-align: top;
-}
-.it-td--no     { color: #6b7280; font-size: 13px; width: 40px; }
-.it-td--center { text-align: center; }
-.it-td--right  { text-align: right; }
-.it-td--amount { font-weight: 600; white-space: nowrap; }
-.it-td--del    { width: 36px; padding: 8px 6px; }
-
-.it-td--name {
-  min-width: 200px;
-}
-
-.it-name {
-  font-size: 13.5px;
-  font-weight: 500;
-  color: #111827;
-  margin-bottom: 4px;
-}
-
-.it-desc {
-  width: 100%;
-  border: none;
-  border-radius: 4px;
-  padding: 5px 8px;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 12.5px;
-  color: #6b7280;
-  background: #f3f4f6;
-  outline: none;
-  box-sizing: border-box;
-}
-.it-desc:focus { background: #fff; border: 1px solid #c7d2fe; }
-
-.it-cell-input {
-  border: none;
-  border-radius: 4px;
-  padding: 5px 7px;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 13px;
-  color: #111827;
-  background: #f3f4f6;
-  outline: none;
-  width: 80px;
-  text-align: center;
-}
-.it-cell-input--right { text-align: right; }
-.it-cell-input:focus { background: #fff; border: 1px solid #c7d2fe; }
-
-.it-qty-row {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  justify-content: center;
-}
-
-.it-qty-input {
-  width: 52px;
-  border: none;
-  border-radius: 4px;
-  padding: 5px 6px;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 13px;
-  color: #111827;
-  background: #f3f4f6;
-  outline: none;
-  text-align: center;
-}
-.it-qty-input:focus { background: #fff; border: 1px solid #c7d2fe; }
-.it-qty-input::-webkit-inner-spin-button { -webkit-appearance: none; }
-
-.it-unit {
-  font-size: 12px;
-  color: #6b7280;
-}
-
-/* Discount */
-.it-td--discount { min-width: 110px; }
-
-.it-discount-col {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.it-discount-row {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.it-pct-symbol,
-.it-rs-symbol {
-  font-size: 12px;
-  color: #6b7280;
-  width: 14px;
-  text-align: right;
-  flex-shrink: 0;
-}
-
-.it-disc-input {
-  width: 60px;
-  border: none;
-  border-radius: 4px;
-  padding: 4px 6px;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 12.5px;
-  background: #f3f4f6;
-  outline: none;
-  text-align: right;
-}
-.it-disc-input:focus { background: #fff; border: 1px solid #c7d2fe; }
-.it-disc-input::-webkit-inner-spin-button { -webkit-appearance: none; }
-
-/* Tax */
-.it-td--tax { min-width: 120px; }
-
-.it-tax-col {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.it-tax-select {
-  font-family: 'DM Sans', sans-serif;
-  font-size: 12.5px;
-  border: none;
-  border-radius: 4px;
-  padding: 4px 6px;
-  background: #f3f4f6;
-  color: #374151;
-  outline: none;
-  width: 100%;
-}
-.it-tax-select:focus { background: #fff; border: 1px solid #c7d2fe; }
-
-.it-tax-amt {
-  font-size: 11.5px;
-  color: #9ca3af;
-}
-
-/* Delete */
-.it-del-btn {
-  width: 28px;
-  height: 28px;
-  border: none;
-  border-radius: 4px;
-  background: transparent;
-  cursor: pointer;
-  color: #9ca3af;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.12s, color 0.12s;
-}
-.it-del-btn svg { width: 15px; height: 15px; }
-.it-del-btn:hover { background: #fee2e2; color: #dc2626; }
-
-/* Add Item row */
-.it-add-item-btn {
-  width: 100%;
-  border: 2px dashed #93c5fd;
-  border-radius: 6px;
-  padding: 12px;
-  background: transparent;
-  color: #4338ca;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 13.5px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.12s;
-  margin: 4px 0;
-}
-.it-add-item-btn:hover { background: #eef2ff; }
-
-.it-barcode-btn {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
-  border: 1px solid #e5e7eb;
-  border-radius: 6px;
-  background: #f9fafb;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 13px;
-  color: #374151;
-  cursor: pointer;
-  transition: background 0.12s;
-}
-.it-barcode-btn svg { width: 22px; height: 22px; }
-.it-barcode-btn:hover { background: #f3f4f6; }
-
-/* Subtotal */
-.it-subtotal-row {
-  background: #f9fafb;
-  border-top: 1px solid #e5e7eb;
-}
-
-.it-subtotal-label {
-  padding: 10px 12px;
-  font-size: 12px;
-  font-weight: 700;
-  color: #6b7280;
-  text-align: right;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.it-subtotal-val {
-  padding: 10px 12px;
-  font-size: 13.5px;
-  font-weight: 600;
-  color: #111827;
-}
-/* ── Decimal / numeric formatting additions ─────────────────────────────── */
 .it-td--amount {
+  font-weight: 600;
+  white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
-.it-subtotal-val {
-  font-variant-numeric: tabular-nums;
+.it-td--del    { width: 36px; padding: 8px 6px; }
+
+/* Item name cell */
+.it-td--name   { min-width: 180px; }
+
+.it-name {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 5px;
 }
+
+.it-desc {
+  width: 100%;
+  border: 1px solid #e5e7eb;
+  border-radius: 5px;
+  padding: 5px 8px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  color: #6b7280;
+  background: #f9fafb;
+  outline: none;
+  box-sizing: border-box;
+}
+.it-desc:focus { background: #fff; border-color: #a5b4fc; }
+.it-desc::placeholder { color: #9ca3af; }
+
+/* Generic cell input (HSN/SAC, price) */
+.it-cell-input {
+  border: 1px solid #e5e7eb;
+  border-radius: 5px;
+  padding: 6px 8px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  color: #111827;
+  background: #f9fafb;
+  outline: none;
+  width: 80px;
+  text-align: center;
+  transition: border-color 0.12s, background 0.12s;
+}
+.it-cell-input--right { text-align: right; width: 100px; }
+.it-cell-input:focus { background: #fff; border-color: #a5b4fc; }
+.it-cell-input::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+/* ── QTY cell ─────────────────────────────────────────────────────────────── */
+.it-qty-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: center;
+  white-space: nowrap;
+}
+
+.it-qty-input {
+  width: 54px;
+  border: 1px solid #e5e7eb;
+  border-radius: 5px;
+  padding: 6px 6px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  color: #111827;
+  background: #f9fafb;
+  outline: none;
+  text-align: center;
+  transition: border-color 0.12s, background 0.12s;
+}
+.it-qty-input:focus { background: #fff; border-color: #a5b4fc; }
+.it-qty-input::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+.it-unit {
+  font-size: 11.5px;
+  color: #6b7280;
+  white-space: nowrap;
+}
+
+/* ── DISCOUNT column ──────────────────────────────────────────────────────── */
+/* Two stacked rows: [% | input] on top, [₹ | input] below — matches Image 2  */
+.it-td--discount { min-width: 120px; }
+
+.it-discount-col {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.it-discount-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.it-pct-symbol,
+.it-rs-symbol {
+  font-size: 12px;
+  color: #6b7280;
+  width: 14px;
+  text-align: right;
+  flex-shrink: 0;
+  font-weight: 500;
+}
+
+.it-disc-input {
+  width: 68px;
+  border: 1px solid #e5e7eb;
+  border-radius: 5px;
+  padding: 5px 7px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12.5px;
+  background: #f9fafb;
+  color: #111827;
+  outline: none;
+  text-align: right;
+  transition: border-color 0.12s, background 0.12s;
+}
+.it-disc-input:focus  { background: #fff; border-color: #a5b4fc; }
+.it-disc-input::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+/* ── TAX column ───────────────────────────────────────────────────────────── */
+.it-td--tax { min-width: 130px; }
+
+.it-tax-col {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.it-tax-select {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12.5px;
+  border: 1px solid #e5e7eb;
+  border-radius: 5px;
+  padding: 5px 6px;
+  background: #f9fafb;
+  color: #374151;
+  outline: none;
+  width: 100%;
+  cursor: pointer;
+  transition: border-color 0.12s;
+}
+.it-tax-select:focus { background: #fff; border-color: #a5b4fc; }
+
+/* ₹ tax-amount shown below dropdown — matches "(₹ 1525.42)" in Image 2 */
 .it-tax-amt {
+  font-size: 11.5px;
+  color: #9ca3af;
   font-variant-numeric: tabular-nums;
+  padding-left: 2px;
+}
+
+/* ── Delete button ────────────────────────────────────────────────────────── */
+.it-del-btn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  cursor: pointer;
+  color: #9ca3af;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.12s, color 0.12s;
+}
+.it-del-btn svg { width: 15px; height: 15px; }
+.it-del-btn:hover { background: #fee2e2; color: #dc2626; }
+
+/* ── Add Item / Scan Barcode action row ───────────────────────────────────── */
+.it-action-row td {
+  padding: 8px 10px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+/* "Add Item" button spans most columns — dashed blue border like Image 2 */
+.it-add-item-btn {
+  width: 100%;
+  border: 2px dashed #93c5fd;
+  border-radius: 6px;
+  padding: 11px;
+  background: transparent;
+  color: #4338ca;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.it-add-item-btn:hover { background: #eef2ff; }
+
+/* "Scan Barcode" button on the right — matches Image 2 */
+.it-barcode-cell {
+  text-align: right;
+}
+
+.it-barcode-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: #f9fafb;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  color: #374151;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.12s;
+}
+.it-barcode-btn svg { width: 20px; height: 20px; flex-shrink: 0; }
+.it-barcode-btn:hover { background: #f3f4f6; }
+
+/* ── SUBTOTAL row — matches Image 2: SUBTOTAL | -₹disc | ₹tax | ₹amount ─── */
+.it-subtotal-row {
+  background: #f9fafb;
+  border-top: 2px solid #e5e7eb;
+}
+
+/* "SUBTOTAL" label cell — right-aligned, spans all non-value columns */
+.it-subtotal-label {
+  padding: 11px 14px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #6b7280;
+  text-align: right;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* All three value cells share this base */
+.it-subtotal-val {
+  padding: 11px 12px;
+  font-size: 13.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* Discount cell — shows as "- ₹ 0.00", muted colour when zero */
+.it-subtotal-val--disc {
+  color: #6b7280;
+  text-align: right;
+}
+
+/* Tax cell — accent colour matching Image 2 */
+.it-subtotal-val--tax {
+  color: #374151;
+  text-align: right;
+}
+
+/* Amount cell — bold, right-aligned */
+.it-subtotal-val--amt {
+  color: #111827;
+  text-align: right;
 }

@@ -104,9 +104,11 @@ export interface ProductRecord {
   name: string;
   itemCode?: string | null;
   salesPrice?: string | number | null;
+  baseSalesPrice?: number | null; 
   purchasePrice?: string | number | null;
   unit?: string | null;
   hsnCode?: string | null;
+  gstRate?: string | null; 
   sacCode?: string | null;
   category?: string | null;
   status: string;

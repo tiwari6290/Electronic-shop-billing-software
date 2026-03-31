@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { QuotationData, fmtDate, apiDuplicateQuotation, apiDeleteQuotation, apiToFormData } from "./Quotationtypes";
+import { QuotationData, fmtDate, apiDuplicateQuotation, apiDeleteQuotation, apiToFormData, calcBillItemAmount } from "./Quotationtypes";
 import "./QuotationViewModal.css";
 
 // ─── Exact SavedTemplate shape from InvoiceBuilder ───────────────────────────
@@ -61,7 +61,12 @@ export default function QuotationViewModal({
   const [tpl] = useState<SavedTemplate | null>(loadTemplate);
   const printRef = useRef<HTMLDivElement>(null);
 
-  const [showDotMenu, setShowDotMenu] = useState(false);
+  const [showDotMenu,        setShowDotMenu]        = useState(false);
+  // Tracks whether the user clicked "Convert to Invoice" and is now inside the
+  // invoice creation flow. The quotation status MUST NOT change until the
+  // parent confirms the invoice was actually saved.
+  const [convertPending,     setConvertPending]     = useState(false);
+  const [showConvertConfirm, setShowConvertConfirm] = useState(false);
   const dotMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -121,17 +126,23 @@ export default function QuotationViewModal({
   const B = `1px solid ${themeColor}`;
 
   // ── Calculations ──────────────────────────────────────────────────────────
-  // Each item: taxableBase = price*qty - discount, tax = base * taxRate/100, amount = base + tax
-  // But quotation.billItems[].amount already includes tax (same pattern as invoice)
-  // So: taxable = amount / (1 + taxRate/100), taxAmt = amount - taxable
-  function getItemTaxable(item: any): number {
-    const rate = Number(item.taxRate) || 0;
-    if (rate > 0) return Number(item.amount) / (1 + rate / 100);
-    return Number(item.amount);
+  // Use the same canonical GST formula as calcBillItemAmount:
+  //   lineGross = qty × price  (pre-tax base price)
+  //   discount  = pct > 0 ? lineGross × pct/100 : flatAmt
+  //   taxable   = lineGross − discount
+  //   tax       = taxable × taxRate/100   ← GST always AFTER discount
+  //   amount    = taxable + tax
+  function getItemCalc(item: any) {
+    return calcBillItemAmount({
+      qty:         Number(item.qty)         || 0,
+      price:       Number(item.price)       || 0,
+      discountPct: Number(item.discountPct) || 0,
+      discountAmt: Number(item.discountAmt) || 0,
+      taxRate:     Number(item.taxRate)     || 0,
+    });
   }
-  function getItemTaxAmt(item: any): number {
-    return Number(item.amount) - getItemTaxable(item);
-  }
+  function getItemTaxable(item: any): number { return getItemCalc(item).taxable; }
+  function getItemTaxAmt(item: any): number  { return getItemCalc(item).taxAmt; }
 
   const itemsSubtotal  = quotation.billItems.reduce((s, i) => s + Number(i.amount), 0);
   const totalTaxAmt    = quotation.billItems.reduce((s, i) => s + getItemTaxAmt(i), 0);
@@ -195,6 +206,7 @@ export default function QuotationViewModal({
   }
 
   return (
+    <>
     <div className="qvm-overlay" onClick={onClose}>
       <div className="qvm-shell" onClick={e => e.stopPropagation()}>
 
@@ -282,8 +294,12 @@ export default function QuotationViewModal({
           <div className="qvm-action-spacer"/>
 
           {quotation.status !== "Closed" ? (
-            <button className="qvm-convert-btn" onClick={() => onConvertToInvoice?.(quotation)}>
-              Convert to Invoice
+            <button
+              className="qvm-convert-btn"
+              disabled={convertPending}
+              onClick={() => setShowConvertConfirm(true)}
+            >
+              {convertPending ? "Opening Invoice..." : "Convert to Invoice"}
             </button>
           ) : (
             <div className="qvm-converted-badge">✓ Converted to Invoice</div>
@@ -596,5 +612,88 @@ export default function QuotationViewModal({
 
       </div>
     </div>
+
+    {/* ── Convert-to-Invoice Confirmation Modal ─────────────────────────────
+        Status changes ONLY after the parent saves the invoice.
+        Clicking "Convert" here just opens the invoice creation flow.
+        If the user cancels or navigates away without saving, the quotation
+        status remains unchanged.
+    ──────────────────────────────────────────────────────────────────────── */}
+    {showConvertConfirm && (
+      <div
+        style={{
+          position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)",
+          zIndex: 700, display: "flex", alignItems: "center", justifyContent: "center",
+        }}
+        onClick={() => setShowConvertConfirm(false)}
+      >
+        <div
+          style={{
+            background: "#fff", borderRadius: 14, padding: "32px 28px", width: 420,
+            maxWidth: "92vw", fontFamily: "'DM Sans', sans-serif",
+            boxShadow: "0 20px 60px rgba(0,0,0,0.22)",
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {/* Icon */}
+          <div style={{ display: "flex", justifyContent: "center", marginBottom: 18 }}>
+            <div style={{
+              width: 56, height: 56, borderRadius: "50%",
+              background: "#ede9fe", display: "flex", alignItems: "center", justifyContent: "center",
+            }}>
+              <svg viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="2" width="26" height="26">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="12" y1="18" x2="12" y2="12"/>
+                <line x1="9"  y1="15" x2="15" y2="15"/>
+              </svg>
+            </div>
+          </div>
+
+          <h2 style={{ margin: "0 0 8px", fontSize: 17, fontWeight: 700, color: "#111827", textAlign: "center" }}>
+            Convert to Invoice?
+          </h2>
+          <p style={{ margin: "0 0 6px", fontSize: 13.5, color: "#6b7280", textAlign: "center", lineHeight: 1.6 }}>
+            This will open a new invoice pre-filled with the details from Quotation&nbsp;
+            <strong style={{ color: "#374151" }}>#{quotation.quotationNo}</strong>.
+          </p>
+          <p style={{ margin: "0 0 24px", fontSize: 12.5, color: "#9ca3af", textAlign: "center" }}>
+            The quotation status will only be marked as <em>Converted</em> after you save the invoice.
+          </p>
+
+          <div style={{ display: "flex", gap: 12, justifyContent: "flex-end" }}>
+            <button
+              style={{
+                padding: "10px 22px", border: "1px solid #d1d5db", borderRadius: 8,
+                background: "#fff", fontSize: 14, color: "#374151", cursor: "pointer",
+                fontFamily: "inherit", fontWeight: 500,
+              }}
+              onClick={() => setShowConvertConfirm(false)}
+            >
+              Cancel
+            </button>
+            <button
+              style={{
+                padding: "10px 24px", border: "none", borderRadius: 8,
+                background: "#6366f1", color: "#fff", fontSize: 14,
+                fontWeight: 600, cursor: "pointer", fontFamily: "inherit",
+                boxShadow: "0 2px 8px rgba(99,102,241,0.3)",
+              }}
+              onClick={() => {
+                setShowConvertConfirm(false);
+                setConvertPending(true);
+                // Delegate to the parent — parent is responsible for:
+                //   1. Opening the Create Invoice form pre-filled with this quotation
+                //   2. Calling apiCloseQuotation / updating status ONLY after a successful save
+                onConvertToInvoice?.(quotation);
+              }}
+            >
+              Continue to Invoice
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }
