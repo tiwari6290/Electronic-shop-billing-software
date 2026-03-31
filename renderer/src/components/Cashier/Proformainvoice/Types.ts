@@ -33,6 +33,7 @@ export interface ItemProduct {
   itemCode: string;
   stock: string;
   salesPrice: number;
+  category?: string;
   purchasePrice: number;
   unit: string;
   hsn: string;

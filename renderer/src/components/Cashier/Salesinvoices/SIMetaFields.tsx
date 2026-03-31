@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { addDays, fmtDisplayDate } from "./SalesInvoiceTypes";
+import { getInvoiceDetailsSettings } from "../../../api/salesInvoiceApi";
 import "./SIMetaFields.css";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -22,7 +23,6 @@ interface InvoiceBuilderDet {
   salesman:       string;
   showWarranty:   boolean;
   warrantyPeriod: string;
-  // Dispatched Through / Transport Name (may be absent in older saves)
   showDispatchedThrough?: boolean;
   dispatchedThrough?:     string;
   showTransportName?:     boolean;
@@ -110,7 +110,7 @@ interface SIMetaFieldsProps {
   vehicleNo?:       string;
   dispatchedThrough?: string;
   transportName?:   string;
-  /** Array of { label, value } for custom fields added in InvoiceBuilder */
+  /** key→value map for custom field values entered by the user */
   customFieldValues?: Record<string, string>;
   showColumns:      { pricePerItem: boolean; quantity: boolean };
   onChange:         (field: string, value: string | number | boolean) => void;
@@ -119,8 +119,8 @@ interface SIMetaFieldsProps {
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-/** Read the active invoice template's det from localStorage */
-function loadBuilderDet(): InvoiceBuilderDet | null {
+/** Read the active invoice template's det from localStorage (used as instant fallback) */
+function loadBuilderDetFromStorage(): InvoiceBuilderDet | null {
   try {
     const raw = localStorage.getItem("activeInvoiceTemplate");
     if (!raw) return null;
@@ -133,35 +133,30 @@ function loadBuilderDet(): InvoiceBuilderDet | null {
 
 /** Default visibility when no template is saved (show everything) */
 const DEFAULT_DET: InvoiceBuilderDet = {
-  industryType:        "Electronics",
-  layout:              "Advanced GST (Tally)",
-  showPO:              false,
-  showEwayBill:        true,
-  ewayBillNo:          "",
-  showVehicle:         false,
-  vehicleNo:           "",
-  showChallan:         true,
-  challanNo:           "",
-  showFinancedBy:      true,
-  financedBy:          "",
-  showSalesman:        true,
-  salesman:            "",
-  showWarranty:        true,
-  warrantyPeriod:      "",
+  industryType:          "Electronics",
+  layout:                "Advanced GST (Tally)",
+  showPO:                false,
+  showEwayBill:          true,
+  ewayBillNo:            "",
+  showVehicle:           false,
+  vehicleNo:             "",
+  showChallan:           true,
+  challanNo:             "",
+  showFinancedBy:        true,
+  financedBy:            "",
+  showSalesman:          true,
+  salesman:              "",
+  showWarranty:          true,
+  warrantyPeriod:        "",
   showDispatchedThrough: false,
-  dispatchedThrough:   "",
-  showTransportName:   false,
-  transportName:       "",
-  showEmailId:         true,
-  customFields:        [],
+  dispatchedThrough:     "",
+  showTransportName:     false,
+  transportName:         "",
+  showEmailId:           true,
+  customFields:          [],
 };
 
-// ─── CustomFieldInput — local state so typing is never blocked ───────────────
-// Uses local state to avoid stale-closure / controlled-input issues.
-// Calls onChange on every keystroke to keep parent form in sync.
-
-// CustomFieldCell renders just the field div (no row wrapper).
-// The parent groups all fields (optional + custom) into rows of 2.
+// ─── CustomFieldCell — isolated local state so typing never lags ──────────────
 function CustomFieldCell({
   label,
   initialValue,
@@ -173,10 +168,8 @@ function CustomFieldCell({
 }) {
   const [val, setVal] = useState(initialValue);
 
-  // Sync when parent resets (e.g. Save & New clears form → initialValue changes)
-  useEffect(() => {
-    setVal(initialValue);
-  }, [initialValue]);
+  // Sync when parent resets (e.g. Save & New clears form)
+  useEffect(() => { setVal(initialValue); }, [initialValue]);
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
     const v = e.target.value;
@@ -202,14 +195,59 @@ function CustomFieldCell({
 export default function SIMetaFields(p: SIMetaFieldsProps) {
   const navigate = useNavigate();
 
-  // Load builder settings once (they are updated on every template save in InvoiceBuilder)
-  const [det, setDet] = useState<InvoiceBuilderDet>(() => loadBuilderDet() ?? DEFAULT_DET);
+  // ── Load builder settings ─────────────────────────────────────────────────
+  // 1. Initialise from localStorage immediately (no flash / wait)
+  // 2. On mount: fetch from backend (source of truth) and update
+  const [det, setDet] = useState<InvoiceBuilderDet>(
+    () => loadBuilderDetFromStorage() ?? DEFAULT_DET
+  );
 
-  // Re-read when component mounts (in case user navigated from InvoiceBuilder)
   useEffect(() => {
-    const saved = loadBuilderDet();
-    if (saved) setDet(saved);
-  }, []);
+    // Try backend first — it is the source of truth across devices/users
+    getInvoiceDetailsSettings()
+      .then(data => {
+        const next: InvoiceBuilderDet = {
+          // Keep display-only fields from defaults / localStorage
+          industryType:          "Electronics",
+          layout:                "Advanced GST (Tally)",
+          ewayBillNo:            "",
+          vehicleNo:             "",
+          challanNo:             "",
+          financedBy:            "",
+          salesman:              "",
+          warrantyPeriod:        "",
+          dispatchedThrough:     "",
+          transportName:         "",
+          // Override toggles from backend
+          showChallan:           data.showChallan,
+          showDispatchedThrough: data.showDispatchedThrough,
+          showEmailId:           data.showEmailId,
+          showFinancedBy:        data.showFinancedBy,
+          showSalesman:          data.showSalesman,
+          showTransportName:     data.showTransportName,
+          showWarranty:          data.showWarranty,
+          showPO:                data.showPO,
+          showEwayBill:          data.showEwayBill,
+          showVehicle:           data.showVehicle,
+          customFields:          data.customFields ?? [],
+        };
+        setDet(next);
+
+        // Also update localStorage as a cache for instant next-load
+        try {
+          const existing = localStorage.getItem("activeInvoiceTemplate");
+          const parsed   = existing ? JSON.parse(existing) : {};
+          localStorage.setItem(
+            "activeInvoiceTemplate",
+            JSON.stringify({ ...parsed, det: next })
+          );
+        } catch { /* ignore storage errors */ }
+      })
+      .catch(() => {
+        // Backend unavailable — localStorage fallback already in state, nothing to do
+        console.warn("SIMetaFields: using localStorage fallback for invoice details settings");
+      });
+  }, []); // runs once on mount
 
   const [showDateCal,  setShowDateCal]  = useState(false);
   const [showDueCal,   setShowDueCal]   = useState(false);
@@ -220,28 +258,21 @@ export default function SIMetaFields(p: SIMetaFieldsProps) {
   const dueRef  = useRef<HTMLDivElement>(null);
 
   // ── Conditional field rows ─────────────────────────────────────────────────
-  // Build list of optional fields based on builder det
   type FieldDef = { key: string; label: string; val: string; show: boolean };
   const optionalFields: FieldDef[] = [
-    { key: "eWayBillNo",   label: "E-Way Bill No.",      val: p.eWayBillNo,          show: det.showEwayBill       },
-    { key: "challanNo",    label: "Challan No.",          val: p.challanNo,           show: det.showChallan        },
-    { key: "financedBy",   label: "Financed By",          val: p.financedBy,          show: det.showFinancedBy     },
-    { key: "salesman",     label: "Salesman",             val: p.salesman,            show: det.showSalesman       },
-    { key: "warrantyPeriod",label:"Warranty Period",      val: p.warrantyPeriod,      show: det.showWarranty       },
-    { key: "emailId",      label: "Email ID",             val: p.emailId,             show: det.showEmailId ?? true },
-    { key: "poNumber",     label: "PO Number",            val: p.poNumber ?? "",      show: det.showPO             },
-    { key: "vehicleNo",    label: "Vehicle Number",       val: p.vehicleNo ?? "",     show: det.showVehicle ?? false },
+    { key: "eWayBillNo",        label: "E-Way Bill No.",    val: p.eWayBillNo,          show: det.showEwayBill             },
+    { key: "challanNo",         label: "Challan No.",        val: p.challanNo,           show: det.showChallan              },
+    { key: "financedBy",        label: "Financed By",        val: p.financedBy,          show: det.showFinancedBy           },
+    { key: "salesman",          label: "Salesman",           val: p.salesman,            show: det.showSalesman             },
+    { key: "warrantyPeriod",    label: "Warranty Period",    val: p.warrantyPeriod,      show: det.showWarranty             },
+    { key: "emailId",           label: "Email ID",           val: p.emailId,             show: det.showEmailId ?? true      },
+    { key: "poNumber",          label: "PO Number",          val: p.poNumber ?? "",      show: det.showPO                   },
+    { key: "vehicleNo",         label: "Vehicle Number",     val: p.vehicleNo ?? "",     show: det.showVehicle ?? false     },
     { key: "dispatchedThrough", label: "Dispatched Through", val: p.dispatchedThrough ?? "", show: det.showDispatchedThrough ?? false },
-    { key: "transportName",label: "Transport Name",       val: p.transportName ?? "", show: det.showTransportName ?? false },
+    { key: "transportName",     label: "Transport Name",     val: p.transportName ?? "", show: det.showTransportName ?? false },
   ];
 
   const visibleFields = optionalFields.filter(f => f.show);
-
-  // Group into rows of 2 for display
-  const fieldRows: FieldDef[][] = [];
-  for (let i = 0; i < visibleFields.length; i += 2) {
-    fieldRows.push(visibleFields.slice(i, i + 2));
-  }
 
   return (
     <div className="si-meta">
@@ -335,11 +366,9 @@ export default function SIMetaFields(p: SIMetaFieldsProps) {
       )}
 
       {/* ── All Meta Fields: optional (from builder toggles) + custom fields ──
-           Merged into ONE pool, rendered 2 per row so the grid fills left-to-right
-           before wrapping — e.g. 6 fields = 3 rows of 2; 3 fields = 1 row of 2 + 1 row of 1
+           Merged into ONE pool, rendered 4 per row, filling left-to-right.
       ── */}
       {(() => {
-        // 1. Build the full flat list: visible optional fields first, then custom fields
         type AnyCell =
           | { kind: "optional"; key: string; label: string; val: string }
           | { kind: "custom";   label: string; defaultVal: string };
@@ -351,7 +380,7 @@ export default function SIMetaFields(p: SIMetaFieldsProps) {
 
         if (allCells.length === 0) return null;
 
-        // 2. Group into rows of 4
+        // Group into rows of 4
         const rows: AnyCell[][] = [];
         for (let i = 0; i < allCells.length; i += 4) {
           rows.push(allCells.slice(i, i + 4));
@@ -378,7 +407,7 @@ export default function SIMetaFields(p: SIMetaFieldsProps) {
                 />
               )
             )}
-            {/* Pad incomplete last row with empty slots to maintain 4-col grid */}
+            {/* Pad incomplete last row to maintain 4-col grid */}
             {Array.from({ length: (4 - row.length) % 4 }).map((_, i) => (
               <div key={`pad-${i}`} className="si-meta-field" />
             ))}

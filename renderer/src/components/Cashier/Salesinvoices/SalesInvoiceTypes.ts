@@ -18,29 +18,43 @@ export interface Item {
   name: string;
   itemCode?: string;
   salesPrice: number;
+  baseSalesPrice?: number;           // ← PRE-TAX base price (always use this on invoice rows)
+  salesPriceInclTax?: boolean;       // ← true if salesPrice was entered incl. GST
+  salesDiscountPercent?: number;     // ← default discount % set on the item
   purchasePrice?: number;
   unit?: string;
   hsnCode?: string;
   category?: string;
+  gstRate?: string;                  // ← GST rate stored as string: "18", "5", etc.
   ProductStock?: {
     openingStock: number;
-    currentStock: number;   // ← live balance after all transactions
+    currentStock: number;
   }[];
 }
 
 export interface BillItem {
   rowId: string;
-  itemId: number;
+  itemId: number | undefined;
   name: string;
   description: string;
   hsn: string;
   qty: number;
   unit: string;
+  /**
+   * ALWAYS the PRE-TAX base price per unit.
+   * GST invoice law: price is the base, tax is computed ON TOP of it.
+   * This value comes from item.baseSalesPrice (preferred) or item.salesPrice.
+   */
   price: number;
   discountPct: number;
   discountAmt: number;
   taxLabel: string;
   taxRate: number;
+  /**
+   * Final line total = taxable + tax
+   * Where: taxable = (qty × price) − discount
+   *        tax     = taxable × taxRate%
+   */
   amount: number;
 }
 
@@ -66,20 +80,29 @@ export interface SalesInvoice {
   salesman: string;
   emailId: string;
   warrantyPeriod: string;
-  // ── Extra optional meta fields (controlled by InvoiceBuilder) ──────────────
   poNumber?: string;
   vehicleNo?: string;
   dispatchedThrough?: string;
   transportName?: string;
-  /** key→value map for custom fields defined in InvoiceBuilder, e.g. { "abc": "some value" } */
   customFieldValues?: Record<string, string>;
-  /** Payment details (ref no, bank, card type etc.) based on payment mode */
+  snapshotMetaFields?: {
+    showSalesman?: boolean;
+    showVehicle?: boolean;
+    showChallan?: boolean;
+    showFinancedBy?: boolean;
+    showWarranty?: boolean;
+    showEwayBill?: boolean;
+    showPO?: boolean;
+    showDispatchedThrough?: boolean;
+    showTransportName?: boolean;
+    showEmailId?: boolean;
+    customFieldLabels?: string[];
+  } | null;
   paymentDetails?: {
     method: string; amount: number;
     refNo?: string; chequeDate?: string; authNo?: string;
     bankName?: string; cardType?: string; branchName?: string;
   };
-  /** Finance/EMI details */
   financeDetails?: {
     enabled: boolean;
     financerName?: string; loanRefNo?: string; loanAmount?: number;
@@ -124,11 +147,11 @@ export const TCS_RATES = [
 
 export const TAX_OPTIONS = [
   { label: "None", rate: 0 },
-  { label: "GST 5%", rate: 5 },
-  { label: "GST 12%", rate: 12 },
-  { label: "GST 18%", rate: 18 },
-  { label: "GST 28%", rate: 28 },
-  { label: "IGST 5%", rate: 5 },
+  { label: "GST 5%",   rate: 5  },
+  { label: "GST 12%",  rate: 12 },
+  { label: "GST 18%",  rate: 18 },
+  { label: "GST 28%",  rate: 28 },
+  { label: "IGST 5%",  rate: 5  },
   { label: "IGST 12%", rate: 12 },
   { label: "IGST 18%", rate: 18 },
   { label: "IGST 28%", rate: 28 },
@@ -172,16 +195,129 @@ export function fmtDisplayDate(dateStr: string): string {
   });
 }
 
+/**
+ * ════════════════════════════════════════════════════════════════
+ * LINE-ITEM AMOUNT CALCULATION (Mandatory GST Invoice Order)
+ * ════════════════════════════════════════════════════════════════
+ *
+ * This is the calculation for the PER-LINE discount in SIItemsTable.
+ * The base price on the invoice row is ALWAYS the pre-tax base price.
+ *
+ * Step 1 — lineGross   = qty × price          (price is ALWAYS pre-tax base)
+ * Step 2 — discAmt     = lineGross × discPct% OR flat discountAmt (not both)
+ * Step 3 — taxableAmt  = lineGross − discAmt  ← GST is ALWAYS on this
+ * Step 4 — taxAmt      = taxableAmt × taxRate%
+ * Step 5 — lineTotal   = taxableAmt + taxAmt
+ *
+ * Example: 1 unit × ₹84.75 base price, 5% per-line discount, 18% GST
+ *   lineGross  = 84.75
+ *   discAmt    = 84.75 × 5%  = 4.24
+ *   taxable    = 84.75 − 4.24 = 80.51
+ *   taxAmt     = 80.51 × 18% = 14.49
+ *   lineTotal  = 80.51 + 14.49 = 95.00
+ *
+ * NOTE — Invoice-level "Add Discount" is SEPARATE:
+ *   It applies on the GST-inclusive preTotalAmount (sum of all lineTotals).
+ *   That reduction is then reverse-calculated to split into taxable + GST.
+ *   Example: total=100, disc=₹10 → afterDisc=90
+ *     Reverse: taxable = 90/1.18 = 76.27, GST = 90−76.27 = 13.73
+ *   The base price shown in the table (84.75) does NOT change.
+ */
 export function calcBillItemAmount(item: BillItem): number {
-  const base = item.qty * item.price;
-  const discPct = base * (item.discountPct / 100);
-  const discAmt = item.discountAmt;
-  const afterDisc = base - discPct - discAmt;
-  const tax = afterDisc * (item.taxRate / 100);
-  return Math.round((afterDisc + tax) * 100) / 100;
+  const lineGross = item.qty * item.price;
+  const discByPct = lineGross * (item.discountPct / 100);
+  // Flat ₹ discount only applies when no % discount is set
+  const discFlat  = item.discountPct > 0 ? 0 : item.discountAmt;
+  const taxable   = Math.max(0, lineGross - discByPct - discFlat);
+  const taxAmt    = taxable * (item.taxRate / 100);
+  return Math.round((taxable + taxAmt) * 100) / 100;
 }
 
-const DEFAULT_TERMS = `1. Goods once sold will not be taken back or exchanged after 7 days`;
+/**
+ * Return the taxable portion of a bill item (pre-tax, post-line-discount).
+ */
+export function calcBillItemTaxable(item: BillItem): number {
+  const lineGross = item.qty * item.price;
+  const discByPct = lineGross * (item.discountPct / 100);
+  const discFlat  = item.discountPct > 0 ? 0 : item.discountAmt;
+  return Math.max(0, lineGross - discByPct - discFlat);
+}
+
+/**
+ * Return the tax amount for a single bill item.
+ * Tax is always computed on the taxable amount (post-discount), not on gross.
+ */
+export function calcBillItemTax(item: BillItem): number {
+  return Math.round(calcBillItemTaxable(item) * (item.taxRate / 100) * 100) / 100;
+}
+
+/**
+ * Parse GST rate string from backend ("18", "18%", "GST 18%", "Exempted", null)
+ * Returns a numeric rate (0 if exempted/null/unrecognised).
+ */
+export function parseGstRate(gstRate?: string | null): number {
+  if (!gstRate) return 0;
+  const match = String(gstRate).match(/(\d+(\.\d+)?)/);
+  return match ? Number(match[1]) : 0;
+}
+
+/**
+ * Build the tax label string displayed in the Tax dropdown.
+ * e.g. rate=18 → "GST 18%"
+ */
+export function buildTaxLabel(rate: number): string {
+  if (rate <= 0) return "None";
+  return `GST ${rate}%`;
+}
+
+/**
+ * ════════════════════════════════════════════════════════════════
+ * INVOICE-LEVEL DISCOUNT — REVERSE CALCULATION
+ * ════════════════════════════════════════════════════════════════
+ *
+ * When an invoice-level discount is applied on the GST-inclusive total,
+ * the reduced total must be reverse-split into taxable and GST components.
+ *
+ * For a single tax rate R%:
+ *   gstInclusiveTotal = taxable × (1 + R/100)
+ *   → taxable = gstInclusiveTotal / (1 + R/100)
+ *   → gstAmt  = gstInclusiveTotal − taxable
+ *
+ * For mixed rates (multiple items at different rates), we scale each
+ * group's taxable and tax proportionally using a discount scale factor:
+ *   discountScaleFactor = afterDiscTotal / preTotalAmount
+ *   adjustedGroupTaxable = groupTaxable × discountScaleFactor
+ *   adjustedGroupTax     = groupTax     × discountScaleFactor
+ *
+ * Result: adjustedTaxableSum + adjustedTaxSum = afterDiscTotal  ✓
+ *
+ * @param preTotalAmount  - GST-inclusive total before invoice discount
+ * @param afterDiscTotal  - GST-inclusive total after invoice discount
+ * @param itemsTaxableSum - sum of per-line taxable amounts (before invoice disc)
+ * @param itemsTaxSum     - sum of per-line tax amounts (before invoice disc)
+ * @returns { adjustedTaxable, adjustedTax }
+ */
+export function reverseCalcAfterDiscount(
+  preTotalAmount: number,
+  afterDiscTotal: number,
+  itemsTaxableSum: number,
+  itemsTaxSum: number,
+): { adjustedTaxable: number; adjustedTax: number } {
+  if (preTotalAmount <= 0) return { adjustedTaxable: 0, adjustedTax: 0 };
+  const scaleFactor       = afterDiscTotal / preTotalAmount;
+  const adjustedTaxable   = Math.round(itemsTaxableSum * scaleFactor * 100) / 100;
+  const adjustedTax       = Math.round(itemsTaxSum     * scaleFactor * 100) / 100;
+  return { adjustedTaxable, adjustedTax };
+}
+const DEFAULT_TERMS = `
+Diclamer:-
+*Delivery received after full Satisfaction. Goods once sold cannot be taken back or exchanged. 
+*For any type of complaint, please contact the Manufacturer. 
+*Dealer is not liable for any complaint after delivery. 
+*Warranty is given by manufacturer only. 
+*Cheque return charge Rs.200/- besides legal liability. 
+*All disputes subject to Kolkata Jurisdiction.
+`;
 
 export function makeBlankInvoice(nextNo: string): SalesInvoice {
   const today = todayStr();
@@ -206,6 +342,7 @@ export function makeBlankInvoice(nextNo: string): SalesInvoice {
     dispatchedThrough: "",
     transportName: "",
     customFieldValues: {},
+    snapshotMetaFields: null,
     billItems: [],
     additionalCharges: [],
     discountType: "Discount After Tax",

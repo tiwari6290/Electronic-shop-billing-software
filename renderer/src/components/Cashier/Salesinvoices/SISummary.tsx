@@ -7,12 +7,12 @@ import "./SISummary.css";
 export interface PaymentDetails {
   method:      string;
   amount:      number;
-  refNo?:      string;   // UPI: txnId | CARD: last4 | NETBANKING: txnId | BANK_TRANSFER: UTR | CHEQUE: chequeNo
-  chequeDate?: string;   // CHEQUE only
-  authNo?:     string;   // CARD only
-  bankName?:   string;   // UPI:app | CARD | NETBANKING | BANK_TRANSFER | CHEQUE
-  cardType?:   string;   // CARD: VISA / Mastercard / Rupay …
-  branchName?: string;   // BANK_TRANSFER | CHEQUE
+  refNo?:      string;
+  chequeDate?: string;
+  authNo?:     string;
+  bankName?:   string;
+  cardType?:   string;
+  branchName?: string;
 }
 
 export interface FinanceDetails {
@@ -31,7 +31,7 @@ export interface FinanceDetails {
   reference?:    string;
 }
 
-// ─── Field config per payment mode (from Image 2) ────────────────────────────
+// ─── Field config per payment mode ───────────────────────────────────────────
 const MODE_FIELDS: Record<string, { refNo?: string; chequeDate?: boolean; authNo?: boolean; bankName?: string; cardType?: boolean; branchName?: boolean }> = {
   Cash:         {},
   UPI:          { refNo: "UPI / Transaction ID", bankName: "UPI App (e.g. PhonePe)" },
@@ -98,7 +98,18 @@ function PaymentDetailsModal({
   onClose:  () => void;
 }) {
   const fields = MODE_FIELDS[method] ?? {};
-  const [form, setForm] = useState<PaymentDetails>({ ...details, method, amount });
+
+  // ── FIX: For Cheque, default chequeDate to today if not already set ──────
+  const todayIso = new Date().toISOString().split("T")[0];
+  const initialDetails: PaymentDetails = {
+    ...details,
+    method,
+    amount,
+    chequeDate: method === "Cheque"
+      ? (details.chequeDate || todayIso)
+      : details.chequeDate,
+  };
+  const [form, setForm] = useState<PaymentDetails>(initialDetails);
 
   const f = (key: keyof PaymentDetails) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm(p => ({ ...p, [key]: e.target.value }));
@@ -119,7 +130,6 @@ function PaymentDetailsModal({
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={onClose}>
       <div style={{ background: "#fff", borderRadius: 14, width: 480, maxWidth: "95vw", boxShadow: "0 24px 60px rgba(0,0,0,.18)", fontFamily: "inherit" }} onClick={e => e.stopPropagation()}>
 
-        {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid #f3f4f6" }}>
           <div>
             <div style={{ fontSize: 15, fontWeight: 700, color: "#111827" }}>{method} Payment Details</div>
@@ -128,7 +138,6 @@ function PaymentDetailsModal({
           <button onClick={onClose} style={{ background: "none", border: "1.5px solid #e5e7eb", borderRadius: 7, width: 30, height: 30, cursor: "pointer", color: "#374151", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15 }}>✕</button>
         </div>
 
-        {/* Body */}
         <div style={{ padding: "18px 20px", display: "flex", flexDirection: "column", gap: 14 }}>
           {!hasFields ? (
             <div style={{ textAlign: "center", color: "#6b7280", fontSize: 13, padding: "20px 0" }}>
@@ -178,7 +187,32 @@ function PaymentDetailsModal({
               {fields.chequeDate && (
                 <div>
                   <label style={labelSty}>Cheque Date</label>
-                  <input type="date" value={form.chequeDate ?? ""} onChange={f("chequeDate")} style={inpSty} />
+                  {/* ── FIX: Show both a calendar picker and a formatted display.
+                      The date picker sets the value; the text box shows it
+                      formatted (DD/MM/YYYY) and lets the user type a custom date.
+                      Defaults to today so it is never blank. ── */}
+                  <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                    {/* Calendar picker */}
+                    <input
+                      type="date"
+                      value={form.chequeDate ?? todayIso}
+                      onChange={f("chequeDate")}
+                      style={{ ...inpSty, width: "auto", flex: "0 0 auto", cursor: "pointer" }}
+                    />
+                    {/* Readable display — formatted DD/MM/YYYY */}
+                    <div style={{
+                      flex: 1, padding: "9px 11px", border: "1.5px solid #e5e7eb",
+                      borderRadius: 7, fontSize: 13, background: "#f9fafb",
+                      color: "#374151", fontWeight: 500,
+                    }}>
+                      {form.chequeDate
+                        ? (() => {
+                            const d = new Date(form.chequeDate);
+                            return `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${d.getFullYear()}`;
+                          })()
+                        : "dd/mm/yyyy"}
+                    </div>
+                  </div>
                 </div>
               )}
               {fields.branchName && (
@@ -191,7 +225,6 @@ function PaymentDetailsModal({
           )}
         </div>
 
-        {/* Footer */}
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, padding: "14px 20px", borderTop: "1px solid #f3f4f6" }}>
           <button onClick={onClose} style={{ padding: "8px 20px", border: "1.5px solid #e5e7eb", background: "#fff", borderRadius: 8, fontSize: 13, cursor: "pointer", color: "#374151", fontWeight: 500, fontFamily: "inherit" }}>Cancel</button>
           <button onClick={() => { onSave(form); onClose(); }} style={{ padding: "8px 22px", background: "#4f46e5", color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Save</button>
@@ -231,16 +264,13 @@ function FinanceModal({
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.5)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center" }} onClick={onClose}>
       <div style={{ background: "#fff", borderRadius: 14, width: 520, maxWidth: "96vw", maxHeight: "90vh", overflow: "hidden", display: "flex", flexDirection: "column", boxShadow: "0 24px 60px rgba(0,0,0,.18)", fontFamily: "inherit" }} onClick={e => e.stopPropagation()}>
 
-        {/* Header */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", borderBottom: "1px solid #f3f4f6", flexShrink: 0 }}>
           <div style={{ fontSize: 15, fontWeight: 700, color: "#111827" }}>Finance Details</div>
           <button onClick={onClose} style={{ background: "none", border: "1.5px solid #e5e7eb", borderRadius: 7, width: 30, height: 30, cursor: "pointer", color: "#374151", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15 }}>✕</button>
         </div>
 
-        {/* Body — scrollable */}
         <div style={{ padding: "18px 20px", overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: 14 }}>
 
-          {/* Row: Financer Name + Loan Ref No */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <div>
               <label style={labelSty}>Financer Name</label>
@@ -252,7 +282,6 @@ function FinanceModal({
             </div>
           </div>
 
-          {/* Row: Loan Amount + Processing Fee */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <div>
               <label style={labelSty}>Loan Amount (₹)</label>
@@ -264,7 +293,6 @@ function FinanceModal({
             </div>
           </div>
 
-          {/* Row: EMI × count */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr auto 80px", gap: 10, alignItems: "end" }}>
             <div>
               <label style={labelSty}>EMI Amount (₹)</label>
@@ -277,7 +305,6 @@ function FinanceModal({
             </div>
           </div>
 
-          {/* Row: Extra EMI × count */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr auto 80px", gap: 10, alignItems: "end" }}>
             <div>
               <label style={labelSty}>Extra EMI (₹)</label>
@@ -290,7 +317,6 @@ function FinanceModal({
             </div>
           </div>
 
-          {/* Row: DBD Charges */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <div>
               <label style={labelSty}>DBD Charges (₹)</label>
@@ -302,7 +328,6 @@ function FinanceModal({
             </div>
           </div>
 
-          {/* Row: Agent Name + Agent Contact */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <div>
               <label style={labelSty}>Agent Name</label>
@@ -315,7 +340,6 @@ function FinanceModal({
           </div>
         </div>
 
-        {/* Footer */}
         <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, padding: "14px 20px", borderTop: "1px solid #f3f4f6", flexShrink: 0 }}>
           <button onClick={onClose} style={{ padding: "8px 20px", border: "1.5px solid #e5e7eb", background: "#fff", borderRadius: 8, fontSize: 13, cursor: "pointer", color: "#374151", fontWeight: 500, fontFamily: "inherit" }}>Cancel</button>
           <button onClick={() => { onSave(form); onClose(); }} style={{ padding: "8px 22px", background: "#4f46e5", color: "#fff", border: "none", borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>Save Finance Details</button>
@@ -325,17 +349,17 @@ function FinanceModal({
   );
 }
 
-// ─── Payment Summary Card (shows after details are filled) ────────────────────
+// ─── Payment Summary Card ─────────────────────────────────────────────────────
 function PaymentSummaryCard({ details, onEdit }: { details: PaymentDetails; onEdit: () => void }) {
   const fields = MODE_FIELDS[details.method] ?? {};
   const rows: { label: string; value: string }[] = [];
 
-  if (fields.refNo    && details.refNo)      rows.push({ label: fields.refNo,      value: details.refNo });
-  if (fields.authNo   && details.authNo)     rows.push({ label: "Auth No.",         value: details.authNo });
-  if (fields.bankName && details.bankName)   rows.push({ label: fields.bankName,    value: details.bankName });
-  if (fields.cardType && details.cardType)   rows.push({ label: "Card Type",        value: details.cardType });
-  if (fields.chequeDate && details.chequeDate) rows.push({ label: "Cheque Date",   value: details.chequeDate });
-  if (fields.branchName && details.branchName) rows.push({ label: "Branch",        value: details.branchName });
+  if (fields.refNo    && details.refNo)        rows.push({ label: fields.refNo,    value: details.refNo });
+  if (fields.authNo   && details.authNo)       rows.push({ label: "Auth No.",       value: details.authNo });
+  if (fields.bankName && details.bankName)     rows.push({ label: fields.bankName,  value: details.bankName });
+  if (fields.cardType && details.cardType)     rows.push({ label: "Card Type",      value: details.cardType });
+  if (fields.chequeDate && details.chequeDate) rows.push({ label: "Cheque Date",    value: details.chequeDate });
+  if (fields.branchName && details.branchName) rows.push({ label: "Branch",         value: details.branchName });
 
   if (rows.length === 0) return null;
 
@@ -357,17 +381,17 @@ function PaymentSummaryCard({ details, onEdit }: { details: PaymentDetails; onEd
 // ─── Finance Summary Card ─────────────────────────────────────────────────────
 function FinanceSummaryCard({ details, onEdit }: { details: FinanceDetails; onEdit: () => void }) {
   const rows: { label: string; value: string }[] = [];
-  if (details.financerName)  rows.push({ label: "Financer",      value: details.financerName });
-  if (details.loanRefNo)     rows.push({ label: "Loan Ref",      value: details.loanRefNo });
-  if (details.loanAmount)    rows.push({ label: "Loan Amount",   value: `₹${details.loanAmount.toLocaleString("en-IN")}` });
-  if (details.emi)           rows.push({ label: "EMI",           value: `₹${details.emi} × ${details.emiCount ?? 1}` });
-  if (details.extraEmi)      rows.push({ label: "Extra EMI",     value: `₹${details.extraEmi} × ${details.extraEmiCount ?? 1}` });
-  if (details.agentName)     rows.push({ label: "Agent",         value: details.agentName });
+  if (details.financerName)  rows.push({ label: "Financer",    value: details.financerName });
+  if (details.loanRefNo)     rows.push({ label: "Loan Ref",    value: details.loanRefNo });
+  if (details.loanAmount)    rows.push({ label: "Loan Amount", value: `₹${details.loanAmount.toLocaleString("en-IN")}` });
+  if (details.emi)           rows.push({ label: "EMI",         value: `₹${details.emi} × ${details.emiCount ?? 1}` });
+  if (details.extraEmi)      rows.push({ label: "Extra EMI",   value: `₹${details.extraEmi} × ${details.extraEmiCount ?? 1}` });
+  if (details.agentName)     rows.push({ label: "Agent",       value: details.agentName });
 
   return (
     <div style={{ marginTop: 8, padding: "10px 12px", background: "#eff6ff", borderRadius: 8, border: "1px solid #bfdbfe", fontSize: 12 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-        <span style={{ fontWeight: 600, color: "#1d4ed8", fontSize: 12 }}>🏦 Finance Details</span>
+        <span style={{ fontWeight: 600, color: "#1d4ed8", fontSize: 12 }}>Finance Details</span>
         <button onClick={onEdit} style={{ background: "none", border: "none", color: "#6366f1", fontSize: 12, fontWeight: 600, cursor: "pointer", padding: 0, fontFamily: "inherit" }}>Edit</button>
       </div>
       {rows.map(r => (
@@ -381,37 +405,47 @@ function FinanceSummaryCard({ details, onEdit }: { details: FinanceDetails; onEd
 
 // ─── Props ────────────────────────────────────────────────────────────────────
 interface Props {
-  subtotal: number;
-  totalTax: number;
-  billItems?: { taxLabel: string; taxRate: number; qty: number; price: number; discountPct: number; discountAmt: number }[];
+  subtotal:    number;
+  totalTax:    number;
+  billItems: Array<{
+    rowId:       string;
+    itemId?:     number;
+    name:        string;
+    qty:         number;
+    price:       number;
+    discountPct: number;
+    discountAmt: number;
+    taxRate:     number;
+    taxLabel:    string;
+    amount:      number;
+  }>;
   additionalCharges: AdditionalCharge[];
-  discountType: "Discount After Tax" | "Discount Before Tax";
-  discountPct: number;
-  discountAmt: number;
-  showDiscount: boolean;
-  applyTCS: boolean;
-  tcsRate: number;
-  tcsLabel: string;
-  tcsBase: "Total Amount" | "Taxable Amount";
-  roundOff: "none" | "+Add" | "-Reduce";
-  roundOffAmt: number;
-  amountReceived: number;
-  paymentMethod: string;
-  onChargesChange: (c: AdditionalCharge[]) => void;
+  onChargesChange:   (charges: AdditionalCharge[]) => void;
+  discountType:         "Discount After Tax" | "Discount Before Tax";
+  discountPct:          number;
+  discountAmt:          number;
+  showDiscount:         boolean;
   onDiscountTypeChange: (t: "Discount After Tax" | "Discount Before Tax") => void;
-  onDiscountPctChange: (v: number) => void;
-  onDiscountAmtChange: (v: number) => void;
-  onToggleDiscount: (show: boolean) => void;
+  onDiscountPctChange:  (v: number) => void;
+  onDiscountAmtChange:  (v: number) => void;
+  onToggleDiscount:     (show: boolean) => void;
+  applyTCS:    boolean;
+  tcsRate:     number;
+  tcsLabel:    string;
+  tcsBase:     "Total Amount" | "Taxable Amount";
   onTCSChange: (apply: boolean, rate: number, label: string, base: "Total Amount" | "Taxable Amount") => void;
+  roundOff:         "none" | "+Add" | "-Reduce";
+  roundOffAmt:      number;
   onRoundOffChange: (mode: "none" | "+Add" | "-Reduce", amt: number) => void;
+  amountReceived:         number;
+  paymentMethod:          string;
   onAmountReceivedChange: (v: number) => void;
-  onPaymentMethodChange: (v: string) => void;
-  signatureUrl: string;
+  onPaymentMethodChange:  (v: string) => void;
+  signatureUrl:          string;
   showEmptySignatureBox: boolean;
-  onSignatureChange: (url: string, showEmpty: boolean) => void;
-  // ── New payment detail + finance props ────────────────
-  paymentDetails?: PaymentDetails;
-  financeDetails?: FinanceDetails;
+  onSignatureChange:     (url: string, showEmpty: boolean) => void;
+  paymentDetails?:         PaymentDetails;
+  financeDetails?:         FinanceDetails;
   onPaymentDetailsChange?: (d: PaymentDetails) => void;
   onFinanceDetailsChange?: (d: FinanceDetails) => void;
 }
@@ -427,7 +461,6 @@ export default function SISummary(p: Props) {
   const [showFinanceModal,  setShowFinanceModal]  = useState(false);
   const [allTcsRates,       setAllTcsRates]       = useState<{ label: string; rate: number }[]>(getDefaultTcsRates);
 
-  // Local state for payment + finance details
   const [payDetails,  setPayDetails]  = useState<PaymentDetails>(
     p.paymentDetails ?? { method: p.paymentMethod, amount: p.amountReceived }
   );
@@ -449,63 +482,149 @@ export default function SISummary(p: Props) {
     return () => document.removeEventListener("mousedown", h);
   }, []);
 
-  // Sync payDetails when method or amount changes from parent
   useEffect(() => {
     setPayDetails(prev => ({ ...prev, method: p.paymentMethod, amount: p.amountReceived }));
   }, [p.paymentMethod, p.amountReceived]);
 
-  // ── Calculations ────────────────────────────────────────────────────────────
+  // ── FIX 3: Re-sync paymentDetails and financeDetails from props whenever
+  // they change externally (e.g. after edit-load restores saved invoice data).
+  // Without this, SISummary's local state stays at its initial empty value
+  // even after the parent updates the form with data fetched from the backend.
+  useEffect(() => {
+    if (p.paymentDetails) {
+      setPayDetails(p.paymentDetails);
+    }
+  }, [p.paymentDetails]);
 
-  const subtotalNum  = Number(p.subtotal) || 0;
-  const totalTaxNum  = Number(p.totalTax) || 0;
+  useEffect(() => {
+    if (p.financeDetails) {
+      setFinDetails(p.financeDetails);
+      setFinEnabled(p.financeDetails.enabled ?? false);
+    }
+  }, [p.financeDetails]);
 
-  // ── Additional charges: compute tax on each charge ──────────────────────
+  // ═══════════════════════════════════════════════════════════════════════════
+  // CALCULATION ENGINE
+  //
+  // Per line item (computed in SIItemsTable / calcBillItemAmount):
+  //   lineGross  = qty × price         (price = pre-tax base)
+  //   lineDisc   = lineGross × discPct% (or flat ₹)
+  //   taxable    = lineGross − lineDisc
+  //   lineTax    = taxable × taxRate%
+  //   lineTotal  = taxable + lineTax
+  //
+  // Summary panel:
+  //   itemsTaxableSum = Σ taxable per line   → "Taxable Amount" row (NEVER changes)
+  //   itemsTaxSum     = Σ lineTax per line   → SGST/CGST rows     (NEVER changes)
+  //   preTotalAmount  = itemsTaxableSum + itemsTaxSum + chargesTotal
+  //
+  // "Add Discount" (Discount After Tax):
+  //   invoiceDiscAmt = preTotalAmount × discPct%  OR flat ₹ entered
+  //   totalAmount    = preTotalAmount − invoiceDiscAmt
+  //
+  //   ⚠ Taxable Amount and SGST/CGST rows DO NOT CHANGE.
+  //      Only the final Total Amount line is reduced by the discount.
+  //      This matches the "Discount After Tax" concept — tax has already
+  //      been computed; the seller is simply giving a post-tax concession.
+  // ═══════════════════════════════════════════════════════════════════════════
+
   function chargeRate(taxLabel: string): number {
     const m = taxLabel.match(/(\d+)%/);
     return m ? Number(m[1]) : 0;
   }
-  const chargesBase  = p.additionalCharges.reduce((s, c) => s + (Number(c.amount) || 0), 0);
-  const chargesTax   = p.additionalCharges.reduce((s, c) => {
+
+  const billItems = p.billItems ?? [];
+
+  // ── Per-item sums (STATIC — never affected by invoice-level discount) ──────
+  const itemsTaxableSum = billItems.reduce((s: number, item: typeof billItems[number]) => {
+    const lineGross = item.qty * item.price;
+    const discByPct = lineGross * (item.discountPct / 100);
+    const discFlat  = item.discountPct > 0 ? 0 : item.discountAmt;
+    return s + Math.max(0, lineGross - discByPct - discFlat);
+  }, 0);
+
+  const itemsTaxSum = billItems.reduce((s: number, item: typeof billItems[number]) => {
+    const lineGross = item.qty * item.price;
+    const discByPct = lineGross * (item.discountPct / 100);
+    const discFlat  = item.discountPct > 0 ? 0 : item.discountAmt;
+    const taxable   = Math.max(0, lineGross - discByPct - discFlat);
+    return s + Math.round(taxable * item.taxRate / 100 * 100) / 100;
+  }, 0);
+
+  // ── Additional charges ────────────────────────────────────────────────────
+  const chargesBase  = p.additionalCharges.reduce((s: number, c: AdditionalCharge) => s + (Number(c.amount) || 0), 0);
+  const chargesTax   = p.additionalCharges.reduce((s: number, c: AdditionalCharge) => {
     const rate = chargeRate(c.taxLabel);
     return s + (Number(c.amount) || 0) * rate / 100;
   }, 0);
-  const chargesTotal = chargesBase + chargesTax;  // charges already include their own tax
+  const chargesTotal = chargesBase + chargesTax;
 
-  // Taxable base = items subtotal (pre-tax) + charge base amounts
-  const taxableBase  = subtotalNum + chargesBase;
+  // ── GST-inclusive total before invoice-level discount ─────────────────────
+  const preTotalAmount = Math.round((itemsTaxableSum + itemsTaxSum + chargesTotal) * 100) / 100;
 
-  const discValue    = p.discountPct > 0 ? taxableBase * (p.discountPct / 100) : (Number(p.discountAmt) || 0);
-  const afterDisc    = Math.max(0, taxableBase - discValue);
-  const taxScaleFactor = taxableBase > 0 ? afterDisc / taxableBase : 1;
-  const effectiveTax = Math.round(totalTaxNum * taxScaleFactor * 100) / 100;
-  const totalChargeAndItemTax = effectiveTax + chargesTax;
-  const afterTax     = afterDisc + totalChargeAndItemTax;
+  // ── Invoice-level discount (Discount After Tax) ───────────────────────────
+  //    Simply reduces the final total. Taxable Amount and tax rows are unchanged.
+  //    % mode:  invoiceDiscAmt = preTotalAmount × discPct / 100
+  //    ₹ mode:  invoiceDiscAmt = discAmt (entered directly)
+  //    Bidirectional sync: editing one field auto-computes the other.
+  const invoiceDiscAmt = p.showDiscount
+    ? (p.discountPct > 0
+        ? Math.round(preTotalAmount * (p.discountPct / 100) * 100) / 100
+        : (Number(p.discountAmt) || 0))
+    : 0;
 
-  // ── SGST / CGST / IGST breakdown from item taxLabels ─────────────────────
+  const afterInvoiceDisc = Math.max(0, Math.round((preTotalAmount - invoiceDiscAmt) * 100) / 100);
+
+  // ── TCS ───────────────────────────────────────────────────────────────────
+  // TCS base uses the unscaled taxable sum (discount does not change taxable amount)
+  const tcsBaseAmt = p.tcsBase === "Total Amount" ? afterInvoiceDisc : itemsTaxableSum;
+  const tcsValue   = p.applyTCS ? Math.round(tcsBaseAmt * (p.tcsRate / 100) * 100) / 100 : 0;
+  const preRound   = Math.round((afterInvoiceDisc + tcsValue) * 100) / 100;
+
+  // ── Round off ─────────────────────────────────────────────────────────────
+  let autoRoundAmt = 0;
+  if (p.roundOff === "+Add")    autoRoundAmt = Math.round((Math.ceil(preRound)  - preRound) * 100) / 100;
+  if (p.roundOff === "-Reduce") autoRoundAmt = Math.round((Math.floor(preRound) - preRound) * 100) / 100;
+  const effectiveRoundOff = p.roundOff !== "none" ? autoRoundAmt : (Number(p.roundOffAmt) || 0);
+  const totalAmount        = Math.round((preRound + effectiveRoundOff) * 100) / 100;
+  const balanceAmount      = Math.max(0, Math.round((totalAmount - (Number(p.amountReceived) || 0)) * 100) / 100);
+
+  // ── Sync auto round-off to parent ─────────────────────────────────────────
+  const prevAutoRoundRef = useRef<number>(0);
+  useEffect(() => {
+    if (p.roundOff === "none") { prevAutoRoundRef.current = 0; return; }
+    const rounded = p.roundOff === "+Add"
+      ? Math.round((Math.ceil(preRound)  - preRound) * 100) / 100
+      : Math.round((Math.floor(preRound) - preRound) * 100) / 100;
+    if (Math.abs(rounded - prevAutoRoundRef.current) > 0.0001) {
+      prevAutoRoundRef.current = rounded;
+      p.onRoundOffChange(p.roundOff, rounded);
+    }
+  }, [preRound, p.roundOff]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── SGST / CGST / IGST breakdown (STATIC — not affected by invoice discount) ──
   interface TaxGroup { sgst: number; cgst: number; igst: number }
   const taxGroups: Record<string, TaxGroup> = {};
 
-  // Item-level taxes
-  (p.billItems ?? []).forEach(item => {
-    const lineTotal  = item.qty * item.price;
-    const lineDisc   = lineTotal * (item.discountPct / 100) + item.discountAmt;
-    const taxableAmt = Math.max(0, lineTotal - lineDisc) * taxScaleFactor;
-    const taxAmt     = taxableAmt * item.taxRate / 100;
+  billItems.forEach((item: typeof billItems[number]) => {
+    const lineGross = item.qty * item.price;
+    const discByPct = lineGross * (item.discountPct / 100);
+    const discFlat  = item.discountPct > 0 ? 0 : item.discountAmt;
+    const taxable   = Math.max(0, lineGross - discByPct - discFlat);
+    // No discountScaleFactor — invoice-level discount does NOT change per-line tax
+    const taxAmt    = taxable * item.taxRate / 100;
     if (taxAmt <= 0 || item.taxRate <= 0) return;
-    const label      = item.taxLabel; // "GST 18%", "IGST 18%", etc.
-    const key        = item.taxLabel;
+    const key = item.taxLabel;
     if (!taxGroups[key]) taxGroups[key] = { sgst: 0, cgst: 0, igst: 0 };
-    if (label.startsWith("IGST")) {
+    if (item.taxLabel.startsWith("IGST")) {
       taxGroups[key].igst += taxAmt;
     } else {
-      // GST splits equally into SGST + CGST
       taxGroups[key].sgst += taxAmt / 2;
       taxGroups[key].cgst += taxAmt / 2;
     }
   });
 
-  // Charge-level taxes
-  p.additionalCharges.forEach(c => {
+  p.additionalCharges.forEach((c: AdditionalCharge) => {
     const rate = chargeRate(c.taxLabel);
     if (rate <= 0) return;
     const taxAmt = (Number(c.amount) || 0) * rate / 100;
@@ -515,67 +634,32 @@ export default function SISummary(p: Props) {
     taxGroups[key].cgst += taxAmt / 2;
   });
 
-  // ── TCS ───────────────────────────────────────────────────────────────────
-  const tcsBaseAmt   = p.tcsBase === "Total Amount" ? afterTax : afterDisc;
-  const tcsValue     = p.applyTCS ? Math.round(tcsBaseAmt * (p.tcsRate / 100) * 100) / 100 : 0;
-  const preRound     = Math.round((afterTax + tcsValue) * 100) / 100;
-
-  // ── Round off ─────────────────────────────────────────────────────────────
-  let autoRoundAmt = 0;
-  if (p.roundOff === "+Add")    autoRoundAmt = Math.round((Math.ceil(preRound)  - preRound) * 100) / 100;
-  if (p.roundOff === "-Reduce") autoRoundAmt = Math.round((Math.floor(preRound) - preRound) * 100) / 100;
-  const effectiveRoundOff = p.roundOff !== "none" ? autoRoundAmt : (Number(p.roundOffAmt) || 0);
-  const totalAmount       = Math.round((preRound + effectiveRoundOff) * 100) / 100;
-  const balanceAmount     = Math.max(0, Math.round((totalAmount - (Number(p.amountReceived) || 0)) * 100) / 100);
-
-  // ── Sync autoRoundAmt to parent whenever mode or preRound changes ─────────
-  // Uses a ref to avoid stale-closure issues with useEffect deps.
-  const prevAutoRoundRef = useRef<number>(0);
-  useEffect(() => {
-    if (p.roundOff === "none") {
-      prevAutoRoundRef.current = 0;
-      return;
-    }
-    const rounded = p.roundOff === "+Add"
-      ? Math.round((Math.ceil(preRound)  - preRound) * 100) / 100
-      : Math.round((Math.floor(preRound) - preRound) * 100) / 100;
-    // Only notify parent if value actually changed (avoids infinite loop)
-    if (Math.abs(rounded - prevAutoRoundRef.current) > 0.0001) {
-      prevAutoRoundRef.current = rounded;
-      p.onRoundOffChange(p.roundOff, rounded);
-    }
-  }, [preRound, p.roundOff]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ── helpers ───────────────────────────────────────────────────────────────
+  // ── Helpers ───────────────────────────────────────────────────────────────
   function addCharge() {
     const nc: AdditionalCharge = { id: `c-${Date.now()}`, label: "", amount: 0, taxLabel: "No Tax Applicable" };
     p.onChargesChange([...p.additionalCharges, nc]);
   }
   function updateCharge(id: string, field: Partial<AdditionalCharge>) {
-    p.onChargesChange(p.additionalCharges.map(c => c.id === id ? { ...c, ...field } : c));
+    p.onChargesChange(p.additionalCharges.map((c: AdditionalCharge) => c.id === id ? { ...c, ...field } : c));
   }
   function removeCharge(id: string) {
-    p.onChargesChange(p.additionalCharges.filter(c => c.id !== id));
+    p.onChargesChange(p.additionalCharges.filter((c: AdditionalCharge) => c.id !== id));
   }
 
   function handlePaymentMethodChange(method: string) {
     p.onPaymentMethodChange(method);
     setShowPayDrop(false);
-    // Open details modal for all modes (even Cash shows "no details needed")
     setTimeout(() => setShowPayModal(true), 50);
   }
-
   function handlePayDetailsSave(d: PaymentDetails) {
     setPayDetails(d);
     p.onPaymentDetailsChange?.(d);
   }
-
   function handleFinanceSave(d: FinanceDetails) {
     setFinDetails(d);
     setFinEnabled(true);
     p.onFinanceDetailsChange?.(d);
   }
-
   function handleFinanceToggle(checked: boolean) {
     if (checked) {
       setShowFinanceModal(true);
@@ -588,21 +672,26 @@ export default function SISummary(p: Props) {
   }
 
   const fmt = (n: number) => n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-  const hasPayDetails = Object.keys(MODE_FIELDS[p.paymentMethod] ?? {}).length > 0 && (payDetails.refNo || payDetails.authNo || payDetails.bankName);
+  const hasPayDetails = Object.keys(MODE_FIELDS[p.paymentMethod] ?? {}).length > 0
+    && (payDetails.refNo || payDetails.authNo || payDetails.bankName);
 
   // ── render ────────────────────────────────────────────────────────────────
   return (
     <div className="si-summary">
 
-      {/* ── Additional Charges ─────────────────────────────── */}
+      {/* ── Additional Charges ── */}
       <div className="si-sum-section">
         <button className="si-sum-link" onClick={addCharge}>+ Add Additional Charges</button>
         {p.additionalCharges.map(c => (
           <div key={c.id} className="si-charge-row">
-            <input className="si-charge-input" value={c.label} onChange={e => updateCharge(c.id, { label: e.target.value })} placeholder="Charge name (ex: Transport Charge)" />
+            <input className="si-charge-input" value={c.label}
+              onChange={e => updateCharge(c.id, { label: e.target.value })}
+              placeholder="Charge name (ex: Transport Charge)" />
             <span className="si-rs-sm">₹</span>
-            <input type="number" className="si-charge-amt" value={c.amount} min={0} onChange={e => updateCharge(c.id, { amount: Number(e.target.value) })} />
-            <select className="si-charge-tax" value={c.taxLabel} onChange={e => updateCharge(c.id, { taxLabel: e.target.value })}>
+            <input type="number" className="si-charge-amt" value={c.amount} min={0}
+              onChange={e => updateCharge(c.id, { amount: Number(e.target.value) })} />
+            <select className="si-charge-tax" value={c.taxLabel}
+              onChange={e => updateCharge(c.id, { taxLabel: e.target.value })}>
               {CHARGE_TAX_OPTIONS.map(o => <option key={o}>{o}</option>)}
             </select>
             <button className="si-charge-del" onClick={() => removeCharge(c.id)}>✕</button>
@@ -613,23 +702,29 @@ export default function SISummary(p: Props) {
         )}
       </div>
 
-      {/* ── Sub Total (taxable base = items pre-tax + charge base) ── */}
+      {/* ── Taxable Amount ─────────────────────────────────────────────────────
+           Always shows the sum of per-line taxable amounts.
+           Invoice-level "Add Discount" does NOT change this value.
+      ── */}
       <div className="si-sum-row">
         <span className="si-sum-lbl">Taxable Amount</span>
-        <span className="si-sum-val">₹ {fmt(afterDisc)}</span>
+        <span className="si-sum-val">₹ {fmt(itemsTaxableSum)}</span>
       </div>
 
-      {/* ── Additional charge "amount incl of tax" line (Image 3) ── */}
-      {chargesTax > 0 && (
+      {/* ── Additional charges total (if any) ── */}
+      {chargesTotal > 0 && (
         <div className="si-sum-row" style={{ fontSize: 12, color: "#6b7280" }}>
-          <span className="si-sum-lbl">Amount incl of tax (charges)</span>
+          <span className="si-sum-lbl">Additional Charges (incl. tax)</span>
           <span className="si-sum-val">₹ {fmt(chargesTotal)}</span>
         </div>
       )}
 
-      {/* ── SGST / CGST / IGST breakdown ─────────────────────── */}
+      {/* ── SGST / CGST / IGST breakdown ─────────────────────────────────────
+           These values are computed from per-line items and are NOT affected
+           by the invoice-level "Add Discount". Discount only reduces the total.
+      ── */}
       {Object.entries(taxGroups).map(([label, grp]) => {
-        const rate = label.match(/(\d+)%/)?.[1] ?? "";
+        const rate   = label.match(/(\d+)%/)?.[1] ?? "";
         const isIGST = label.startsWith("IGST");
         return (
           <React.Fragment key={label}>
@@ -660,10 +755,126 @@ export default function SISummary(p: Props) {
         );
       })}
 
-      {/* ── TCS ────────────────────────────────────────────── */}
+      {/* ── Invoice-level Discount (Discount After Tax) ───────────────────────
+           Reduces only the final Total Amount.
+           Taxable Amount and SGST/CGST rows above are NOT affected.
+           % ↔ ₹ are bidirectionally linked:
+             Typing % → ₹ field shows computed equivalent (read-only)
+             Typing ₹ → % field shows computed equivalent (read-only)
+      ── */}
+      {!p.showDiscount ? (
+        <div className="si-sum-row">
+          <button className="si-sum-link" onClick={() => p.onToggleDiscount(true)}>
+            + Add Discount
+          </button>
+          <span className="si-sum-val si-sum-neg">- ₹ 0</span>
+        </div>
+      ) : (
+        <div className="si-disc-section">
+          <div className="si-disc-type-row">
+            {/* Label + remove button */}
+            <span className="si-sum-lbl" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              Discount After Tax
+              <button
+                className="si-disc-rm"
+                title="Remove discount"
+                onClick={() => {
+                  p.onToggleDiscount(false);
+                  p.onDiscountPctChange(0);
+                  p.onDiscountAmtChange(0);
+                }}
+              >✕</button>
+            </span>
+
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+
+              {/*
+               * % input:
+               *   - Editable when % is the active mode (discountPct > 0 or both are 0)
+               *   - Read-only (computed %) when ₹ is the active mode (discountAmt > 0, discountPct === 0)
+               */}
+              <span style={{ fontSize: 13, color: "#6b7280" }}>%</span>
+              <input
+                type="number"
+                className="si-disc-pct"
+                placeholder="0"
+                min={0}
+                max={100}
+                value={
+                  p.discountPct > 0
+                    ? p.discountPct
+                    : p.discountAmt > 0 && preTotalAmount > 0
+                      ? Math.round(p.discountAmt / preTotalAmount * 100 * 100) / 100
+                      : ""
+                }
+                readOnly={p.discountPct === 0 && p.discountAmt > 0}
+                style={p.discountPct === 0 && p.discountAmt > 0
+                  ? { background: "#f3f4f6", color: "#6b7280" }
+                  : {}}
+                onChange={e => {
+                  const pct = Math.min(100, Math.max(0, Number(e.target.value) || 0));
+                  // Typing % activates % mode — clears any flat ₹ discount
+                  p.onDiscountPctChange(pct);
+                  p.onDiscountAmtChange(
+                    pct > 0
+                      ? Math.round(preTotalAmount * pct / 100 * 100) / 100
+                      : 0
+                  );
+                }}
+              />
+
+              <span style={{ color: "#d1d5db", fontSize: 16 }}>/</span>
+
+              {/*
+               * ₹ input:
+               *   - Editable when ₹ is the active mode (discountAmt > 0, discountPct === 0)
+               *   - Read-only (computed ₹) when % is the active mode (discountPct > 0)
+               */}
+              <span style={{ fontSize: 13, color: "#6b7280" }}>₹</span>
+              <input
+                type="number"
+                className="si-disc-pct"
+                 style={{
+    width: 72,
+    ...(p.discountPct > 0
+      ? { background: "#f3f4f6", color: "#6b7280" }
+      : {})
+  }}
+                placeholder="0"
+                min={0}
+                value={
+                  p.discountPct > 0
+                    ? Math.round(preTotalAmount * p.discountPct / 100 * 100) / 100
+                    : (p.discountAmt || "")
+                }
+                readOnly={p.discountPct > 0}
+                
+                onChange={e => {
+                  const amt = Math.max(0, Number(e.target.value) || 0);
+                  // Typing ₹ activates ₹ mode — clears any % discount
+                  p.onDiscountAmtChange(amt);
+                  p.onDiscountPctChange(
+                    amt > 0 && preTotalAmount > 0
+                      ? Math.round(amt / preTotalAmount * 100 * 100) / 100
+                      : 0
+                  );
+                }}
+              />
+
+              {/* Effective discount amount */}
+              <span className="si-sum-neg" style={{ fontSize: 13, fontWeight: 600, minWidth: 60, textAlign: "right" }}>
+                - ₹ {fmt(invoiceDiscAmt)}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── TCS ── */}
       <div className="si-sum-row">
         <label className="si-tcs-label">
-          <input type="checkbox" checked={p.applyTCS} onChange={e => p.onTCSChange(e.target.checked, p.tcsRate, p.tcsLabel, p.tcsBase)} />
+          <input type="checkbox" checked={p.applyTCS}
+            onChange={e => p.onTCSChange(e.target.checked, p.tcsRate, p.tcsLabel, p.tcsBase)} />
           Apply TCS
         </label>
         {p.applyTCS && (
@@ -677,12 +888,16 @@ export default function SISummary(p: Props) {
               {showTCSDropdown && (
                 <div className="si-tcs-dropdown">
                   {allTcsRates.map(r => (
-                    <button key={r.label} className="si-tcs-opt" onClick={() => { p.onTCSChange(true, r.rate, r.label, p.tcsBase); setShowTCSDropdown(false); }}>
+                    <button key={r.label} className="si-tcs-opt"
+                      onClick={() => { p.onTCSChange(true, r.rate, r.label, p.tcsBase); setShowTCSDropdown(false); }}>
                       <span className="si-tcs-rate">{r.rate.toFixed(1)}%</span>
                       <span className="si-tcs-desc">{r.label.replace(/^\d+\.?\d*%\s*/, "")}</span>
                     </button>
                   ))}
-                  <button className="si-tcs-add" onClick={() => { setShowTCSDropdown(false); setShowAddTcsModal(true); }}>+ Add New TCS Rate</button>
+                  <button className="si-tcs-add"
+                    onClick={() => { setShowTCSDropdown(false); setShowAddTcsModal(true); }}>
+                    + Add New TCS Rate
+                  </button>
                 </div>
               )}
             </div>
@@ -692,12 +907,20 @@ export default function SISummary(p: Props) {
 
       {p.applyTCS && p.tcsLabel && (
         <div className="si-tcs-base-row">
-          <label className="si-radio-lbl"><input type="radio" name="tcsBase" checked={p.tcsBase === "Total Amount"}    onChange={() => p.onTCSChange(p.applyTCS, p.tcsRate, p.tcsLabel, "Total Amount")} />Total Amount</label>
-          <label className="si-radio-lbl"><input type="radio" name="tcsBase" checked={p.tcsBase === "Taxable Amount"} onChange={() => p.onTCSChange(p.applyTCS, p.tcsRate, p.tcsLabel, "Taxable Amount")} />Taxable Amount</label>
+          <label className="si-radio-lbl">
+            <input type="radio" name="tcsBase" checked={p.tcsBase === "Total Amount"}
+              onChange={() => p.onTCSChange(p.applyTCS, p.tcsRate, p.tcsLabel, "Total Amount")} />
+            Total Amount
+          </label>
+          <label className="si-radio-lbl">
+            <input type="radio" name="tcsBase" checked={p.tcsBase === "Taxable Amount"}
+              onChange={() => p.onTCSChange(p.applyTCS, p.tcsRate, p.tcsLabel, "Taxable Amount")} />
+            Taxable Amount
+          </label>
         </div>
       )}
 
-      {/* ── Round Off ──────────────────────────────────────── */}
+      {/* ── Round Off ── */}
       <div className="si-sum-row">
         <label className="si-tcs-label">
           <input
@@ -714,8 +937,6 @@ export default function SISummary(p: Props) {
           />
           Round Off
         </label>
-
-        {/* Only show controls when auto round off is ON */}
         {p.roundOff !== "none" && (
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <div className="si-round-wrap">
@@ -730,7 +951,8 @@ export default function SISummary(p: Props) {
                       ? Math.round((Math.ceil(preRound)  - preRound) * 100) / 100
                       : Math.round((Math.floor(preRound) - preRound) * 100) / 100;
                     return (
-                      <button key={o} className="si-round-opt" onClick={() => { p.onRoundOffChange(o, amt); setShowRoundDrop(false); }}>
+                      <button key={o} className="si-round-opt"
+                        onClick={() => { p.onRoundOffChange(o, amt); setShowRoundDrop(false); }}>
                         <span>{o === "+Add" ? "Round Up" : "Round Down"}</span>
                         <span style={{ color: o === "+Add" ? "#16a34a" : "#dc2626", fontWeight: 600, marginLeft: 8 }}>
                           {o === "+Add" ? "+" : ""}{amt.toFixed(2)}
@@ -748,7 +970,7 @@ export default function SISummary(p: Props) {
         )}
       </div>
 
-      {/* ── Total Amount ───────────────────────────────────── */}
+      {/* ── Total Amount ── */}
       <div className="si-total-row">
         <span className="si-total-lbl">Total Amount</span>
         {totalAmount > 0
@@ -759,16 +981,20 @@ export default function SISummary(p: Props) {
 
       <div className="si-sum-sep" />
 
-      {/* ── Mark as fully paid ─────────────────────────────── */}
+      {/* ── Mark as fully paid ── */}
       <div className="si-fully-paid-row">
         <span />
         <label className="si-tcs-label">
           Mark as fully paid
-          <input type="checkbox" checked={p.amountReceived === totalAmount && totalAmount > 0} onChange={e => p.onAmountReceivedChange(e.target.checked ? totalAmount : 0)} />
+          <input
+            type="checkbox"
+            checked={p.amountReceived === totalAmount && totalAmount > 0}
+            onChange={e => p.onAmountReceivedChange(e.target.checked ? totalAmount : 0)}
+          />
         </label>
       </div>
 
-      {/* ── Amount Received + Payment Method ───────────────── */}
+      {/* ── Amount Received + Payment Method ── */}
       <div className="si-amt-recv-row">
         <span className="si-sum-lbl">Amount Received</span>
         <div className="si-recv-right">
@@ -776,9 +1002,11 @@ export default function SISummary(p: Props) {
           <input
             type="number" className="si-recv-input"
             value={p.amountReceived || ""} min={0} max={totalAmount} placeholder="0"
-            onChange={e => { const v = Math.min(totalAmount, Math.max(0, Number(e.target.value))); p.onAmountReceivedChange(v); }}
+            onChange={e => {
+              const v = Math.min(totalAmount, Math.max(0, Number(e.target.value)));
+              p.onAmountReceivedChange(v);
+            }}
           />
-          {/* Payment method dropdown */}
           <div ref={payRef} className="si-pay-wrap">
             <button className="si-pay-btn" onClick={() => setShowPayDrop(!showPayDrop)}>
               {p.paymentMethod}
@@ -787,19 +1015,15 @@ export default function SISummary(p: Props) {
             {showPayDrop && (
               <div className="si-pay-drop">
                 {PAYMENT_METHODS.map(m => (
-                  <button
-                    key={m}
+                  <button key={m}
                     className={`si-pay-opt${p.paymentMethod === m ? " si-pay-opt--active" : ""}`}
-                    onClick={() => handlePaymentMethodChange(m)}
-                  >
+                    onClick={() => handlePaymentMethodChange(m)}>
                     {m}
                   </button>
                 ))}
               </div>
             )}
           </div>
-
-          {/* "Details" button — opens payment details modal */}
           {p.paymentMethod !== "Cash" && (
             <button
               onClick={() => setShowPayModal(true)}
@@ -816,27 +1040,22 @@ export default function SISummary(p: Props) {
         </div>
       </div>
 
-      {/* ── Payment Details Summary Card ────────────────────── */}
       {hasPayDetails && (
         <PaymentSummaryCard details={payDetails} onEdit={() => setShowPayModal(true)} />
       )}
 
-      {/* ── Finance checkbox + summary ──────────────────────── */}
+      {/* ── Finance ── */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 0", borderTop: "1px solid #f3f4f6", marginTop: 4 }}>
         <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13.5, color: "#374151", fontWeight: 500 }}>
-          <input
-            type="checkbox"
-            checked={finEnabled}
+          <input type="checkbox" checked={finEnabled}
             onChange={e => handleFinanceToggle(e.target.checked)}
             style={{ width: 16, height: 16, accentColor: "#6366f1", cursor: "pointer" }}
           />
           Finance / EMI Payment
         </label>
         {finEnabled && (
-          <button
-            onClick={() => setShowFinanceModal(true)}
-            style={{ marginLeft: "auto", padding: "4px 10px", border: "1.5px solid #bfdbfe", borderRadius: 6, background: "#eff6ff", color: "#1d4ed8", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}
-          >
+          <button onClick={() => setShowFinanceModal(true)}
+            style={{ marginLeft: "auto", padding: "4px 10px", border: "1.5px solid #bfdbfe", borderRadius: 6, background: "#eff6ff", color: "#1d4ed8", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }}>
             Edit
           </button>
         )}
@@ -845,15 +1064,17 @@ export default function SISummary(p: Props) {
         <FinanceSummaryCard details={finDetails} onEdit={() => setShowFinanceModal(true)} />
       )}
 
-      {/* ── Balance Amount ─────────────────────────────────── */}
+      {/* ── Balance Amount ── */}
       <div className="si-balance-row">
         <span className="si-balance-lbl">Balance Amount</span>
-        <span className={`si-balance-val${balanceAmount === 0 ? " si-balance-zero" : ""}`}>₹ {fmt(balanceAmount)}</span>
+        <span className={`si-balance-val${balanceAmount === 0 ? " si-balance-zero" : ""}`}>
+          ₹ {fmt(balanceAmount)}
+        </span>
       </div>
 
-      {/* ── Authorized Signatory ───────────────────────────── */}
+      {/* ── Authorized Signatory ── */}
       <div className="si-signatory">
-        <div className="si-signatory-text">Authorized signatory for <strong>Your Business</strong></div>
+        <div className="si-signatory-text">Authorized signatory</div>
         <input ref={fileRef} type="file" accept="image/*" style={{ display: "none" }}
           onChange={e => {
             const file = e.target.files?.[0];
@@ -885,7 +1106,7 @@ export default function SISummary(p: Props) {
         )}
       </div>
 
-      {/* ── Signature Modal ────────────────────────────────── */}
+      {/* ── Signature Modal ── */}
       {showSigModal && (
         <div className="si-sig-modal-overlay" onClick={() => setShowSigModal(false)}>
           <div className="si-sig-modal" onClick={e => e.stopPropagation()}>
@@ -916,7 +1137,7 @@ export default function SISummary(p: Props) {
         </div>
       )}
 
-      {/* ── Payment Details Modal ──────────────────────────── */}
+      {/* ── Payment Details Modal ── */}
       {showPayModal && (
         <PaymentDetailsModal
           method={p.paymentMethod}
@@ -927,20 +1148,19 @@ export default function SISummary(p: Props) {
         />
       )}
 
-      {/* ── Finance Modal ──────────────────────────────────── */}
+      {/* ── Finance Modal ── */}
       {showFinanceModal && (
         <FinanceModal
           details={finDetails}
           onSave={handleFinanceSave}
           onClose={() => {
             setShowFinanceModal(false);
-            // If modal closed without saving and finance was never enabled, uncheck
             if (!finDetails.financerName) setFinEnabled(false);
           }}
         />
       )}
 
-      {/* ── Add TCS Rate Modal ─────────────────────────────── */}
+      {/* ── Add TCS Rate Modal ── */}
       {showAddTcsModal && (
         <AddTcsRateModal
           onClose={() => setShowAddTcsModal(false)}

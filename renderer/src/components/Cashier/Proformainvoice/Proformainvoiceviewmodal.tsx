@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";   // ← FIX: for navigate-based convert
 import "./Proformainvoiceviewmodal.css";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -39,7 +40,7 @@ interface ProformaInvoice {
   partyName: string;
   dueIn: string;
   amount: number;
-  status: "Open" | "Closed";
+  status: "Open" | "Closed" | "Converted" | "Cancelled";
   fullData?: FullInvoiceData;
 }
 
@@ -86,9 +87,16 @@ interface Props {
   onEdit: (invoice: ProformaInvoice) => void;
   onDuplicate: (invoice: ProformaInvoice) => void;
   onDelete: (id: number) => void;
-  onConvertToInvoice: (invoice: ProformaInvoice) => void;
+  /**
+   * FIX: This callback is now OPTIONAL.
+   * If omitted the modal handles navigation to CreateSalesInvoice internally.
+   * If provided (legacy usage) it is still called — but should NOT change the
+   * proforma status; that happens in CreateSalesInvoice after the invoice saves.
+   */
+  onConvertToInvoice?: (invoice: ProformaInvoice) => void;
   prefix?: string;
   prefixEnabled?: boolean;
+  converting?: boolean;   // true while convert API call is in-flight
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -217,11 +225,14 @@ const IconTrash = () => (
 
 const ProformaInvoiceViewModal: React.FC<Props> = ({
   invoice, onClose, onEdit, onDuplicate, onDelete, onConvertToInvoice,
-  prefix = "", prefixEnabled = false,
+  prefix = "", prefixEnabled = false, converting = false,
 }) => {
+  const navigate = useNavigate();  // ← FIX: used for navigate-based convert
+
   const [showMenu, setShowMenu] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [localConverting, setLocalConverting] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Load active template from InvoiceBuilder
@@ -323,6 +334,73 @@ const ProformaInvoiceViewModal: React.FC<Props> = ({
     setTimeout(() => { printWindow.print(); printWindow.close(); }, 500);
   }
 
+  /**
+   * FIX: handleConvert no longer calls the backend convert endpoint which
+   * would prematurely set the proforma status to CONVERTED/CLOSED.
+   *
+   * Instead it builds the fromProforma payload from the data already in
+   * memory (invoice.fullData) and navigates to CreateSalesInvoice.
+   *
+   * CreateSalesInvoice will call proformaApi.update(id, { status: "CONVERTED" })
+   * only AFTER the invoice is successfully saved to the backend.
+   */
+  const isAlreadyConverted = (
+    invoice.status === "Closed" ||
+    invoice.status === "Converted" ||
+    invoice.status === "Cancelled"
+  );
+
+  const handleConvert = async () => {
+    if (isAlreadyConverted || converting || localConverting) return;
+
+    // If the parent provided a custom handler AND it is the old-style
+    // (calls backend immediately), the parent should be updated too.
+    // We call it here for backward compatibility, but the status should
+    // NOT be changed by the parent until after the invoice is saved.
+    if (onConvertToInvoice) {
+      onConvertToInvoice(invoice);
+      return;
+    }
+
+    // Navigate-based flow (self-contained, no premature status change)
+    setLocalConverting(true);
+    try {
+      // Fetch fresh data from the backend (data-only endpoint, no status change)
+      const BASE_PROFORMA = "http://localhost:4000/api/proforma-invoices";
+      const token = localStorage.getItem("authToken") || sessionStorage.getItem("authToken") || "";
+      const res = await fetch(`${BASE_PROFORMA}/${invoice.id}/convert`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+      const result = await res.json();
+
+      if (!res.ok) {
+        if (res.status === 400 && result?.message?.toLowerCase().includes("already converted")) {
+          alert("This proforma invoice has already been converted to a sales invoice.");
+          return;
+        }
+        throw new Error(result?.message ?? `HTTP ${res.status}`);
+      }
+
+      onClose(); // Close the modal before navigating
+      navigate("/cashier/sales-invoice", {
+        state: {
+          fromProforma:   result,                               // fresh pre-fill from backend
+          fromProformaId: result.proformaId ?? invoice.id,     // CreateSalesInvoice uses this after save
+        },
+      });
+    } catch (err: any) {
+      alert(err.message ?? "Failed to convert proforma");
+    } finally {
+      setLocalConverting(false);
+    }
+  };
+
+  const isConverting = converting || localConverting;
+
   return (
     <div className="aa-pfi-overlay" onClick={onClose}>
       <div className="aa-pfi-modal" onClick={e => e.stopPropagation()}>
@@ -397,7 +475,6 @@ const ProformaInvoiceViewModal: React.FC<Props> = ({
               <IconShare />
             </button>
             <button className="aa-pfi-action-btn pfi-action-btn--round">
-              {/* clock / reminder icon */}
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="10"/>
                 <polyline points="12 6 12 12 16 14"/>
@@ -410,12 +487,14 @@ const ProformaInvoiceViewModal: React.FC<Props> = ({
             </button>
           </div>
 
+          {/* FIX: button disabled covers "Closed", "Converted", and "CONVERTED" */}
           <button
             className="aa-pfi-convert-btn"
-            onClick={() => onConvertToInvoice(invoice)}
-            disabled={invoice.status === "Closed"}
+            onClick={handleConvert}
+            disabled={isAlreadyConverted || isConverting}
+            title={isAlreadyConverted ? "Already converted to invoice" : "Convert to Sales Invoice"}
           >
-            Convert to Invoice
+            {isConverting ? "Converting…" : isAlreadyConverted ? "Converted" : "Convert to Invoice"}
           </button>
         </div>
 
@@ -510,7 +589,6 @@ const ProformaInvoiceViewModal: React.FC<Props> = ({
                     <td className="aa-pfi-td pfi-td--amount">{li.amount || 0}</td>
                   </tr>
                 )) : (
-                  // Empty rows to stretch table (matching screenshot)
                   Array.from({ length: 8 }).map((_, i) => (
                     <tr key={i} className={i % 2 === 0 ? "aa-pfi-tr-even" : "aa-pfi-tr-odd"}>
                       <td className="aa-pfi-td pfi-td--sno">&nbsp;</td>

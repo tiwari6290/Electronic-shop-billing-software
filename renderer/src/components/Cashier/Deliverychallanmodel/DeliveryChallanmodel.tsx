@@ -1,17 +1,27 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Search, Calendar, ChevronDown, Settings, MessageSquare, Edit, Clock, Copy, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import "./Deliverychallanmodel.css";
 import CreateDeliveryChallan from "./Createdeliverychallan";
 import ChallanViewPage from "./Challanviewpage";
+import {
+  listChallans,
+  deleteChallan as apiDeleteChallan,
+  getChallanSettings,
+  saveChallanSettings,
+  getNextChallanNumber,
+  getChallanForConversion,   // ← FIX: use the non-destructive fetcher
+  duplicateChallan as apiDuplicateChallan,
+  mapBackendChallan,
+} from "../../../api/deliverychallanapi";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
-export type ChallanStatus = "Open" | "Closed";
+export type ChallanStatus = "OPEN" | "CLOSED" | "CANCELLED";
 
 export interface ChallanItem {
   id: number;
   date: string;
-  challanNumber: number;
+  challanNumber: string;
   partyName: string;
   partyId?: number;
   amount: number;
@@ -32,6 +42,11 @@ export interface ChallanItem {
   emailId?: string;
   warrantyPeriod?: string;
   shippingAddress?: string;
+  poNumber?: string;
+  vehicleNo?: string;
+  dispatchedThrough?: string;
+  transportName?: string;
+  customFieldValues?: Record<string, string>;
   selectedBankId?: number;
 }
 
@@ -145,200 +160,246 @@ function DateFilter({ selected, customFrom, customTo, onSelect }: { selected:Dat
   const handlePick=(d:Date)=>{ if(!pickingEnd){setTempFrom(d);setTempTo(null);setPickingEnd(true);}else{if(tempFrom&&d<tempFrom){setTempTo(tempFrom);setTempFrom(d);}else{setTempTo(d);}setPickingEnd(false);}};
   return (
     <div className="date-filter-wrapper" ref={ref}>
-      <button className={`filter-btn${open?" active":""}`} onClick={()=>{setOpen(!open);setPhase("preset");}}><Calendar size={14}/><span>{label}</span><ChevronDown size={12}/></button>
-      {open&&(<div className="date-dropdown">
-        {phase==="preset"?(<ul className="preset-list">{PRESETS.map(p=>{const range=p!=="Custom"?getPresetRange(p):null;return(<li key={p} className={`preset-item${selected===p?" preset-active":""}`} onClick={()=>{if(p==="Custom"){setPhase("custom");setTempFrom(null);setTempTo(null);setPickingEnd(false);}else{const[from,to]=getPresetRange(p);onSelect(p,from,to);setOpen(false);}}}><span>{p}</span>{range&&<span className="preset-range">{fmt(range[0])} – {fmt(range[1])}</span>}</li>);})}</ul>
-        ):(<div className="custom-picker">
-          <div className="custom-picker-header"><span className={`date-badge${tempFrom?" active":""}`}>{tempFrom?fmtShort(tempFrom):"From Date"}</span><span className="date-badge-sep">→</span><span className={`date-badge${tempTo?" active":""}`}>{tempTo?fmtShort(tempTo):"To Date"}</span></div>
-          <MiniCal value={tempFrom} onChange={handlePick} highlight={[tempFrom,tempTo]}/>
-          <div className="custom-picker-actions"><button className="btn-cancel-sm" onClick={()=>setPhase("preset")}>Back</button><button className="btn-ok-sm" disabled={!tempFrom||!tempTo} onClick={()=>{if(tempFrom&&tempTo){onSelect("Custom",tempFrom,tempTo);setOpen(false);}}}>Apply</button></div>
-        </div>)}
-      </div>)}
+      <button className="filter-btn" onClick={()=>setOpen(o=>!o)}>
+        <Calendar size={13}/> {label} <ChevronDown size={12}/>
+      </button>
+      {open && (
+        <div className="date-filter-popup">
+          {phase==="preset" ? (
+            <ul className="preset-list">
+              {PRESETS.map(p=>(
+                <li key={p} className={selected===p?"active":""} onClick={()=>{
+                  if(p==="Custom"){setPhase("custom");setTempFrom(null);setTempTo(null);}
+                  else{const[f,t]=getPresetRange(p);onSelect(p,f,t);setOpen(false);}
+                }}>{p}</li>
+              ))}
+            </ul>
+          ) : (
+            <div className="custom-range-picker">
+              <div className="crp-header">
+                <button onClick={()=>setPhase("preset")}>‹ Back</button>
+                <span>{pickingEnd?"Select End Date":"Select Start Date"}</span>
+              </div>
+              <div className="crp-cals">
+                <MiniCal value={tempFrom} onChange={handlePick} highlight={[tempFrom,tempTo]}/>
+                <MiniCal value={tempTo||tempFrom} onChange={handlePick} highlight={[tempFrom,tempTo]}/>
+              </div>
+              {tempFrom&&tempTo&&(
+                <div className="crp-footer">
+                  <button className="btn-primary-sm" onClick={()=>{onSelect("Custom",tempFrom,tempTo);setOpen(false);setPhase("preset");}}>Apply</button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
 
 // ─── Status Filter ─────────────────────────────────────────────────────────────
-function StatusFilter({ value, onChange }: { value:ChallanFilter; onChange:(v:ChallanFilter)=>void }) {
-  const [open,setOpen]=useState(false);
-  const ref=useRef<HTMLDivElement>(null);
-  const opts:ChallanFilter[]=["Show All Challans","Show Open Challans","Show Closed Challans"];
-  useEffect(()=>{ const h=(e:MouseEvent)=>{if(ref.current&&!ref.current.contains(e.target as Node))setOpen(false);}; document.addEventListener("mousedown",h); return()=>document.removeEventListener("mousedown",h); },[]);
+function StatusFilter({ value, onChange }: { value: ChallanFilter; onChange: (v: ChallanFilter) => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener("mousedown", h); return () => document.removeEventListener("mousedown", h);
+  }, []);
+  const options: ChallanFilter[] = ["Show All Challans","Show Open Challans","Show Closed Challans"];
   return (
     <div className="status-filter-wrapper" ref={ref}>
-      <button className={`filter-btn${open?" active":""}`} onClick={()=>setOpen(!open)}><span>{value}</span><ChevronDown size={12}/></button>
-      {open&&(<ul className="status-dropdown">{opts.map(o=><li key={o} className={`status-item${value===o?" status-active":""}`} onClick={()=>{onChange(o);setOpen(false);}}>{o}</li>)}</ul>)}
-    </div>
-  );
-}
-
-// ─── Toggle ────────────────────────────────────────────────────────────────────
-function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <button className={`dc-toggle${checked?" dc-toggle--on":""}`} onClick={()=>onChange(!checked)} role="switch" aria-checked={checked} type="button">
-      <span className="dc-toggle-thumb"/>
-    </button>
-  );
-}
-
-// ─── Settings Modal ─────────────────────────────────────────────────────────────
-function SettingsModal({ settings, onSave, onClose }: { settings: SettingsState; onSave: (s: SettingsState) => void; onClose: () => void }) {
-  const [local, setLocal] = useState({ ...settings });
-  const upd = <K extends keyof SettingsState>(k: K, v: SettingsState[K]) => setLocal(p => ({ ...p, [k]: v }));
-  const num = local.prefixEnabled ? `${local.prefix}${local.sequenceNumber}` : `${local.sequenceNumber}`;
-  return (
-    <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="modal" style={{ maxWidth: 520 }}>
-        <div className="modal-header"><h2>Quick Delivery Challan Settings</h2><button className="modal-close" onClick={onClose}>✕</button></div>
-        <div className="modal-body">
-          <div className="settings-card">
-            <div className="settings-card-header">
-              <div><div className="settings-title">Delivery Challan Prefix &amp; Sequence Number</div><div className="settings-desc">Add your custom prefix &amp; sequence for Delivery Challan Numbering</div></div>
-              <Toggle checked={local.prefixEnabled} onChange={v => upd("prefixEnabled", v)} />
-            </div>
-            {local.prefixEnabled && (<div className="settings-fields"><div className="field-group"><label>Prefix</label><input className="settings-input" value={local.prefix} onChange={e => upd("prefix", e.target.value)}/></div><div className="field-group"><label>Sequence Number</label><input className="settings-input" type="number" value={local.sequenceNumber} onChange={e => upd("sequenceNumber", Number(e.target.value))}/></div></div>)}
-            {local.prefixEnabled && <div className="challan-num-preview">Delivery Challan Number: {num}</div>}
-          </div>
-          <div className="settings-card"><div className="settings-card-header"><div><div className="settings-title">Show Item Image on Invoice</div><div className="settings-desc">This will apply to all vouchers except for Payment In and Payment Out</div></div><Toggle checked={local.showItemImage} onChange={v => upd("showItemImage", v)}/></div></div>
-          <div className="settings-card"><div className="settings-card-header"><div><div className="settings-title">Price History <span className="badge-new">New</span></div><div className="settings-desc">Show last 5 sales / purchase prices of the item for the selected party in invoice</div></div><Toggle checked={local.priceHistory} onChange={v => upd("priceHistory", v)}/></div></div>
-        </div>
-        <div className="modal-footer"><button className="btn-secondary" onClick={onClose}>Cancel</button><button className="btn-primary" onClick={()=>{onSave(local);onClose();}}>Save</button></div>
-      </div>
+      <button className="filter-btn" onClick={() => setOpen(o => !o)}>{value} <ChevronDown size={12}/></button>
+      {open && (
+        <ul className="status-filter-dropdown">
+          {options.map(o => (
+            <li key={o} className={value===o?"active":""} onClick={() => { onChange(o); setOpen(false); }}>{o}</li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
 
 // ─── Row Menu ──────────────────────────────────────────────────────────────────
-function RowMenu({ challanId, onEdit, onEditHistory, onDuplicate, onDelete }: { challanId:number; onEdit:(id:number)=>void; onEditHistory:(id:number)=>void; onDuplicate:(id:number)=>void; onDelete:(id:number)=>void }) {
-  const [open,setOpen]=useState(false);
-  const ref=useRef<HTMLDivElement>(null);
-  useEffect(()=>{ const h=(e:MouseEvent)=>{if(ref.current&&!ref.current.contains(e.target as Node))setOpen(false);}; document.addEventListener("mousedown",h); return()=>document.removeEventListener("mousedown",h); },[]);
+function RowMenu({ challanId, onEdit, onEditHistory, onDuplicate, onDelete }: {
+  challanId: number;
+  onEdit: (id: number) => void;
+  onEditHistory: (id: number) => void;
+  onDuplicate: (id: number) => void;
+  onDelete: (id: number) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    document.addEventListener("mousedown", h); return () => document.removeEventListener("mousedown", h);
+  }, []);
   return (
     <div className="row-menu-wrapper" ref={ref}>
-      <button className="row-menu-btn" onClick={e=>{e.stopPropagation();setOpen(!open);}}>⋮</button>
-      {open&&(<ul className="row-menu-dropdown">
-        <li onClick={e=>{e.stopPropagation();onEdit(challanId);setOpen(false);}}><Edit size={14}/> Edit</li>
-        <li onClick={e=>{e.stopPropagation();onEditHistory(challanId);setOpen(false);}}><Clock size={14}/> Edit History</li>
-        <li onClick={e=>{e.stopPropagation();onDuplicate(challanId);setOpen(false);}}><Copy size={14}/> Duplicate</li>
-        <li className="menu-danger" onClick={e=>{e.stopPropagation();onDelete(challanId);setOpen(false);}}><Trash2 size={14}/> Delete</li>
-      </ul>)}
+      <button className="row-menu-btn" onClick={() => setOpen(o => !o)}>⋮</button>
+      {open && (
+        <ul className="row-menu-dropdown">
+          <li onClick={() => { onEdit(challanId); setOpen(false); }}><Edit size={13}/> Edit</li>
+          <li onClick={() => { onEditHistory(challanId); setOpen(false); }}><Clock size={13}/> Edit History</li>
+          <li onClick={() => { onDuplicate(challanId); setOpen(false); }}><Copy size={13}/> Duplicate</li>
+          <li className="danger" onClick={() => { onDelete(challanId); setOpen(false); }}><Trash2 size={13}/> Delete</li>
+        </ul>
+      )}
+    </div>
+  );
+}
+
+// ─── Settings Modal ────────────────────────────────────────────────────────────
+function SettingsModal({ settings, onSave, onClose }: { settings: SettingsState; onSave: (s: SettingsState) => void; onClose: () => void }) {
+  const [local, setLocal] = useState(settings);
+  const handleSave = async () => {
+    try {
+      await saveChallanSettings({ prefix: local.prefix, sequenceNumber: local.sequenceNumber, enablePrefix: local.prefixEnabled, showItemImage: local.showItemImage, priceHistory: local.priceHistory });
+    } catch {}
+    onSave(local); onClose();
+  };
+  return (
+    <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="settings-modal">
+        <div className="sm-header"><h2>Delivery Challan Settings</h2><button onClick={onClose}>✕</button></div>
+        <div className="sm-body">
+          <div className="sm-row"><div><b>Prefix & Sequence</b><p>Customise your challan numbering</p></div>
+            <label className="toggle-label"><input type="checkbox" checked={local.prefixEnabled} onChange={e=>setLocal({...local,prefixEnabled:e.target.checked})}/><span/></label>
+          </div>
+          {local.prefixEnabled && (
+            <div className="sm-prefix-row">
+              <div><label>Prefix</label><input className="sm-input" value={local.prefix} onChange={e=>setLocal({...local,prefix:e.target.value})} placeholder="e.g. DC-"/></div>
+              <div><label>Sequence Number</label><input type="number" className="sm-input" value={local.sequenceNumber} min={1} onChange={e=>setLocal({...local,sequenceNumber:Number(e.target.value)})}/></div>
+            </div>
+          )}
+          <div className="sm-row"><div><b>Show Item Image</b><p>Display item images on challan</p></div>
+            <label className="toggle-label"><input type="checkbox" checked={local.showItemImage} onChange={e=>setLocal({...local,showItemImage:e.target.checked})}/><span/></label>
+          </div>
+          <div className="sm-row"><div><b>Price History</b><p>Show last 5 sale prices</p></div>
+            <label className="toggle-label"><input type="checkbox" checked={local.priceHistory} onChange={e=>setLocal({...local,priceHistory:e.target.checked})}/><span/></label>
+          </div>
+        </div>
+        <div className="sm-footer"><button onClick={onClose}>Cancel</button><button className="btn-primary" onClick={handleSave}>Save</button></div>
+      </div>
     </div>
   );
 }
 
 // ─── Main Component ────────────────────────────────────────────────────────────
-const INITIAL_DATA: ChallanItem[] = [
-  { id: 1, date: "2026-03-01", challanNumber: 19, partyName: "Ramakant Pandit", amount: 410.96, status: "Open", items: [] },
-];
-
-type AppView = "list" | "create" | "edit" | "duplicate" | "view";
-
-export default function DeliveryChallan() {
+export default function DeliveryChallanModel() {
   const navigate = useNavigate();
-  const [challans, setChallans] = useState<ChallanItem[]>(() => {
-    try { const s = localStorage.getItem("challans"); return s ? JSON.parse(s) : INITIAL_DATA; } catch { return INITIAL_DATA; }
-  });
-  const [datePreset, setDatePreset] = useState<DatePreset>("Last 365 Days");
-  const [dateFrom, setDateFrom] = useState<Date|null>(() => getPresetRange("Last 365 Days")[0]);
-  const [dateTo, setDateTo] = useState<Date|null>(() => getPresetRange("Last 365 Days")[1]);
-  const [statusFilter, setStatusFilter] = useState<ChallanFilter>("Show Open Challans");
+
+  const [view, setView] = useState<"list"|"create"|"edit"|"view"|"duplicate">("list");
+  const [challans, setChallans] = useState<ChallanItem[]>([]);
+  const [activeChallan, setActiveChallan] = useState<ChallanItem | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [totalCount, setTotalCount] = useState(0);
+
+  const [datePreset, setDatePreset] = useState<DatePreset>("This Month");
+  const [dateFrom, setDateFrom] = useState<Date | null>(null);
+  const [dateTo, setDateTo] = useState<Date | null>(null);
+  const [statusFilter, setStatusFilter] = useState<ChallanFilter>("Show All Challans");
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearch, setShowSearch] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
-  const [view, setView] = useState<AppView>("list");
-  const [activeChallan, setActiveChallan] = useState<ChallanItem | null>(null);
   const [sortDir, setSortDir] = useState<"asc"|"desc">("desc");
-  const [settings, setSettings] = useState<SettingsState>({ prefixEnabled: true, prefix: "", sequenceNumber: 21, showItemImage: true, priceHistory: true });
+  const [showSettings, setShowSettings] = useState(false);
+  const [settings, setSettings] = useState<SettingsState>({ prefixEnabled: false, prefix: "DC-", sequenceNumber: 1, showItemImage: true, priceHistory: true });
+  const [nextChallanNo, setNextChallanNo] = useState("DC-00001");
 
-  useEffect(() => { localStorage.setItem("challans", JSON.stringify(challans)); }, [challans]);
+  const loadSettings = useCallback(async () => {
+    try {
+      const s = await getChallanSettings();
+      setSettings({ prefixEnabled: s.enablePrefix, prefix: s.prefix || "DC-", sequenceNumber: s.sequenceNumber, showItemImage: s.showItemImage, priceHistory: s.priceHistory });
+    } catch {}
+  }, []);
 
-  const nextNumber = Math.max(...challans.map(c => c.challanNumber), settings.sequenceNumber - 1) + 1;
+  const loadNextNumber = useCallback(async () => {
+    try { const { challanNo } = await getNextChallanNumber(); setNextChallanNo(challanNo); } catch {}
+  }, []);
 
-  const filtered = challans
-    .filter(c => { const d = startOfDay(new Date(c.date)); if (dateFrom && d < dateFrom) return false; if (dateTo && d > dateTo) return false; return true; })
-    .filter(c => statusFilter === "Show Open Challans" ? c.status === "Open" : statusFilter === "Show Closed Challans" ? c.status === "Closed" : true)
-    .filter(c => !searchQuery || c.partyName.toLowerCase().includes(searchQuery.toLowerCase()) || c.challanNumber.toString().includes(searchQuery))
-    .sort((a, b) => sortDir === "asc" ? new Date(a.date).getTime() - new Date(b.date).getTime() : new Date(b.date).getTime() - new Date(a.date).getTime());
+  const fetchChallans = useCallback(async () => {
+    setLoading(true); setError(null);
+    try {
+      const statusMap: Record<ChallanFilter, "ALL"|"OPEN"|"CLOSED"> = {
+        "Show All Challans": "ALL", "Show Open Challans": "OPEN", "Show Closed Challans": "CLOSED",
+      };
+      const params: any = { status: statusMap[statusFilter], search: searchQuery || undefined };
+      if (dateFrom) params.from = dateFrom.toISOString().split("T")[0];
+      if (dateTo)   params.to   = dateTo.toISOString().split("T")[0];
+      const { challans: raw, total } = await listChallans(params);
+      setChallans(raw.map(mapBackendChallan));
+      setTotalCount(total);
+    } catch (e: any) {
+      setError(e.message || "Failed to load challans");
+    } finally { setLoading(false); }
+  }, [statusFilter, dateFrom, dateTo, searchQuery]);
 
-  const handleSaveChallan = (challan: ChallanItem) => {
-    setChallans(prev => {
-      const exists = prev.find(c => c.id === challan.id);
-      if (exists) return prev.map(c => c.id === challan.id ? challan : c);
-      return [...prev, challan];
-    });
+  useEffect(() => { loadSettings(); loadNextNumber(); }, [loadSettings, loadNextNumber]);
+  useEffect(() => { if (view === "list") fetchChallans(); }, [fetchChallans, view]);
+
+  // ── Sorted list (already filtered server-side) ────────────────────────────
+  const filtered = [...challans].sort((a, b) =>
+    sortDir === "asc"
+      ? new Date(a.date).getTime() - new Date(b.date).getTime()
+      : new Date(b.date).getTime() - new Date(a.date).getTime()
+  );
+
+  // ── Save: after create/edit, refresh list and number ─────────────────────
+  const handleSaveChallan = async (_challan: ChallanItem) => {
+    await Promise.all([fetchChallans(), loadNextNumber()]);
     setView("list");
     setActiveChallan(null);
   };
 
-  const handleDelete = (id: number) => setChallans(prev => prev.filter(c => c.id !== id));
-
-  const handleDuplicate = (id: number) => {
-    const orig = challans.find(c => c.id === id);
-    if (!orig) return;
-    // New id → will be inserted as a brand-new record when saved
-    const duped: ChallanItem = {
-      ...orig,
-      id: Date.now(),
-      challanNumber: Math.max(...challans.map(c => c.challanNumber)) + 1,
-      status: "Open",
-    };
-    setActiveChallan(duped);
-    setView("duplicate");
+  // ── Delete ────────────────────────────────────────────────────────────────
+  const handleDelete = async (id: number) => {
+    if (!window.confirm("Delete this challan?")) return;
+    try {
+      await apiDeleteChallan(id);
+      setChallans(prev => prev.filter(c => c.id !== id));
+    } catch (err: any) {
+      alert("Delete failed: " + err.message);
+    }
   };
 
-  const handleConvertToInvoice = (challan: ChallanItem) => {
-    // 1. Mark challan as Closed and persist to localStorage immediately
-    const updatedChallans = challans.map(c =>
-      c.id === challan.id ? { ...c, status: "Closed" as ChallanStatus } : c
-    );
-    setChallans(updatedChallans);
-    localStorage.setItem("challans", JSON.stringify(updatedChallans));
+  // ── Duplicate ─────────────────────────────────────────────────────────────
+  const handleDuplicate = async (id: number) => {
+    try {
+      await apiDuplicateChallan(id);
+      await Promise.all([fetchChallans(), loadNextNumber()]);
+    } catch (err: any) {
+      alert("Duplicate failed: " + err.message);
+    }
+  };
 
-    // 2. Build the fromChallan payload that CreateSalesInvoice expects
-    const fromChallan = {
-      party: { id: challan.partyId || 0, name: challan.partyName, mobile: "", balance: 0 },
-      billItems: (challan.items || []).map(i => ({
-        rowId: `row-${Date.now()}-${i.id}`,
-        itemId: i.id,
-        name: i.name,
-        description: i.description || "",
-        hsn: i.hsnSac || "",
-        qty: i.qty,
-        unit: i.unit,
-        price: i.pricePerItem,
-        discountPct: i.discount.percent,
-        discountAmt: i.discount.amount,
-        taxLabel: i.tax || "None",
-        taxRate: i.taxRate || 0,
-        amount: i.amount,
-      })),
-      additionalCharges: (challan.additionalCharges || []).map(c => ({
-        id: `c-${c.id}`,
-        label: c.label,
-        amount: c.amount,
-        taxLabel: c.tax || "No Tax Applicable",
-      })),
-      discountType: challan.discountType === "Before Tax"
-        ? "Discount Before Tax"
-        : "Discount After Tax",
-      discountPct: challan.discountPct || 0,
-      discountAmt: challan.discountAmt || 0,
-      roundOff: challan.autoRoundOff ? "+Add" : "none",
-      roundOffAmt: challan.roundOffAmt || 0,
-      notes: challan.notes || "",
-      termsConditions: challan.termsAndConditions || "",
-      challanNo: String(challan.challanNumber),
-    };
-
-    // 3. Navigate to Create Sales Invoice with all pre-filled data
-    setView("list");
-    setActiveChallan(null);
-    navigate("/cashier/sales-invoice", { state: { fromChallan } });
+  // ── Convert to Invoice ────────────────────────────────────────────────────
+  // FIX: We no longer call the backend convert endpoint here (that would
+  // prematurely change the status to CLOSED before the invoice is saved).
+  // Instead we just fetch the challan data and navigate to CreateSalesInvoice.
+  // CreateSalesInvoice will call updateChallanStatus(id, "CLOSED") only after
+  // a successful save — see CreateSalesInvoice.tsx handleSave().
+  const handleConvertToInvoice = async (challan: ChallanItem) => {
+    try {
+      const { fromChallan } = await getChallanForConversion(challan.id);
+      setView("list");
+      setActiveChallan(null);
+      // Navigate with both the pre-fill data AND the source challan ID.
+      // The status flip to CLOSED happens inside CreateSalesInvoice on save.
+      navigate("/cashier/sales-invoice", {
+        state: {
+          fromChallan,
+          fromChallanId: challan.id,   // ← NEW: used by CreateSalesInvoice to close challan after save
+        },
+      });
+    } catch (err: any) {
+      alert("Failed to load challan data: " + err.message);
+    }
   };
 
   if (view === "create") {
     return <CreateDeliveryChallan
-      challan={null} nextNumber={nextNumber} settings={settings}
+      challan={null} nextNumber={nextChallanNo} settings={settings}
       onSave={handleSaveChallan} onBack={() => { setView("list"); setActiveChallan(null); }}
       isEditMode={false}
     />;
@@ -346,7 +407,7 @@ export default function DeliveryChallan() {
 
   if ((view === "edit" || view === "duplicate") && activeChallan) {
     return <CreateDeliveryChallan
-      challan={activeChallan} nextNumber={nextNumber} settings={settings}
+      challan={activeChallan} nextNumber={nextChallanNo} settings={settings}
       onSave={handleSaveChallan} onBack={() => { setView("list"); setActiveChallan(null); }}
       isEditMode={view === "edit"}
     />;
@@ -355,9 +416,30 @@ export default function DeliveryChallan() {
   if (view === "view" && activeChallan) {
     return <ChallanViewPage
       challan={activeChallan}
-      onBack={() => { setView("list"); setActiveChallan(null); }}
+      onBack={() => { setView("list"); setActiveChallan(null); fetchChallans(); }}
       onEdit={() => setView("edit")}
       onConvertToInvoice={() => handleConvertToInvoice(activeChallan)}
+      onDelete={async (id) => {
+        if (!window.confirm("Delete this challan?")) return;
+        try {
+          await apiDeleteChallan(id);
+          setView("list");
+          setActiveChallan(null);
+          await fetchChallans();
+        } catch (err: any) {
+          alert("Delete failed: " + err.message);
+        }
+      }}
+      onDuplicate={async (id) => {
+        try {
+          await apiDuplicateChallan(id);
+          await Promise.all([fetchChallans(), loadNextNumber()]);
+          setView("list");
+          setActiveChallan(null);
+        } catch (err: any) {
+          alert("Duplicate failed: " + err.message);
+        }
+      }}
     />;
   }
 
@@ -386,6 +468,13 @@ export default function DeliveryChallan() {
         </div>
         <button className="btn-create" onClick={() => { setActiveChallan(null); setView("create"); }}>Create Delivery Challan</button>
       </div>
+
+      {error && (
+        <div style={{ background: "#fee2e2", color: "#dc2626", padding: "12px 16px", borderRadius: 8, margin: "0 0 12px", fontSize: 14 }}>
+          {error} — <button style={{ background: "none", border: "none", color: "#dc2626", cursor: "pointer", textDecoration: "underline" }} onClick={fetchChallans}>Retry</button>
+        </div>
+      )}
+
       <div className="dc-table-wrapper">
         <table className="dc-table">
           <thead>
@@ -399,7 +488,9 @@ export default function DeliveryChallan() {
             </tr>
           </thead>
           <tbody>
-            {filtered.length === 0 ? (
+            {loading ? (
+              <tr><td colSpan={6} className="empty-state">Loading…</td></tr>
+            ) : filtered.length === 0 ? (
               <tr><td colSpan={6} className="empty-state">No challans found</td></tr>
             ) : filtered.map(c => (
               <tr key={c.id} onClick={() => { setActiveChallan(c); setView("view"); }}>
@@ -407,7 +498,11 @@ export default function DeliveryChallan() {
                 <td>{c.challanNumber}</td>
                 <td>{c.partyName}</td>
                 <td>₹ {c.amount.toFixed(2)}</td>
-                <td><span className={`status-badge status-${c.status.toLowerCase()}`}>{c.status}</span></td>
+                <td>
+                  <span className={`status-badge status-${c.status.toLowerCase()}`}>
+                    {c.status === "OPEN" ? "Open" : c.status === "CLOSED" ? "Closed" : "Cancelled"}
+                  </span>
+                </td>
                 <td onClick={e => e.stopPropagation()}>
                   <RowMenu challanId={c.id}
                     onEdit={id => { const item = challans.find(ch => ch.id === id); if (item) { setActiveChallan(item); setView("edit"); } }}
@@ -421,6 +516,11 @@ export default function DeliveryChallan() {
           </tbody>
         </table>
       </div>
+      {totalCount > 0 && (
+        <div style={{ padding: "8px 16px", fontSize: 12, color: "#6b7280" }}>
+          Showing {filtered.length} of {totalCount} challans
+        </div>
+      )}
       {showSettings && <SettingsModal settings={settings} onSave={setSettings} onClose={() => setShowSettings(false)}/>}
     </div>
   );

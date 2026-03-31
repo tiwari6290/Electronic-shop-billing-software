@@ -74,7 +74,7 @@
   margin: 16px;
   border-radius: 10px;
   border: 1px solid #e5e7eb;
-  overflow: hidden;
+  overflow: visible;
 }
 
 /* ── Top Panel ────────────────────────────────────────────────── */
@@ -102,7 +102,7 @@
 .csi-footer-col {
   border-right: 1px solid #e5e7eb;
 }
-.csi-summary-col {}
+
 
 /* ── Settings Modal ───────────────────────────────────────────── */
 .csi-overlay { position: fixed; inset: 0; background: rgba(17,24,39,.5); z-index: 500; display: flex; align-items: center; justify-content: center; }

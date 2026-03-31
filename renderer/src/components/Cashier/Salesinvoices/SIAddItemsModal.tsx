@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { BillItem } from "./SalesInvoiceTypes";
+import { BillItem, parseGstRate, buildTaxLabel, calcBillItemAmount } from "./SalesInvoiceTypes";
 import { getItems, BackendItem } from "@/api/salesInvoiceApi";
 import "./SIAddItemsModal.css";
 
@@ -18,7 +18,7 @@ export default function SIAddItemsModal({ onClose, onAddToBill }: Props) {
   const [selected, setSelected] = useState<Map<number, number>>(new Map());
   const searchRef = useRef<HTMLInputElement>(null);
 
-  // Load items from backend on mount
+  // ── Load items from backend on mount ───────────────────────────────────────
   useEffect(() => {
     let active = true;
     setLoading(true);
@@ -33,7 +33,7 @@ export default function SIAddItemsModal({ onClose, onAddToBill }: Props) {
     searchRef.current?.focus();
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
-      if (e.key === "F7") handleAdd();
+      if (e.key === "F7")    handleAdd();
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -59,17 +59,62 @@ export default function SIAddItemsModal({ onClose, onAddToBill }: Props) {
     setSelected(new Map(selected).set(id, qty));
   }
 
+  /**
+   * ════════════════════════════════════════════════════════════════
+   * CORE FIX — "Add to Bill" builds BillItem with correct values:
+   *
+   * 1. price       → item.baseSalesPrice  (the PRE-TAX base, always)
+   *                  Falls back to item.salesPrice only if baseSalesPrice
+   *                  is not available (legacy items).
+   *
+   * 2. discountPct → item.salesDiscountPercent  (default % set on item)
+   *                  The user can still change this in SIItemsTable.
+   *
+   * 3. taxRate     → parsed from item.gstRate  (e.g. "18" → 18)
+   *                  Tax is always computed AFTER applying the discount:
+   *                    taxable = (qty × price) − discount
+   *                    tax     = taxable × taxRate%
+   *                    amount  = taxable + tax
+   *
+   * Example from your requirement:
+   *   Item: base price ₹84.75, 5% default discount, 18% GST
+   *   lineGross  = 1 × 84.75 = 84.75
+   *   discAmt    = 84.75 × 5% = 4.24
+   *   taxable    = 84.75 − 4.24 = 80.51
+   *   taxAmt     = 80.51 × 18% = 14.49
+   *   amount     = 80.51 + 14.49 = 95.00  ✓
+   * ════════════════════════════════════════════════════════════════
+   */
   function handleAdd() {
     if (selected.size === 0) return;
+
     const billItems: BillItem[] = [];
+
     selected.forEach((qty, itemId) => {
       const item = items.find(i => i.id === itemId);
       if (!item) return;
-      const price   = Number(item.salesPrice ?? 0);
-      const taxRate = item.gstRate ? Number(item.gstRate) : 0;
-      const base    = qty * price;
-      const taxAmt  = base * taxRate / 100;
-      billItems.push({
+
+      // ── 1. Base price — ALWAYS pre-tax ─────────────────────────────────────
+      // baseSalesPrice is the correct field (set by backend when item was created
+      // with a tax rate). Fall back to salesPrice for legacy items.
+      const price = Number(
+        item.baseSalesPrice != null && Number(item.baseSalesPrice) > 0
+          ? item.baseSalesPrice
+          : item.salesPrice ?? 0
+      );
+
+      // ── 2. Default discount % from item master ──────────────────────────────
+      // This pre-fills the discount column in the invoice table.
+      // The user can still change it per-line in SIItemsTable.
+      const discountPct = Number(item.salesDiscountPercent ?? 0);
+
+      // ── 3. GST rate ─────────────────────────────────────────────────────────
+      // gstRate comes as a string from backend: "18", "5", "Exempted", etc.
+      const taxRate  = parseGstRate(item.gstRate);
+      const taxLabel = buildTaxLabel(taxRate);
+
+      // ── 4. Build the BillItem and calculate amount using shared formula ─────
+      const billItem: BillItem = {
         rowId:       `row-${Date.now()}-${itemId}`,
         itemId,
         name:        item.name,
@@ -78,13 +123,20 @@ export default function SIAddItemsModal({ onClose, onAddToBill }: Props) {
         qty,
         unit:        item.unit ?? "PCS",
         price,
-        discountPct: 0,
-        discountAmt: 0,
-        taxLabel:    item.gstRate ? `GST ${item.gstRate}%` : "None",
+        discountPct,
+        discountAmt: 0,          // flat ₹ discount — always 0 at add time (% takes priority)
+        taxLabel,
         taxRate,
-        amount:      Math.round((base + taxAmt) * 100) / 100,
-      });
+        amount:      0,          // will be recalculated below using shared formula
+      };
+
+      // Calculate amount using the shared utility so the formula is identical
+      // everywhere (SIItemsTable, SISummary, here).
+      billItem.amount = calcBillItemAmount(billItem);
+
+      billItems.push(billItem);
     });
+
     onAddToBill(billItems);
     onClose();
   }
@@ -93,8 +145,8 @@ export default function SIAddItemsModal({ onClose, onAddToBill }: Props) {
   const totalSelected = Array.from(selected.values()).reduce((s, v) => s + v, 0);
 
   /**
-   * ✅ FIX: use currentStock (live balance) not openingStock (original entry).
-   * Falls back to openingStock if currentStock is not present (old data).
+   * Show live (currentStock) not opening stock.
+   * Falls back to openingStock for legacy items that don't have currentStock yet.
    */
   function getStock(item: BackendItem): string {
     if (!item.ProductStock || item.ProductStock.length === 0) return "–";
@@ -103,6 +155,20 @@ export default function SIAddItemsModal({ onClose, onAddToBill }: Props) {
       0
     );
     return String(total);
+  }
+
+  /**
+   * Display the base price in the modal table.
+   * Shows baseSalesPrice when available (with a "(base)" label for clarity),
+   * otherwise shows salesPrice.
+   */
+  function displayPrice(item: BackendItem): string {
+    const base = Number(
+      item.baseSalesPrice != null && Number(item.baseSalesPrice) > 0
+        ? item.baseSalesPrice
+        : item.salesPrice ?? 0
+    );
+    return `₹${base.toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
   }
 
   return (
@@ -115,9 +181,8 @@ export default function SIAddItemsModal({ onClose, onAddToBill }: Props) {
           <button onClick={onClose}>✕</button>
         </div>
 
-        {/* ── Toolbar: [search bar] [category] [Create New Item] ── */}
+        {/* ── Toolbar ── */}
         <div className="si-aim-toolbar">
-          {/* Full-width search with barcode icon inside */}
           <div className="si-aim-search-wrap">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
@@ -127,7 +192,7 @@ export default function SIAddItemsModal({ onClose, onAddToBill }: Props) {
               className="si-aim-search"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Search by Item/ Serial no./ HSN code/ SKU/ Custom Field / Category"
+              placeholder="Search by Item / Serial no. / HSN code / SKU / Custom Field / Category"
             />
             <button className="si-aim-barcode" title="Scan barcode">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" style={{ width: 20, height: 20 }}>
@@ -140,7 +205,6 @@ export default function SIAddItemsModal({ onClose, onAddToBill }: Props) {
             </button>
           </div>
 
-          {/* Category dropdown */}
           <select
             className="si-aim-cat"
             value={category}
@@ -150,7 +214,6 @@ export default function SIAddItemsModal({ onClose, onAddToBill }: Props) {
             {categories.map(c => <option key={c}>{c}</option>)}
           </select>
 
-          {/* Create New Item */}
           <button
             className="si-aim-create"
             onClick={() => { onClose(); navigate("/cashier/create-item"); }}
@@ -167,7 +230,10 @@ export default function SIAddItemsModal({ onClose, onAddToBill }: Props) {
                 <th>Item Name</th>
                 <th>Item Code</th>
                 <th>Stock</th>
-                <th>Sales Price</th>
+                {/* FIX: renamed "Sales Price" → "Base Price" for clarity */}
+                <th>Base Price</th>
+                <th>GST Rate</th>
+                <th>Default Disc%</th>
                 <th>Purchase Price</th>
                 <th>Quantity</th>
               </tr>
@@ -175,16 +241,19 @@ export default function SIAddItemsModal({ onClose, onAddToBill }: Props) {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={6} className="si-aim-empty">Loading items…</td>
+                  <td colSpan={8} className="si-aim-empty">Loading items…</td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="si-aim-empty">
+                  <td colSpan={8} className="si-aim-empty">
                     {search ? "No items found" : "No items available. Create items first."}
                   </td>
                 </tr>
               ) : filtered.map(item => {
-                const qty = selected.get(item.id) || 0;
+                const qty      = selected.get(item.id) || 0;
+                const taxRate  = parseGstRate(item.gstRate);
+                const discPct  = Number(item.salesDiscountPercent ?? 0);
+
                 return (
                   <tr
                     key={item.id}
@@ -193,16 +262,26 @@ export default function SIAddItemsModal({ onClose, onAddToBill }: Props) {
                     <td className="si-aim-name">{item.name}</td>
                     <td className="si-aim-code">{item.itemCode || "–"}</td>
                     <td className="si-aim-stock">{getStock(item)}</td>
+
+                    {/* Base price — the pre-tax value that will be used on the invoice */}
+                    <td className="si-aim-price">{displayPrice(item)}</td>
+
+                    {/* GST rate */}
                     <td className="si-aim-price">
-                      {item.salesPrice != null
-                        ? `₹${Number(item.salesPrice).toLocaleString("en-IN")}`
-                        : "–"}
+                      {taxRate > 0 ? `${taxRate}%` : "–"}
                     </td>
+
+                    {/* Default discount % */}
+                    <td className="si-aim-price">
+                      {discPct > 0 ? `${discPct}%` : "–"}
+                    </td>
+
                     <td className="si-aim-price">
                       {item.purchasePrice != null && Number(item.purchasePrice) > 0
                         ? `₹${Number(item.purchasePrice).toLocaleString("en-IN")}`
                         : "–"}
                     </td>
+
                     <td className="si-aim-qty-cell">
                       {qty === 0 ? (
                         <button className="si-aim-add-btn" onClick={() => setQty(item.id, 1)}>
@@ -238,8 +317,8 @@ export default function SIAddItemsModal({ onClose, onAddToBill }: Props) {
           <div className="si-aim-bottom">
             <span className="si-aim-sel-count">
               {totalSelected > 0
-                ? `Show ${totalSelected} Item(s) Selected`
-                : "Show 0 Item(s) Selected"}
+                ? `${totalSelected} Item(s) Selected`
+                : "0 Item(s) Selected"}
             </span>
             <div className="si-aim-actions">
               <button className="si-aim-cancel" onClick={onClose}>Cancel [ESC]</button>

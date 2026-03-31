@@ -1,11 +1,119 @@
-import { useState, useRef, useEffect } from "react";
-import { LinkedInvoice, getSalesInvoices, getSalesReturns, fmtDisplayDate } from "./Salesreturntypes";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { LinkedInvoice, fmtDisplayDate } from "./Salesreturntypes";
 import { Party } from "./Salesreturntypes";
+import { getAvailableInvoicesForReturn, AvailableInvoice } from "../../../api/salesreturnapi";
 import "./Createsalesreturn.css";
+
+// ─── Read field visibility + custom fields from InvoiceBuilder localStorage ───
+interface BuilderDetSettings {
+  showEwayBill:          boolean;
+  showChallan:           boolean;
+  showFinancedBy:        boolean;
+  showSalesman:          boolean;
+  showEmailId:           boolean;
+  showWarranty:          boolean;
+  showVehicle:           boolean;
+  showPO:                boolean;
+  showDispatchedThrough: boolean;
+  showTransportName:     boolean;
+  customFields:          { label: string; value: string }[];
+}
+
+function getBuilderDetSettings(): BuilderDetSettings {
+  const defaults: BuilderDetSettings = {
+    showEwayBill:          true,
+    showChallan:           true,
+    showFinancedBy:        true,
+    showSalesman:          true,
+    showEmailId:           true,
+    showWarranty:          true,
+    showVehicle:           false,
+    showPO:                false,
+    showDispatchedThrough: false,
+    showTransportName:     false,
+    customFields:          [],
+  };
+  try {
+    const raw = localStorage.getItem("activeInvoiceTemplate");
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      const d = parsed?.det;
+      if (d) {
+        return {
+          showEwayBill:          d.showEwayBill          ?? defaults.showEwayBill,
+          showChallan:           d.showChallan           ?? defaults.showChallan,
+          showFinancedBy:        d.showFinancedBy        ?? defaults.showFinancedBy,
+          showSalesman:          d.showSalesman          ?? defaults.showSalesman,
+          showEmailId:           d.showEmailId           ?? defaults.showEmailId,
+          showWarranty:          d.showWarranty          ?? defaults.showWarranty,
+          showVehicle:           d.showVehicle           ?? defaults.showVehicle,
+          showPO:                d.showPO                ?? defaults.showPO,
+          showDispatchedThrough: d.showDispatchedThrough ?? defaults.showDispatchedThrough,
+          showTransportName:     d.showTransportName     ?? defaults.showTransportName,
+          customFields:          Array.isArray(d.customFields) ? d.customFields : [],
+        };
+      }
+    }
+  } catch {}
+  return defaults;
+}
+
+// ─── Convert backend AvailableInvoice → frontend LinkedInvoice ────────────────
+// FIX: now copies ALL meta fields + customFieldValues from the invoice
+function toLinkedInvoice(inv: AvailableInvoice, partyName: string): LinkedInvoice {
+  return {
+    id:          String(inv.id),
+    invoiceNo:   inv.invoiceNo,
+    invoiceDate: inv.invoiceDate.split("T")[0],
+    party:       { name: partyName },
+
+    // ── Items ──────────────────────────────────────────────────────────────
+    billItems: inv.items.map((item) => ({
+      rowId:       `row-${item.id}`,
+      itemId:      String(item.productId),
+      name:        item.product.name,
+      description: "",
+      hsn:         item.product.hsnCode || "",
+      qty:         item.quantity,
+      unit:        item.product.unit || "PCS",
+      price:       item.price,
+      discountPct: 0,
+      discountAmt: 0,
+      taxLabel:    "None",
+      taxRate:     0,
+      amount:      item.quantity * item.price,
+    })),
+
+    additionalCharges: [],
+    discountPct:       0,
+    discountAmt:       0,
+
+    // ── Meta fields from the invoice ───────────────────────────────────────
+    notes:             inv.notes           || "",
+    termsConditions:   inv.termsConditions || "",
+    amountReceived:    Number(inv.totalAmount) - Number(inv.outstandingAmount),
+    status:            inv.status,
+
+    // Standard meta fields — all populated from the actual invoice data
+    challanNo:         inv.challanNo         || "",
+    financedBy:        inv.financedBy        || "",
+    salesman:          inv.salesman          || "",
+    emailId:           inv.emailId           || "",
+    warrantyPeriod:    inv.warrantyPeriod    || "",
+    eWayBillNo:        inv.ewayBillNo        || "",
+    poNumber:          inv.poNumber          || "",
+    vehicleNo:         inv.vehicleNo         || "",
+    dispatchedThrough: inv.dispatchedThrough || "",
+    transportName:     inv.transportName     || "",
+
+    // Custom fields JSON — e.g. { "WWW": "90" }
+    customFieldValues: inv.customFieldValues ?? {},
+  };
+}
 
 // ─── Date Picker ──────────────────────────────────────────────────────────────
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-const DAYS = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+const DAYS   = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
 
 function DatePicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const [open, setOpen] = useState(false);
@@ -14,7 +122,9 @@ function DatePicker({ value, onChange }: { value: string; onChange: (v: string) 
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const h = (e: MouseEvent) => { if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false); };
+    const h = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
   }, []);
@@ -22,20 +132,30 @@ function DatePicker({ value, onChange }: { value: string; onChange: (v: string) 
   const dim = (m: number, y: number) => new Date(y, m + 1, 0).getDate();
   const fdo = (m: number, y: number) => new Date(y, m, 1).getDay();
 
-  const selectedDate = value ? new Date(value) : null;
-  const cells: (number | null)[] = [...Array(fdo(vm, vy)).fill(null), ...Array.from({ length: dim(vm, vy) }, (_, i) => i + 1)];
+  const cells: (number | null)[] = [
+    ...Array(fdo(vm, vy)).fill(null),
+    ...Array.from({ length: dim(vm, vy) }, (_, i) => i + 1),
+  ];
   while (cells.length % 7 !== 0) cells.push(null);
 
-  const ds = (d: number) => `${vy}-${String(vm + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+  const ds = (d: number) =>
+    `${vy}-${String(vm + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
   const isSelected = (d: number) => ds(d) === value;
-  const isToday = (d: number) => ds(d) === new Date().toISOString().split("T")[0];
+  const isToday    = (d: number) => ds(d) === new Date().toISOString().split("T")[0];
 
   return (
     <div ref={ref} className="csr-datepick-wrap">
       <button className="csr-date-btn" onClick={() => setOpen(!open)}>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <rect x="3" y="4" width="18" height="18" rx="2"/>
+          <line x1="16" y1="2" x2="16" y2="6"/>
+          <line x1="8" y1="2" x2="8" y2="6"/>
+          <line x1="3" y1="10" x2="21" y2="10"/>
+        </svg>
         <span>{value ? fmtDisplayDate(value) : "Select date"}</span>
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+          <polyline points="6 9 12 15 18 9"/>
+        </svg>
       </button>
       {open && (
         <div className="csr-cal-popup">
@@ -59,15 +179,21 @@ function DatePicker({ value, onChange }: { value: string; onChange: (v: string) 
               return (
                 <button
                   key={i}
-                  className={`csr-cal-day${isSelected(day) ? " csr-cal-day--sel" : ""}${isToday(day) && !isSelected(day) ? " csr-cal-day--today" : ""}`}
+                  className={[
+                    "csr-cal-day",
+                    isSelected(day) ? "csr-cal-day--sel" : "",
+                    isToday(day) && !isSelected(day) ? "csr-cal-day--today" : "",
+                  ].filter(Boolean).join(" ")}
                   onClick={() => { onChange(ds(day)); setOpen(false); }}
-                >{day}</button>
+                >
+                  {day}
+                </button>
               );
             })}
           </div>
           <div className="csr-cal-footer">
             <button className="csr-cal-cancel" onClick={() => setOpen(false)}>CANCEL</button>
-            <button className="csr-cal-ok" onClick={() => setOpen(false)}>OK</button>
+            <button className="csr-cal-ok"     onClick={() => setOpen(false)}>OK</button>
           </div>
         </div>
       )}
@@ -77,19 +203,19 @@ function DatePicker({ value, onChange }: { value: string; onChange: (v: string) 
 
 // ─── Meta Fields Component ────────────────────────────────────────────────────
 interface MetaFieldsProps {
-  salesReturnNo: number;
+  salesReturnNo:   number;
   salesReturnDate: string;
-  party: Party | null;
+  party:           Party | null;
   currentReturnId: string;
   linkedInvoiceId: string | null;
-  eWayBillNo: string;
-  challanNo: string;
-  financedBy: string;
-  salesman: string;
-  emailId: string;
-  warrantyPeriod: string;
-  onChange: (field: string, value: any) => void;
-  onInvoiceLink: (invoice: LinkedInvoice | null) => void;
+  eWayBillNo:      string;
+  challanNo:       string;
+  financedBy:      string;
+  salesman:        string;
+  emailId:         string;
+  warrantyPeriod:  string;
+  onChange:        (field: string, value: any) => void;
+  onInvoiceLink:   (invoice: LinkedInvoice | null) => void;
 }
 
 export default function SRMetaFields({
@@ -97,42 +223,131 @@ export default function SRMetaFields({
   linkedInvoiceId, eWayBillNo, challanNo, financedBy,
   salesman, emailId, warrantyPeriod, onChange, onInvoiceLink,
 }: MetaFieldsProps) {
-  const [invoiceOpen, setInvoiceOpen] = useState(false);
-  const [invoiceSearch, setInvoiceSearch] = useState("");
-  const [editNo, setEditNo] = useState(false);
-  const [tempNo, setTempNo] = useState(String(salesReturnNo));
+
+  const [invoiceOpen,       setInvoiceOpen]       = useState(false);
+  const [invoiceSearch,     setInvoiceSearch]     = useState("");
+  const [editNo,            setEditNo]            = useState(false);
+  const [tempNo,            setTempNo]            = useState(String(salesReturnNo));
+  const [availableInvoices, setAvailableInvoices] = useState<AvailableInvoice[]>([]);
+  const [loadingInvoices,   setLoadingInvoices]   = useState(false);
+  const [invoiceError,      setInvoiceError]      = useState<string | null>(null);
+
+  // customFieldValues holds the DISPLAYED values for custom fields.
+  // They are seeded from InvoiceBuilder defaults, then overwritten when an
+  // invoice is selected (with the actual values saved on that invoice).
+  const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
+  const [builderDet,        setBuilderDet]        = useState<BuilderDetSettings>(() => getBuilderDetSettings());
+
   const invoiceRef = useRef<HTMLDivElement>(null);
 
+  // ── Read builder settings on mount ──────────────────────────────────────────
   useEffect(() => {
-    const h = (e: MouseEvent) => { if (invoiceRef.current && !invoiceRef.current.contains(e.target as Node)) setInvoiceOpen(false); };
+    const det = getBuilderDetSettings();
+    setBuilderDet(det);
+    // Seed custom field values from InvoiceBuilder defaults
+    const initial: Record<string, string> = {};
+    det.customFields.forEach(f => { if (f.label) initial[f.label] = f.value || ""; });
+    setCustomFieldValues(initial);
+  }, []);
+
+  // ── Close dropdown on outside click ─────────────────────────────────────────
+  useEffect(() => {
+    const h = (e: MouseEvent) => {
+      if (invoiceRef.current && !invoiceRef.current.contains(e.target as Node))
+        setInvoiceOpen(false);
+    };
     document.addEventListener("mousedown", h);
     return () => document.removeEventListener("mousedown", h);
   }, []);
 
-  // Get all invoices linked to this party, excluding those already used in other sales returns
-  const allInvoices = getSalesInvoices();
-  const allReturns = getSalesReturns();
-  const usedInvoiceIds = allReturns
-    .filter(r => r.id !== currentReturnId && r.linkedInvoiceId)
-    .map(r => r.linkedInvoiceId);
+  useEffect(() => { setTempNo(String(salesReturnNo)); }, [salesReturnNo]);
 
-  const partyInvoices = allInvoices.filter(inv => {
-    if (party && inv.party?.name !== party.name) return false;
-    if (usedInvoiceIds.includes(inv.id)) return false;
-    if (inv.id === linkedInvoiceId) return true; // always show currently linked
-    return true;
-  }).filter(inv => {
+  // ── Fetch available invoices from backend when party changes ─────────────────
+  const fetchAvailableInvoices = useCallback(async () => {
+    if (!party?.id) { setAvailableInvoices([]); return; }
+    setLoadingInvoices(true);
+    setInvoiceError(null);
+    try {
+      const invoices = await getAvailableInvoicesForReturn(party.id);
+      setAvailableInvoices(invoices);
+    } catch (err: any) {
+      setInvoiceError("Failed to load invoices");
+      setAvailableInvoices([]);
+    } finally {
+      setLoadingInvoices(false);
+    }
+  }, [party?.id]);
+
+  useEffect(() => {
+    fetchAvailableInvoices();
+    if (!party) {
+      onChange("linkedInvoiceId", null);
+      onInvoiceLink(null);
+    }
+  }, [party?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Filter invoices by search term ───────────────────────────────────────────
+  const filteredInvoices = availableInvoices.filter(inv => {
     if (!invoiceSearch.trim()) return true;
-    return String(inv.invoiceNo).includes(invoiceSearch) || fmtDisplayDate(inv.invoiceDate).toLowerCase().includes(invoiceSearch.toLowerCase());
+    const q = invoiceSearch.toLowerCase();
+    return (
+      String(inv.invoiceNo).toLowerCase().includes(q) ||
+      inv.invoiceDate.includes(q)
+    );
   });
 
-  const linkedInvoice = linkedInvoiceId ? allInvoices.find(i => i.id === linkedInvoiceId) : null;
+  const linkedInvoice = linkedInvoiceId
+    ? availableInvoices.find(i => String(i.id) === String(linkedInvoiceId))
+    : null;
 
-  const handleSelectInvoice = (inv: LinkedInvoice) => {
-    onChange("linkedInvoiceId", inv.id);
-    onInvoiceLink(inv);
+  // ── Select invoice — FIX: push ALL meta fields to parent form ────────────────
+  const handleSelectInvoice = (inv: AvailableInvoice) => {
+    const linked = toLinkedInvoice(inv, party?.name ?? "");
+
+    // 1. Tell parent about the linked invoice (items, additionalCharges, etc.)
+    onChange("linkedInvoiceId", String(inv.id));
+    onInvoiceLink(linked);
+
+    // 2. Push standard meta fields directly into the parent form state
+    //    so inputs like Challan No, Salesman, etc. show the invoice's actual values
+    onChange("challanNo",      inv.challanNo         || "");
+    onChange("financedBy",     inv.financedBy        || "");
+    onChange("salesman",       inv.salesman          || "");
+    onChange("emailId",        inv.emailId           || "");
+    onChange("warrantyPeriod", inv.warrantyPeriod    || "");
+    onChange("eWayBillNo",     inv.ewayBillNo        || "");
+
+    // 3. Populate custom field display state from the invoice's customFieldValues
+    //    e.g. if the invoice has { "WWW": "90" }, show 90 (not the builder default 100)
+    if (inv.customFieldValues && Object.keys(inv.customFieldValues).length > 0) {
+      setCustomFieldValues(prev => ({
+        ...prev,              // keep any custom fields not present on the invoice
+        ...inv.customFieldValues,
+      }));
+    }
+
     setInvoiceOpen(false);
     setInvoiceSearch("");
+  };
+
+  const handleClearInvoice = () => {
+    onChange("linkedInvoiceId", null);
+    onInvoiceLink(null);
+    setInvoiceSearch("");
+
+    // Reset meta fields to empty
+    onChange("challanNo",      "");
+    onChange("financedBy",     "");
+    onChange("salesman",       "");
+    onChange("emailId",        "");
+    onChange("warrantyPeriod", "");
+    onChange("eWayBillNo",     "");
+
+    // Reset custom fields back to InvoiceBuilder defaults
+    const det = getBuilderDetSettings();
+    const reset: Record<string, string> = {};
+    det.customFields.forEach(f => { if (f.label) reset[f.label] = f.value || ""; });
+    setCustomFieldValues(reset);
   };
 
   const formatInvoiceDate = (d: string) => {
@@ -140,12 +355,25 @@ export default function SRMetaFields({
     return `${String(dt.getDate()).padStart(2,"0")}/${String(dt.getMonth()+1).padStart(2,"0")}/${String(dt.getFullYear()).slice(-2)}`;
   };
 
-  const calcInvoiceAmount = (inv: LinkedInvoice): number => {
-    return inv.billItems.reduce((s, i) => s + (i.amount || i.qty * i.price), 0);
-  };
+  // ── Build list of visible meta fields (controlled by Invoice Builder) ─────────
+  const extraFields: { key: string; label: string; value: string; fieldProp: string }[] = [];
+  if (builderDet.showEwayBill)          extraFields.push({ key: "eWayBillNo",       label: "E-Way Bill No:",      value: eWayBillNo,     fieldProp: "eWayBillNo" });
+  if (builderDet.showChallan)           extraFields.push({ key: "challanNo",        label: "Challan No.:",        value: challanNo,      fieldProp: "challanNo" });
+  if (builderDet.showFinancedBy)        extraFields.push({ key: "financedBy",       label: "Financed By:",        value: financedBy,     fieldProp: "financedBy" });
+  if (builderDet.showSalesman)          extraFields.push({ key: "salesman",         label: "Salesman:",           value: salesman,       fieldProp: "salesman" });
+  if (builderDet.showEmailId)           extraFields.push({ key: "emailId",          label: "Email ID:",           value: emailId,        fieldProp: "emailId" });
+  if (builderDet.showWarranty)          extraFields.push({ key: "warrantyPeriod",   label: "Warranty Period:",    value: warrantyPeriod, fieldProp: "warrantyPeriod" });
+  if (builderDet.showPO)                extraFields.push({ key: "poNumber",         label: "PO Number:",          value: "",             fieldProp: "poNumber" });
+  if (builderDet.showVehicle)           extraFields.push({ key: "vehicleNo",        label: "Vehicle No:",         value: "",             fieldProp: "vehicleNo" });
+  if (builderDet.showDispatchedThrough) extraFields.push({ key: "dispatchedThrough",label: "Dispatched Through:", value: "",             fieldProp: "dispatchedThrough" });
+  if (builderDet.showTransportName)     extraFields.push({ key: "transportName",    label: "Transport Name:",     value: "",             fieldProp: "transportName" });
+
+  const visibleCustomFields = builderDet.customFields.filter(cf => cf.label.trim());
 
   return (
     <div className="csr-meta-panel">
+
+      {/* ── Sales Return No + Date ── */}
       <div className="csr-meta-row">
         <div className="csr-meta-field">
           <label className="csr-meta-label">Sales Return No:</label>
@@ -170,42 +398,75 @@ export default function SRMetaFields({
         </div>
       </div>
 
+      {/* ── Link to Invoice ── */}
       <div className="csr-meta-field csr-meta-field--full">
         <label className="csr-meta-label">Link to Invoice :</label>
         <div ref={invoiceRef} className="csr-invoice-link-wrap">
-          <div className={`csr-invoice-search-box${invoiceOpen ? " csr-invoice-search-box--open" : ""}`}
-            onClick={() => setInvoiceOpen(true)}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+          <div
+            className={`csr-invoice-search-box${invoiceOpen ? " csr-invoice-search-box--open" : ""}`}
+            onClick={() => { if (party?.id) setInvoiceOpen(true); }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
+            </svg>
             <input
               className="csr-invoice-search-input"
-              placeholder="Search invoices"
+              placeholder={party ? "Search invoices" : "Select a party first"}
               value={invoiceSearch}
+              disabled={!party?.id}
               onChange={e => setInvoiceSearch(e.target.value)}
-              onFocus={() => setInvoiceOpen(true)}
+              onFocus={() => { if (party?.id) { setInvoiceOpen(true); fetchAvailableInvoices(); } }}
             />
+            {loadingInvoices && (
+              <span className="csr-invoice-loading">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+                  style={{ animation: "spin 1s linear infinite" }}>
+                  <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
+                </svg>
+              </span>
+            )}
           </div>
+
           {invoiceOpen && (
             <div className="csr-invoice-dropdown">
-              {partyInvoices.length === 0 ? (
+              {loadingInvoices ? (
+                <div className="csr-invoice-empty">Loading invoices…</div>
+              ) : invoiceError ? (
+                <div className="csr-invoice-empty csr-invoice-error">
+                  {invoiceError}
+                  <button className="csr-invoice-retry" onClick={fetchAvailableInvoices}>Retry</button>
+                </div>
+              ) : filteredInvoices.length === 0 ? (
                 <div className="csr-invoice-empty">
-                  {party ? "No available invoices for this party" : "Select a party to see invoices"}
+                  {invoiceSearch
+                    ? "No invoices match your search"
+                    : party
+                    ? "No available invoices — all invoices for this party already have a return"
+                    : "Select a party to see invoices"}
                 </div>
               ) : (
                 <>
                   <div className="csr-invoice-dropdown-hdr">
                     <span>Date</span>
                     <span>Invoice No.</span>
-                    <span>Amount(₹)</span>
+                    <span>Amount (₹)</span>
+                    <span>Status</span>
                   </div>
-                  {partyInvoices.map(inv => (
+                  {filteredInvoices.map(inv => (
                     <div
                       key={inv.id}
-                      className={`csr-invoice-option${inv.id === linkedInvoiceId ? " csr-invoice-option--sel" : ""}`}
+                      className={`csr-invoice-option${String(inv.id) === String(linkedInvoiceId) ? " csr-invoice-option--sel" : ""}`}
                       onClick={() => handleSelectInvoice(inv)}
                     >
                       <span>{formatInvoiceDate(inv.invoiceDate)}</span>
                       <span>#{inv.invoiceNo}</span>
-                      <span>₹{calcInvoiceAmount(inv).toLocaleString("en-IN")}</span>
+                      <span>₹{Number(inv.totalAmount).toLocaleString("en-IN")}</span>
+                      <span className={`csr-inv-status csr-inv-status--${inv.status.toLowerCase()}`}>
+                        {inv.status === "OPEN"    ? "Unpaid"
+                          : inv.status === "PARTIAL" ? "Partial"
+                          : inv.status === "PAID"    ? "Paid"
+                          : inv.status}
+                      </span>
                     </div>
                   ))}
                 </>
@@ -213,42 +474,71 @@ export default function SRMetaFields({
             </div>
           )}
         </div>
+
+        {/* Linked invoice badge */}
         {linkedInvoice && (
           <div className="csr-linked-badge">
-            Linked to Invoice #{linkedInvoice.invoiceNo}
-            <button className="csr-linked-clear" onClick={() => { onChange("linkedInvoiceId", null); onInvoiceLink(null); }}>×</button>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+              <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+            </svg>
+            &nbsp;Linked to Invoice #{linkedInvoice.invoiceNo}&nbsp;
+            <span className="csr-linked-status">
+              ({linkedInvoice.status === "OPEN"
+                ? "Unpaid"
+                : linkedInvoice.status === "PARTIAL"
+                ? "Partially Paid"
+                : "Paid"})
+            </span>
+            <button className="csr-linked-clear" onClick={handleClearInvoice} title="Remove link">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
           </div>
         )}
       </div>
 
-      <div className="csr-meta-extras">
-        <div className="csr-meta-extra-field">
-          <label>E-Way Bill No:
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{marginLeft:3}}><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
-          </label>
-          <input className="csr-meta-extra-input" value={eWayBillNo} onChange={e => onChange("eWayBillNo", e.target.value)} />
+      {/* ── Extra fields (standard + custom) from Invoice Builder ── */}
+      {(extraFields.length > 0 || visibleCustomFields.length > 0) && (
+        <div className="csr-meta-extras">
+
+          {/* Standard fields — value comes from parent form props (controlled) */}
+          {extraFields.map(f => (
+            <div key={f.key} className="csr-meta-extra-field">
+              <label>
+                {f.label}
+                {f.key === "eWayBillNo" && (
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+                    style={{ marginLeft: 3, verticalAlign: "middle" }}>
+                    <circle cx="12" cy="12" r="10"/>
+                    <path d="M12 8v4M12 16h.01"/>
+                  </svg>
+                )}
+              </label>
+              <input
+                className="csr-meta-extra-input"
+                value={f.value}
+                onChange={e => onChange(f.fieldProp, e.target.value)}
+              />
+            </div>
+          ))}
+
+          {/* Custom fields — value comes from local state (seeded from invoice on select) */}
+          {visibleCustomFields.map((cf, idx) => (
+            <div key={`custom-${idx}`} className="csr-meta-extra-field">
+              <label>{cf.label}:</label>
+              <input
+                className="csr-meta-extra-input"
+                value={customFieldValues[cf.label] ?? cf.value ?? ""}
+                onChange={e =>
+                  setCustomFieldValues(prev => ({ ...prev, [cf.label]: e.target.value }))
+                }
+              />
+            </div>
+          ))}
         </div>
-        <div className="csr-meta-extra-field">
-          <label>Challan No.:</label>
-          <input className="csr-meta-extra-input" value={challanNo} onChange={e => onChange("challanNo", e.target.value)} />
-        </div>
-        <div className="csr-meta-extra-field">
-          <label>Financed By:</label>
-          <input className="csr-meta-extra-input" value={financedBy} onChange={e => onChange("financedBy", e.target.value)} />
-        </div>
-        <div className="csr-meta-extra-field">
-          <label>Salesman:</label>
-          <input className="csr-meta-extra-input" value={salesman} onChange={e => onChange("salesman", e.target.value)} />
-        </div>
-        <div className="csr-meta-extra-field">
-          <label>Email ID:</label>
-          <input className="csr-meta-extra-input" value={emailId} onChange={e => onChange("emailId", e.target.value)} />
-        </div>
-        <div className="csr-meta-extra-field">
-          <label>Warranty Period:</label>
-          <input className="csr-meta-extra-input" value={warrantyPeriod} onChange={e => onChange("warrantyPeriod", e.target.value)} />
-        </div>
-      </div>
+      )}
     </div>
   );
 }

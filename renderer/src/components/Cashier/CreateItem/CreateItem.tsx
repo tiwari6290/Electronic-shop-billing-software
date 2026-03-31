@@ -342,6 +342,46 @@ const CreateItem = () => {
     return isNaN(n) ? null : n;
   };
 
+  /* ── Helper: parse GST rate string → numeric % ── */
+  const parseGstNum = (rateStr: string): number => {
+    if (!rateStr || rateStr === "Exempted") return 0;
+    // handles "18", "0.1", "28+cess5" etc. — take the first numeric portion
+    const m = rateStr.match(/^(\d+\.?\d*)/);
+    return m ? Number(m[1]) : 0;
+  };
+
+  /**
+   * Compute base (pre-tax) price from the entered price.
+   *
+   * If "With Tax":   basePrce = enteredPrice / (1 + gstRate/100)
+   * If "Without Tax": basePrce = enteredPrice  (already pre-tax)
+   *
+   * Returns null if enteredPrice is empty/zero.
+   */
+  const computeBasePrice = (
+    enteredPriceStr: string,
+    taxMode: string,          // "With Tax" | "Without Tax"
+    gstRateStr: string
+  ): { basePrice: number | null; inclTax: boolean } => {
+    const entered = cleanNumber(enteredPriceStr);
+    if (entered === null) return { basePrice: null, inclTax: taxMode === "With Tax" };
+
+    const enteredNum  = Number(entered);
+    const gstNum      = parseGstNum(gstRateStr);
+    const inclTax     = taxMode === "With Tax";
+
+    let basePrice: number;
+    if (inclTax && gstNum > 0) {
+      // Remove GST from the inclusive price
+      basePrice = Math.round((enteredNum / (1 + gstNum / 100)) * 100) / 100;
+    } else {
+      // Already exclusive — use as-is
+      basePrice = Math.round(enteredNum * 100) / 100;
+    }
+
+    return { basePrice, inclTax };
+  };
+
   /* ── Save item ── */
   const createItem = async () => {
     if (!name.trim()) {
@@ -357,6 +397,13 @@ const CreateItem = () => {
         categoryValue = await autoCreateCategory(searchCategory);
       }
 
+      // ── Compute base prices on the frontend ─────────────────────────────────
+      const { basePrice: baseSalesPriceVal, inclTax: salesInclTax } =
+        computeBasePrice(salesPrice, salesTax, gstRate);
+
+      const { basePrice: basePurchasePriceVal, inclTax: purchaseInclTax } =
+        computeBasePrice(purchasePrice, purchaseTax, gstRate);
+
       const payload = {
         name: name.trim(),
         itemType: type,
@@ -371,8 +418,17 @@ const CreateItem = () => {
             ? serviceDescription || null
             : description || null,
 
-        salesPrice: cleanNumber(salesPrice),
+        // ── Prices as entered by user (stored for display/reference) ──────────
+        salesPrice:    cleanNumber(salesPrice),
         purchasePrice: cleanNumber(purchasePrice),
+
+        // ── Computed base (pre-tax) prices — always used for billing ──────────
+        baseSalesPrice:      baseSalesPriceVal,
+        basePurchasePrice:   basePurchasePriceVal,
+        salesPriceInclTax:   salesInclTax,
+        purchasePriceInclTax: purchaseInclTax,
+        taxType:             salesInclTax ? "with_tax" : "without_tax",
+
         mrp: cleanNumber(mrp),
         wholesalePrice: cleanNumber(wholesalePrice),
 
@@ -608,11 +664,17 @@ const CreateItem = () => {
                   <div className="ci-price">
                     <span className="ci-price-sym">₹</span>
                     <input
-                      type="number"
+                      type="text"
+                      inputMode="decimal"
+                      pattern="[0-9]*\.?[0-9]*"
                       className="ci-price-input"
-                      placeholder="ex: ₹200"
+                      placeholder="ex: 200"
                       value={salesPrice}
-                      onChange={(e) => setSalesPrice(e.target.value)}
+                      onChange={(e) => {
+                        // Allow only digits and a single decimal point
+                        const v = e.target.value;
+                        if (v === "" || /^\d*\.?\d*$/.test(v)) setSalesPrice(v);
+                      }}
                     />
                     <select
                       className="ci-price-sel"
@@ -623,6 +685,30 @@ const CreateItem = () => {
                       <option>Without Tax</option>
                     </select>
                   </div>
+                  {/* Live base price preview — shown when With Tax + price + GST all filled */}
+                  {salesTax === "With Tax" && salesPrice && gstRate && Number(gstRate) > 0 && (
+                    <div className="ci-base-price-hint">
+                      Base price (ex-GST): ₹{
+                        (Math.round(Number(salesPrice) / (1 + Number(gstRate) / 100) * 100) / 100)
+                          .toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                      }
+                      <span className="ci-base-price-note">
+                        &nbsp;· GST {gstRate}% = ₹{
+                          (Math.round((Number(salesPrice) - Number(salesPrice) / (1 + Number(gstRate) / 100)) * 100) / 100)
+                            .toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                        }
+                      </span>
+                    </div>
+                  )}
+                  {salesTax === "Without Tax" && salesPrice && gstRate && Number(gstRate) > 0 && (
+                    <div className="ci-base-price-hint">
+                      Price entered is base (ex-GST). GST {gstRate}% will be added during billing.
+                      &nbsp;Final = ₹{
+                        (Math.round(Number(salesPrice) * (1 + Number(gstRate) / 100) * 100) / 100)
+                          .toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                      }
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label>GST Tax Rate(%)</label>
@@ -701,10 +787,16 @@ const CreateItem = () => {
                   <div className="ci-price">
                     <span className="ci-price-sym">₹</span>
                     <input
+                      type="text"
+                      inputMode="decimal"
+                      pattern="[0-9]*\.?[0-9]*"
                       className="ci-price-input"
-                      placeholder="ex: ₹200"
+                      placeholder="ex: 200"
                       value={salesPrice}
-                      onChange={(e) => setSalesPrice(e.target.value)}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        if (v === "" || /^\d*\.?\d*$/.test(v)) setSalesPrice(v);
+                      }}
                     />
                     <select
                       className="ci-price-sel"
@@ -715,16 +807,36 @@ const CreateItem = () => {
                       <option>Without Tax</option>
                     </select>
                   </div>
+                  {salesTax === "With Tax" && salesPrice && gstRate && Number(gstRate) > 0 && (
+                    <div className="ci-base-price-hint">
+                      Base (ex-GST): ₹{
+                        (Math.round(Number(salesPrice) / (1 + Number(gstRate) / 100) * 100) / 100)
+                          .toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                      }
+                      <span className="ci-base-price-note">
+                        &nbsp;· GST ₹{
+                          (Math.round((Number(salesPrice) - Number(salesPrice) / (1 + Number(gstRate) / 100)) * 100) / 100)
+                            .toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                        }
+                      </span>
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label>Purchase Price</label>
                   <div className="ci-price">
                     <span className="ci-price-sym">₹</span>
                     <input
+                      type="text"
+                      inputMode="decimal"
+                      pattern="[0-9]*\.?[0-9]*"
                       className="ci-price-input"
-                      placeholder="ex: ₹200"
+                      placeholder="ex: 200"
                       value={purchasePrice}
-                      onChange={(e) => setPurchasePrice(e.target.value)}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        if (v === "" || /^\d*\.?\d*$/.test(v)) setPurchasePrice(v);
+                      }}
                     />
                     <select
                       className="ci-price-sel"
@@ -735,6 +847,20 @@ const CreateItem = () => {
                       <option>Without Tax</option>
                     </select>
                   </div>
+                  {purchaseTax === "With Tax" && purchasePrice && gstRate && Number(gstRate) > 0 && (
+                    <div className="ci-base-price-hint">
+                      Base (ex-GST): ₹{
+                        (Math.round(Number(purchasePrice) / (1 + Number(gstRate) / 100) * 100) / 100)
+                          .toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                      }
+                      <span className="ci-base-price-note">
+                        &nbsp;· GST ₹{
+                          (Math.round((Number(purchasePrice) - Number(purchasePrice) / (1 + Number(gstRate) / 100)) * 100) / 100)
+                            .toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                        }
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
 

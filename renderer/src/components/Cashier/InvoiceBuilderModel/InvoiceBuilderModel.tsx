@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import "./InvoiceBuilderModel.css";
-
+import { saveInvoiceDetailsSettings } from "../../../api/salesInvoiceApi";
 // ─── TYPES ────────────────────────────────────────────────────────────────────
 
 type View = "home" | "builder";
@@ -134,7 +134,6 @@ interface InvoiceData {
   city: string;
   gstin: string;
   phone: string;
-  email: string;
   pan: string;
   invoiceNo: string;
   date: string;
@@ -184,8 +183,7 @@ const DEFAULT_INVOICE: InvoiceData = {
   slogan: "",
   address: "Kumillapara, P.O.: Sauipara, Bally, Howrah - 711227",
   state: "West Bengal", city: "Howrah",
-  gstin: "19AFTPM0665H1ZY", phone: "2646 1320, Mobile: 9831789022",
-  email: "mondal@electronics.in", pan: "AFTPM0665H",
+  gstin: "19AFTPM0665H1ZY", phone: "2646 1320, Mobile: 9831789022", pan: "AFTPM0665H",
   invoiceNo: "MONDAL/2026/00013", date: "19/03/2026",
   dueDate: "18/04/2026", placeOfSupply: "West Bengal", poNo: "",
   billTo: { name: "Rohit Kumar Jha", address: "1/2 Mankundu", mobile: "6207941417", gstin: "" },
@@ -1495,6 +1493,23 @@ const HomePage: React.FC<HomePageProps> = ({ savedTemplates, onCreateOwn, onUse,
     onSaved(t);
     setSaveSuccess(true);
     setTimeout(() => setSaveSuccess(false), 2000);
+
+    // Sync settings to backend
+    saveInvoiceDetailsSettings({
+      showChallan:           invDet.challan,
+      showDispatchedThrough: invDet.dispatched,
+      showEmailId:           invDet.email,
+      showFinancedBy:        invDet.financed,
+      showSalesman:          invDet.salesman,
+      showTransportName:     invDet.transport,
+      showWarranty:          invDet.warranty,
+      showPO:                invDet.po,
+      showEwayBill:          invDet.eway,
+      showVehicle:           invDet.vehicle,
+      customFields:          invCustomFields,
+    }).catch(err => {
+      console.warn("InvoiceBuilderModel: failed to sync settings to backend:", err);
+    });
   };
 
   return (
@@ -1953,7 +1968,7 @@ const BusinessPanel: React.FC<{ inv: InvoiceData; setInv: React.Dispatch<React.S
       {vis.pan && <IBInput value={inv.pan} onChange={(v) => setInv((i) => ({ ...i, pan: v }))} />}
     </SettingRow>
     <SettingRow label="Email" checked={vis.email} onChange={(v) => setVis((s) => ({ ...s, email: v }))}>
-      {vis.email && <IBInput value={inv.email} onChange={(v) => setInv((i) => ({ ...i, email: v }))} />}
+   
     </SettingRow>
   </div>
 );

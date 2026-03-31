@@ -455,6 +455,15 @@ export default function GodownPage() {
   const handleDeleteConfirm = async () => {
     if (!deletingGodown) return;
     try {
+      // If there are items in this godown, warn the user and stop
+      if (items.length > 0) {
+        alert(
+          `Cannot delete godown "${deletingGodown.name}" because it contains ${items.length} item(s).\n` +
+          `Please transfer or remove all items from this godown before deleting it.`
+        );
+        setDeletingGodown(null);
+        return;
+      }
       await api.delete(`/godowns/${deletingGodown.id}`);
       const remaining = godowns.filter(g => g.id !== deletingGodown.id);
       setGodowns(remaining);
@@ -464,7 +473,10 @@ export default function GodownPage() {
         setSelectedGodownId("");
         setItems([]);
       }
-    } catch (error) {
+    } catch (error: any) {
+      // Backend may reject delete if godown has stock (FK constraint)
+      const msg = error?.response?.data?.message ?? "Delete godown failed";
+      alert(`Could not delete godown: ${msg}`);
       console.error("Delete godown failed", error);
     }
     setDeletingGodown(null);

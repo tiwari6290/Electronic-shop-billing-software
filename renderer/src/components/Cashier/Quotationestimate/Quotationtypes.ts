@@ -20,11 +20,57 @@ export interface Item {
   name: string;
   itemCode: string;
   stock: string;
+  /** Price as entered by the user (may be inclusive of GST if salesPriceInclTax=true) */
   salesPrice: number;
+  /** Always the pre-tax base price — never null after apiGetItems mapping */
+  baseSalesPrice: number;
   purchasePrice: number;
   unit: string;
   hsn?: string;
   category?: string;
+  /** GST rate as a number, e.g. 18 for 18% */
+  gstRate: number;
+  taxLabel: string;
+  /** Default discount % stored on the product — pre-filled when item is added to bill */
+  salesDiscountPercent: number;
+}
+
+// ─── Core calculation helper ──────────────────────────────────────────────────
+/**
+ * GST-standard line calculation:
+ *   lineGross  = qty × price  (price must be the pre-tax base price)
+ *   discountVal = discountPct > 0 ? lineGross × pct/100 : discountAmt
+ *   taxable    = lineGross − discountVal
+ *   tax        = taxable × taxRate/100
+ *   amount     = taxable + tax
+ *
+ * Rule: discountPct wins if > 0; otherwise discountAmt is used.
+ * GST is ALWAYS applied after discount.
+ */
+export interface CalcResult {
+  lineGross: number;
+  discountVal: number;
+  taxable: number;
+  taxAmt: number;
+  amount: number;
+}
+
+export function calcBillItemAmount(item: {
+  qty: number;
+  price: number;
+  discountPct: number;
+  discountAmt: number;
+  taxRate: number;
+}): CalcResult {
+  const lineGross  = parseFloat((item.qty * item.price).toFixed(2));
+  const discountVal =
+    item.discountPct > 0
+      ? parseFloat(((lineGross * item.discountPct) / 100).toFixed(2))
+      : parseFloat((item.discountAmt ?? 0).toFixed(2));
+  const taxable  = parseFloat((lineGross - discountVal).toFixed(2));
+  const taxAmt   = parseFloat(((taxable * item.taxRate) / 100).toFixed(2));
+  const amount   = parseFloat((taxable + taxAmt).toFixed(2));
+  return { lineGross, discountVal, taxable, taxAmt, amount };
 }
 
 export interface BillItem {
@@ -35,11 +81,13 @@ export interface BillItem {
   hsn: string;
   qty: number;
   unit: string;
+  /** Always the pre-tax base price — never GST-inclusive */
   price: number;
   discountPct: number;
   discountAmt: number;
   taxLabel: string;
   taxRate: number;
+  /** Final line total = taxable + tax (after discount, inclusive of GST) */
   amount: number;
 }
 
@@ -70,6 +118,12 @@ export interface QuotationData {
   salesman: string;
   emailId: string;
   warrantyPeriod: string;
+  poNumber?:          string;
+  vehicleNo?:         string;
+  dispatchedThrough?: string;
+  transportName?:     string;
+  /** key→value map for custom fields defined in InvoiceBuilder, e.g. { "Job No": "123" } */
+  customFieldValues?: Record<string, string>;
   validFor: number;
   validityDate: string;
   showDueDate: boolean;
@@ -79,10 +133,10 @@ export interface QuotationData {
 
 export const TAX_OPTIONS = [
   { label: "None",     rate: 0  },
-  { label: "GST 5%",   rate: 5  },
-  { label: "GST 12%",  rate: 12 },
-  { label: "GST 18%",  rate: 18 },
-  { label: "GST 28%",  rate: 28 },
+  { label: "GST 5%",  rate: 5  },
+  { label: "GST 12%", rate: 12 },
+  { label: "GST 18%", rate: 18 },
+  { label: "GST 28%", rate: 28 },
   { label: "IGST 5%",  rate: 5  },
   { label: "IGST 12%", rate: 12 },
   { label: "IGST 18%", rate: 18 },
@@ -141,7 +195,16 @@ export interface ApiQuotationItem {
   id: number;
   quotationId: number;
   productId: number;
-  product?: { id: number; name: string; unit?: string; hsnCode?: string; itemCode?: string };
+  product?: {
+    id: number;
+    name: string;
+    unit?: string;
+    hsnCode?: string;
+    itemCode?: string;
+    gstRate?: string | null;
+    baseSalesPrice?: number | null;
+    salesPriceInclTax?: boolean;
+  };
   quantity: number;
   price: number;
   discount: number;
@@ -210,10 +273,6 @@ export async function apiConvertQuotationToInvoice(id: number): Promise<unknown>
   return res.data;
 }
 
-/**
- * Marks a quotation as CONVERTED/Closed without creating a full invoice.
- * Call this after the linked sales invoice has been saved successfully.
- */
 export async function apiCloseQuotation(id: number): Promise<ApiQuotation> {
   const res = await api.put(`/quotations/${id}`, { status: "CONVERTED" });
   return res.data;
@@ -256,16 +315,54 @@ export async function apiGetItems(): Promise<Item[]> {
       (s: number, ps: any) => s + (ps.currentStock ?? ps.openingStock ?? 0),
       0
     );
+
+    // ── GST rate ────────────────────────────────────────────────────────────
+    // DB stores gstRate as a string — may be "18" or "GST 18%" depending on
+    // how the product was created. Strip all non-numeric chars before parsing
+    // so both formats produce the correct number (e.g. 18).
+    const gstRate = p.gstRate
+      ? parseFloat(String(p.gstRate).replace(/[^0-9.]/g, "")) || 0
+      : 0;
+
+    // ── Base (pre-tax) price ─────────────────────────────────────────────────
+    // Priority 1: baseSalesPrice column — backend stores this explicitly when
+    //             the product was saved with salesPriceInclTax = true.
+    // Priority 2: back-calculate from salesPrice by stripping GST:
+    //             basePrice = salesPrice / (1 + gstRate / 100)
+    // This guarantees baseSalesPrice is NEVER null in the frontend.
+    const salesPrice = p.salesPrice ? Number(p.salesPrice) : 0;
+    const baseSalesPrice =
+      p.baseSalesPrice != null
+        ? Number(p.baseSalesPrice)
+        : gstRate > 0
+          ? parseFloat((salesPrice / (1 + gstRate / 100)).toFixed(2))
+          : salesPrice;
+
+    // ── Default discount % ───────────────────────────────────────────────────
+    // product.salesDiscountPercent is set in the product master.
+    // Pre-fill this on the bill row so users don't have to type it every time.
+    const salesDiscountPercent =
+      p.salesDiscountPercent
+        ? parseFloat(String(p.salesDiscountPercent)) || 0
+        : 0;
+
+    // Tax label shown in the TAX dropdown on the bill row
+    const taxLabel = gstRate > 0 ? `GST ${gstRate}%` : "None";
+
     return {
-      id:            p.id,
-      name:          p.name,
-      itemCode:      p.itemCode ?? "",
-      stock:         totalStock.toString(),
-      salesPrice:    p.salesPrice    ? Number(p.salesPrice)    : 0,
-      purchasePrice: p.purchasePrice ? Number(p.purchasePrice) : 0,
-      unit:          p.unit ?? "",
-      hsn:           p.hsnCode ?? "",
-      category:      p.category ?? "",
+      id:                   p.id,
+      name:                 p.name,
+      itemCode:             p.itemCode ?? "",
+      stock:                totalStock.toString(),
+      salesPrice,           // original price as stored (may be incl-tax)
+      baseSalesPrice,       // always pre-tax — use this for calculations
+      purchasePrice:        p.purchasePrice ? Number(p.purchasePrice) : 0,
+      unit:                 p.unit ?? "",
+      hsn:                  p.hsnCode ?? "",
+      category:             p.category ?? "",
+      gstRate,
+      taxLabel,
+      salesDiscountPercent,
     };
   });
 }
@@ -293,14 +390,28 @@ export function apiToFormData(q: ApiQuotation): QuotationData {
       : null,
 
     billItems: (q.items ?? []).map((item): BillItem => {
-      const price       = Number(item.price    ?? 0);
       const qty         = Number(item.quantity ?? 0);
-      const discountPct = Number(item.discount ?? 0);
-      const taxRate     = Number(item.taxRate  ?? 0);
-      const total       = Number(item.total    ?? 0);
-      const amount      = total > 0
-        ? total
-        : price * qty * (1 - discountPct / 100) * (1 + taxRate / 100);
+      const discountPct = Number(item.discount  ?? 0);
+      const taxRate     = Number(item.taxRate    ?? 0);
+
+      // Resolve base price — prefer product.baseSalesPrice if available
+      const baseSalesPrice = item.product?.baseSalesPrice != null
+        ? Number(item.product.baseSalesPrice)
+        : null;
+      const price = baseSalesPrice != null ? baseSalesPrice : Number(item.price ?? 0);
+
+      // Recalculate from scratch using the canonical formula so stored `total`
+      // is never blindly trusted (avoids GST-inclusive bugs from old data).
+      const { discountVal, taxAmt, amount } = calcBillItemAmount({
+        qty,
+        price,
+        discountPct,
+        discountAmt: 0,   // API stores only discount% — flat amt always 0 on reload
+        taxRate,
+      });
+
+      // Build tax label
+      const taxLabel = taxRate > 0 ? `GST ${taxRate}%` : "None";
 
       return {
         rowId:       String(item.id),
@@ -313,7 +424,7 @@ export function apiToFormData(q: ApiQuotation): QuotationData {
         price,
         discountPct,
         discountAmt: 0,
-        taxLabel:    taxRate > 0 ? `GST ${taxRate}%` : "None",
+        taxLabel,
         taxRate,
         amount,
       };
@@ -336,11 +447,16 @@ export function apiToFormData(q: ApiQuotation): QuotationData {
     notes:           q.notes           ?? "",
     termsConditions: q.termsConditions ?? "",
     eWayBillNo:      (q as any).ewayBillNo ?? (q as any).eWayBillNo ?? "",
-    challanNo:       q.challanNo       ?? "",
-    financedBy:      q.financedBy      ?? "",
-    salesman:        q.salesman        ?? "",
-    emailId:         q.emailId         ?? "",
-    warrantyPeriod:  q.warrantyPeriod  ?? "",
+    challanNo:       q.challanNo        ?? "",
+    financedBy:      q.financedBy       ?? "",
+    salesman:        q.salesman         ?? "",
+    emailId:         q.emailId          ?? "",
+    warrantyPeriod:  q.warrantyPeriod   ?? "",
+    poNumber:          (q as any).poNumber          ?? "",
+    vehicleNo:         (q as any).vehicleNo         ?? "",
+    dispatchedThrough: (q as any).dispatchedThrough ?? "",
+    transportName:     (q as any).transportName     ?? "",
+    customFieldValues: (q as any).customFieldValues ?? {},
 
     validFor:     30,
     validityDate: q.validTill?.split("T")[0] ?? addDays(todayStr(), 30),
@@ -352,51 +468,73 @@ export function apiToFormData(q: ApiQuotation): QuotationData {
 }
 
 // ─── Mapper: QuotationData → API payload ──────────────────────────────────────
+/**
+ * All monetary values are derived fresh using calcBillItemAmount so the
+ * payload is always consistent with the GST-standard formula — never stale.
+ */
 export function formDataToApiPayload(form: QuotationData, settings?: QuotationSettings) {
-  const subtotal      = form.billItems.reduce((s, i) => s + i.amount, 0);
-  const chargesTotal  = form.additionalCharges.reduce((s, c) => s + c.amount, 0);
-  const taxAmount     = form.billItems.reduce((s, i) => s + (i.amount * i.taxRate) / (100 + i.taxRate), 0);
-  const taxableAmount = subtotal - taxAmount;
+  // Per-item recalc (canonical formula)
+  const itemsWithCalc = form.billItems.map((item) => {
+    const calc = calcBillItemAmount(item);
+    return { item, calc };
+  });
+
+  // Subtotal = sum of final line amounts (taxable + tax, after discount)
+  const subtotal     = parseFloat(itemsWithCalc.reduce((s, { calc }) => s + calc.amount,    0).toFixed(2));
+  const totalTaxAmt  = parseFloat(itemsWithCalc.reduce((s, { calc }) => s + calc.taxAmt,    0).toFixed(2));
+  const totalDisc    = parseFloat(itemsWithCalc.reduce((s, { calc }) => s + calc.discountVal,0).toFixed(2));
+  // taxableAmount = subtotal − tax (i.e. sum of all post-discount, pre-tax values)
+  const taxableAmount = parseFloat((subtotal - totalTaxAmt).toFixed(2));
+
+  const chargesTotal = parseFloat(form.additionalCharges.reduce((s, c) => s + c.amount, 0).toFixed(2));
+
+  // Quotation-level discount (applied on top of item discounts)
   const discountAmount = form.discountPct > 0
-    ? (subtotal * form.discountPct) / 100
-    : form.discountAmt;
-  const roundOffVal = form.roundOff === "+Add"
-    ? form.roundOffAmt
-    : form.roundOff === "-Reduce"
-    ? -form.roundOffAmt
-    : 0;
-  const totalAmount = subtotal + chargesTotal - discountAmount + roundOffVal;
-  const quotationNo = form.quotationNo;
+    ? parseFloat(((subtotal * form.discountPct) / 100).toFixed(2))
+    : parseFloat((form.discountAmt ?? 0).toFixed(2));
+
+  const roundOffVal =
+    form.roundOff === "+Add"    ?  form.roundOffAmt :
+    form.roundOff === "-Reduce" ? -form.roundOffAmt : 0;
+
+  const totalAmount = parseFloat((subtotal + chargesTotal - discountAmount + roundOffVal).toFixed(2));
 
   return {
-    quotationNo,
-    partyId:                form.party?.id ?? null,
-    branchCode:             settings?.branchCode ?? null,
-    quotationDate:          form.quotationDate,
-    validTill:              form.showDueDate ? form.validityDate : null,
-    notes:                  form.notes,
-    termsConditions:        form.termsConditions,
-    ewayBillNo:             form.eWayBillNo,
-    challanNo:              form.challanNo,
-    financedBy:             form.financedBy,
-    salesman:               form.salesman,
-    emailId:                form.emailId,
-    warrantyPeriod:         form.warrantyPeriod,
-    subTotal:               subtotal,
+    quotationNo:   form.quotationNo,
+    partyId:       form.party?.id ?? null,
+    branchCode:    settings?.branchCode ?? null,
+    quotationDate: form.quotationDate,
+    validTill:     form.showDueDate ? form.validityDate : null,
+    notes:           form.notes,
+    termsConditions: form.termsConditions,
+    ewayBillNo:      form.eWayBillNo,
+    challanNo:       form.challanNo,
+    financedBy:      form.financedBy,
+    salesman:        form.salesman,
+    emailId:         form.emailId,
+    warrantyPeriod:  form.warrantyPeriod,
+    poNumber:          (form as any).poNumber          ?? "",
+    vehicleNo:         (form as any).vehicleNo         ?? "",
+    dispatchedThrough: (form as any).dispatchedThrough ?? "",
+    transportName:     (form as any).transportName     ?? "",
+    customFieldValues: (form as any).customFieldValues ?? {},
+    subTotal:              subtotal,
     taxableAmount,
     discountAmount,
     additionalChargesTotal: chargesTotal,
-    taxAmount,
-    roundOff:               roundOffVal,
+    taxAmount:             totalTaxAmt,
+    roundOff:              roundOffVal,
     totalAmount,
-    items: form.billItems.map((item) => ({
+    items: itemsWithCalc.map(({ item, calc }) => ({
       productId: item.itemId,
       quantity:  item.qty,
+      // Always send the base (pre-tax) price — backend stores this in QuotationItem.price
       price:     item.price,
+      // discount stored as % in DB (consistent with how backend reads it back)
       discount:  item.discountPct,
       taxRate:   item.taxRate,
-      taxAmount: (item.amount * item.taxRate) / (100 + item.taxRate),
-      total:     item.amount,
+      taxAmount: calc.taxAmt,
+      total:     calc.amount,
     })),
     additionalCharges: form.additionalCharges.map((c) => ({
       name:   c.label,
@@ -406,6 +544,7 @@ export function formDataToApiPayload(form: QuotationData, settings?: QuotationSe
 }
 
 // ─── Utilities ────────────────────────────────────────────────────────────────
+// ─── Utility ───────────────────────────────────────────────────────────────────
 export function formatCurrency(n: number): string {
   return "₹ " + n.toLocaleString("en-IN");
 }

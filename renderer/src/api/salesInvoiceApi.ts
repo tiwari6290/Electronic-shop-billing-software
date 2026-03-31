@@ -35,6 +35,27 @@ export interface SaleInvoice {
   status: "OPEN" | "PARTIAL" | "PAID" | "CANCELLED";
   createdAt: string;
   updatedAt: string;
+  // ── NEW extended fields ──────────────────────────────────────────────────
+  poNumber?: string | null;
+  vehicleNo?: string | null;
+  dispatchedThrough?: string | null;
+  transportName?: string | null;
+  customFieldValues?: Record<string, string> | null;
+  snapshotMetaFields?: {
+    showSalesman?: boolean;
+    showVehicle?: boolean;
+    showChallan?: boolean;
+    showFinancedBy?: boolean;
+    showWarranty?: boolean;
+    showEwayBill?: boolean;
+    showPO?: boolean;
+    showDispatchedThrough?: boolean;
+    showTransportName?: boolean;
+    showEmailId?: boolean;
+    customFieldLabels?: string[];
+  } | null;
+  paymentDetails?: Record<string, any> | null;
+  financeDetails?: Record<string, any> | null;
   party: {
     id: number;
     name: string;
@@ -47,7 +68,8 @@ export interface SaleInvoice {
   };
   items: Array<{
     id: number;
-    productId: number;
+    productId:   number | null;    // null for free-text items
+    productName?: string | null;   // always present for free-text items
     quantity: number;
     price: number;
     discount?: number | null;
@@ -55,19 +77,21 @@ export interface SaleInvoice {
     taxRate?: number | null;
     taxAmount?: number | null;
     total: number;
-    product: {
+    product?: {                    // optional — absent for free-text items
       id: number;
       name: string;
       itemCode?: string | null;
       hsnCode?: string | null;
       unit?: string | null;
       gstRate?: string | null;
-    };
+    } | null;
   }>;
   additionalCharges: Array<{
     id: number;
     name: string;
     amount: number;
+    taxLabel?: string | null;
+    taxAmount?: number | null;
   }>;
 }
 
@@ -88,6 +112,27 @@ export interface FeSalesInvoice {
   warrantyPeriod: string;
   notes: string;
   termsConditions: string;
+  // ── NEW extended meta fields ─────────────────────────────────────────────
+  poNumber?: string;
+  vehicleNo?: string;
+  dispatchedThrough?: string;
+  transportName?: string;
+  customFieldValues?: Record<string, string>;
+  snapshotMetaFields?: {
+    showSalesman?: boolean;
+    showVehicle?: boolean;
+    showChallan?: boolean;
+    showFinancedBy?: boolean;
+    showWarranty?: boolean;
+    showEwayBill?: boolean;
+    showPO?: boolean;
+    showDispatchedThrough?: boolean;
+    showTransportName?: boolean;
+    showEmailId?: boolean;
+    customFieldLabels?: string[];
+  } | null;
+  paymentDetails?: Record<string, any>;
+  financeDetails?: Record<string, any>;
   party: {
     id: number;
     name: string;
@@ -101,7 +146,9 @@ export interface FeSalesInvoice {
   shipTo: { name: string; mobile?: string; billingAddress?: string } | null;
   billItems: Array<{
     rowId: string;
-    itemId: number;
+    // FIX: itemId is number | undefined because free-text items have no linked product.
+    // The mapper produces `item.productId ?? undefined` which is correctly typed here.
+    itemId: number | undefined;
     name: string;
     description: string;
     hsn: string;
@@ -163,6 +210,15 @@ export function fromSaleInvoice(inv: SaleInvoice): FeSalesInvoice {
     warrantyPeriod:   inv.warrantyPeriod ?? "",
     notes:            inv.notes          ?? "",
     termsConditions:  inv.termsConditions ?? "",
+    // ── Map new extended fields back to frontend ──────────────────────────
+    poNumber:          inv.poNumber          ?? "",
+    vehicleNo:         inv.vehicleNo         ?? "",
+    dispatchedThrough: inv.dispatchedThrough ?? "",
+    transportName:     inv.transportName     ?? "",
+    customFieldValues: (inv.customFieldValues as Record<string, string>) ?? {},
+    snapshotMetaFields: (inv.snapshotMetaFields as FeSalesInvoice["snapshotMetaFields"]) ?? null,
+    paymentDetails:    (inv.paymentDetails   as Record<string, any>)    ?? undefined,
+    financeDetails:    (inv.financeDetails   as Record<string, any>)    ?? undefined,
     party: inv.party
       ? {
           id:              inv.party.id,
@@ -195,8 +251,11 @@ export function fromSaleInvoice(inv: SaleInvoice): FeSalesInvoice {
 
       return {
         rowId:       `row-${item.id}-${idx}`,
-        itemId:      item.productId,
-        name:        item.product?.name ?? "",
+        // FIX: productId is null for free-text items; undefined is the correct
+        // sentinel value here — downstream code checks `itemId != null` to detect
+        // whether a real product is linked (see toCreatePayload below).
+        itemId:      item.productId ?? undefined,
+        name:        item.product?.name ?? item.productName ?? "",
         description: "",
         hsn:         item.product?.hsnCode ?? "",
         qty:         item.quantity,
@@ -209,11 +268,12 @@ export function fromSaleInvoice(inv: SaleInvoice): FeSalesInvoice {
         amount:      Number(item.total),
       };
     }),
+    // ── Map additionalCharges — now include taxLabel from backend ──────────
     additionalCharges: (inv.additionalCharges ?? []).map((c) => ({
       id:       String(c.id),
       label:    c.name,
       amount:   Number(c.amount),
-      taxLabel: "No Tax Applicable",
+      taxLabel: c.taxLabel ?? "No Tax Applicable",
     })),
     discountType:          "Discount After Tax",
     discountPct:           0,
@@ -255,14 +315,16 @@ export interface CreateInvoicePayload {
   applyTcs: boolean;
   autoRoundOff: boolean;
   items: Array<{
-    productId:   number;
+    productId?:  number;        // optional — omitted for free-text items
+    productName?: string;       // always sent so backend can display the name
     quantity:    number;
     price:       number;
     taxRate:     number;
     discountPct: number;
     discount:    number;
   }>;
-  additionalCharges: Array<{ name: string; amount: number }>;
+  // ── additionalCharges now includes taxLabel ──────────────────────────────
+  additionalCharges: Array<{ name: string; amount: number; taxLabel?: string }>;
   subTotal?:               number;
   taxAmount?:              number;
   tcsAmount?:              number;
@@ -272,6 +334,27 @@ export interface CreateInvoicePayload {
   additionalChargesTotal?: number;
   signatureUrl?:           string | null;
   showEmptySignatureBox?:  boolean;
+  // ── NEW extended fields ──────────────────────────────────────────────────
+  poNumber?:          string | null;
+  vehicleNo?:         string | null;
+  dispatchedThrough?: string | null;
+  transportName?:     string | null;
+  customFieldValues?: Record<string, string>;
+  snapshotMetaFields?: {
+    showSalesman?: boolean;
+    showVehicle?: boolean;
+    showChallan?: boolean;
+    showFinancedBy?: boolean;
+    showWarranty?: boolean;
+    showEwayBill?: boolean;
+    showPO?: boolean;
+    showDispatchedThrough?: boolean;
+    showTransportName?: boolean;
+    showEmailId?: boolean;
+    customFieldLabels?: string[];
+  } | null;
+  paymentDetails?:    Record<string, any> | null;
+  financeDetails?:    Record<string, any> | null;
 }
 
 export function toCreatePayload(form: FeSalesInvoice): CreateInvoicePayload {
@@ -295,19 +378,35 @@ export function toCreatePayload(form: FeSalesInvoice): CreateInvoicePayload {
     tcsRate:         form.tcsRate,
     autoRoundOff:    form.roundOff !== "none",
     items: form.billItems.map((i) => ({
-      productId:   i.itemId,
+      // Only send productId when it's a real linked product (not free-text)
+      ...(i.itemId != null ? { productId: Number(i.itemId) } : {}),
+      // Always send productName so free-text items are preserved on the backend
+      productName: i.name || "Item",
       quantity:    Number(i.qty)         || 0,
       price:       Number(i.price)       || 0,
       taxRate:     Number(i.taxRate)     || 0,
       discountPct: Number(i.discountPct) || 0,
       discount:    Number(i.discountAmt) || 0,
     })),
+    // ── additionalCharges — now sends taxLabel to backend ─────────────────
     additionalCharges: form.additionalCharges.map((c) => ({
-      name:   c.label,
-      amount: Number(c.amount) || 0,
+      name:     c.label,
+      amount:   Number(c.amount) || 0,
+      taxLabel: c.taxLabel || "No Tax Applicable",
     })),
     signatureUrl:          form.signatureUrl          || undefined,
     showEmptySignatureBox: form.showEmptySignatureBox ?? false,
+    // ── NEW extended fields ───────────────────────────────────────────────
+    poNumber:          form.poNumber          || null,
+    vehicleNo:         form.vehicleNo         || null,
+    dispatchedThrough: form.dispatchedThrough || null,
+    transportName:     form.transportName     || null,
+    customFieldValues: form.customFieldValues || {},
+    snapshotMetaFields: form.snapshotMetaFields ?? null,
+    paymentDetails:    form.paymentDetails    || null,
+    financeDetails:    (form.financeDetails as any)?.enabled === true
+                         ? form.financeDetails
+                         : null,
   };
 }
 
@@ -425,6 +524,63 @@ export async function getInvoiceSummary(): Promise<{
   };
 }
 
+// ─── Invoice Details Settings ─────────────────────────────────────────────────
+
+export interface InvoiceDetailsSettings {
+  id: number;
+  showChallan:           boolean;
+  showDispatchedThrough: boolean;
+  showEmailId:           boolean;
+  showFinancedBy:        boolean;
+  showSalesman:          boolean;
+  showTransportName:     boolean;
+  showWarranty:          boolean;
+  showPO:                boolean;
+  showEwayBill:          boolean;
+  showVehicle:           boolean;
+  customFields: Array<{ label: string; value: string }>;
+}
+
+const DETAILS_SETTINGS_DEFAULTS: InvoiceDetailsSettings = {
+  id:                    0,
+  showChallan:           true,
+  showDispatchedThrough: false,
+  showEmailId:           true,
+  showFinancedBy:        true,
+  showSalesman:          true,
+  showTransportName:     false,
+  showWarranty:          true,
+  showPO:                false,
+  showEwayBill:          true,
+  showVehicle:           false,
+  customFields:          [],
+};
+
+/** GET /api/invoice-details-settings */
+export async function getInvoiceDetailsSettings(): Promise<InvoiceDetailsSettings> {
+  try {
+    const res  = await fetch("/api/invoice-details-settings");
+    const body = await res.json().catch(() => ({}));
+    return { ...DETAILS_SETTINGS_DEFAULTS, ...(body.data ?? {}) };
+  } catch {
+    return DETAILS_SETTINGS_DEFAULTS;
+  }
+}
+
+/** PUT /api/invoice-details-settings */
+export async function saveInvoiceDetailsSettings(
+  payload: Omit<InvoiceDetailsSettings, "id">
+): Promise<InvoiceDetailsSettings> {
+  const res  = await fetch("/api/invoice-details-settings", {
+    method:  "PUT",
+    headers: { "Content-Type": "application/json" },
+    body:    JSON.stringify(payload),
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!body.success) throw new Error(body.message ?? "Failed to save invoice details settings");
+  return { ...DETAILS_SETTINGS_DEFAULTS, ...(body.data ?? {}) };
+}
+
 // ─── Party endpoints ──────────────────────────────────────────────────────────
 
 export interface BackendParty {
@@ -465,9 +621,20 @@ export interface BackendItem {
   itemCode?: string | null;
   hsnCode?: string | null;
   unit?: string | null;
+  /** Original price as typed by the user (may be with-tax or without-tax) */
   salesPrice?: number | null;
+  /**
+   * Pre-tax base price — ALWAYS use this on invoices so tax is calculated
+   * on top of it correctly. Falls back to salesPrice for legacy items.
+   */
+  baseSalesPrice?: number | null;
+  /** true when the stored salesPrice was entered inclusive of GST */
+  salesPriceInclTax?: boolean;
+  /** Default discount % set on the item — pre-filled into invoice rows */
+  salesDiscountPercent?: number | null;
   purchasePrice?: number | null;
   category?: string | null;
+  /** GST rate string: "18", "5", "28+cess5", "Exempted", or null */
   gstRate?: string | null;
   itemType: string;
   ProductStock?: Array<{
@@ -482,15 +649,6 @@ export async function getItems(): Promise<BackendItem[]> {
 }
 
 // ─── Party Shipping Addresses ─────────────────────────────────────────────────
-
-export interface ShippingAddressPayload {
-  partyId: number;
-  name: string;
-  street: string;
-  city?: string;
-  state?: string;
-  pincode?: string;
-}
 
 export interface BackendShippingAddress {
   id: number;
@@ -550,7 +708,7 @@ export async function createPartyBankAccount(
   return res.data.data;
 }
 
-// ─── Invoice Settings ─────────────────────────────────────────────────────────
+// ─── Invoice Settings (prefix / sequence) ────────────────────────────────────
 
 export interface InvoiceSettings {
   id:                 number | null;
@@ -593,7 +751,7 @@ export async function saveInvoiceSettings(
 
 /**
  * Builds the invoice number preview from saved settings.
- * Must match the backend logic in invoice_controller.ts exactly:
+ * Must match the backend logic in invoice_controller.ts:
  *   prefix = enablePrefix && prefix.trim() ? prefix.trim() : "INV-"
  *   invoiceNo = `${prefix}${sequenceNumber.padStart(5, "0")}`
  */
