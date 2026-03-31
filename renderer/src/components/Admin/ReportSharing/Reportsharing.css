@@ -1,0 +1,426 @@
+/* CAReportsSharing.css */
+
+.ca-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: #f5f6fa;
+  font-family: "Segoe UI", sans-serif;
+}
+
+.ca-body {
+  padding: 24px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  flex: 1;
+  position: relative;
+}
+
+.ca-settings-label {
+  font-size: 15px;
+  font-weight: 600;
+  color: #111827;
+}
+
+/* Settings card */
+.ca-settings-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.ca-settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px;
+}
+
+.ca-setting-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 4px;
+}
+
+.ca-setting-sub {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+/* Toggle */
+.toggle-switch {
+  width: 42px;
+  height: 24px;
+  border-radius: 999px;
+  background: #d1d5db;
+  position: relative;
+  cursor: pointer;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+
+.toggle-switch.on {
+  background: #4f46e5;
+}
+
+.toggle-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  transition: left 0.2s;
+}
+
+.toggle-switch.on .toggle-knob {
+  left: 21px;
+}
+
+/* Notice */
+.ca-notice {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 13px;
+  color: #92400e;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ca-notice-icon {
+  font-size: 15px;
+  flex-shrink: 0;
+}
+
+/* Footer note */
+.ca-footer-note {
+  position: absolute;
+  bottom: 16px;
+  left: 28px;
+  right: 28px;
+  font-size: 11px;
+  color: #9ca3af;
+  border-top: 1px solid #e5e7eb;
+  padding-top: 10px;
+}
+
+/* ── Modal overlay ── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+/* ── Modal base ── */
+.modal {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+  padding: 0;
+  overflow: hidden;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 22px 14px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.modal-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 22px;
+  color: #6b7280;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0 4px;
+}
+
+.modal-close:hover {
+  color: #111;
+}
+
+/* ── CA Modal specific ── */
+.ca-modal {
+  max-width: 360px;
+}
+
+.ca-illustration {
+  background: #e8eaf6;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100px;
+}
+
+.ca-illus-inner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 28px;
+}
+
+.illus-doc {
+  background: #fff;
+  border-radius: 6px;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+
+.illus-doc-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: #4f46e5;
+}
+
+.illus-doc-label.small {
+  font-size: 9px;
+  color: #6366f1;
+}
+
+.illus-doc-icon {
+  font-size: 20px;
+}
+
+.illus-arrows {
+  font-size: 18px;
+  color: #4f46e5;
+  letter-spacing: -4px;
+}
+
+.illus-person, .illus-computer {
+  font-size: 32px;
+}
+
+.modal-section-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #111827;
+  padding: 16px 22px 4px;
+}
+
+.modal-field {
+  padding: 8px 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.modal-field label {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.req {
+  color: #ef4444;
+}
+
+.modal-field input,
+.modal-field select {
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 9px 12px;
+  font-size: 13px;
+  color: #374151;
+  outline: none;
+  transition: border-color 0.2s;
+  background: #fff;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.modal-field input:focus,
+.modal-field select:focus {
+  border-color: #4f46e5;
+}
+
+.modal-field input::placeholder {
+  color: #9ca3af;
+}
+
+.ca-note-box {
+  margin: 8px 22px;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  border-radius: 6px;
+  padding: 10px 14px;
+  font-size: 12px;
+  color: #92400e;
+  line-height: 1.5;
+}
+
+/* Add Your CA bar */
+.ca-add-bar {
+  margin: 12px 22px 20px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.ca-add-bar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ca-badge {
+  background: #4f46e5;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  border-radius: 8px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.ca-add-bar-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.ca-add-bar-sub {
+  font-size: 11px;
+  color: #6b7280;
+}
+
+.btn-add-ca {
+  background: #4f46e5;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.2s;
+}
+
+.btn-add-ca:hover {
+  background: #4338ca;
+}
+
+/* ── Add User Modal ── */
+.add-user-modal {
+  max-width: 440px;
+}
+
+.add-user-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  padding: 0;
+}
+
+.add-user-grid .modal-field {
+  padding: 8px 12px 8px 22px;
+}
+
+.add-user-grid .modal-field:nth-child(even) {
+  padding: 8px 22px 8px 12px;
+}
+
+/* Permissions box */
+.permissions-box {
+  margin: 8px 22px 12px;
+  background: #eff6ff;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.permission-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  font-size: 12.5px;
+  color: #374151;
+  border-bottom: 1px solid #dbeafe;
+}
+
+.permission-row:last-child {
+  border-bottom: none;
+}
+
+.perm-check {
+  color: #4f46e5;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+/* Add User actions */
+.add-user-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 12px 22px 20px;
+}
+
+.btn-cancel-modal {
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  padding: 9px 24px;
+  font-size: 13px;
+  color: #374151;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-cancel-modal:hover {
+  background: #f9fafb;
+}
+
+.btn-save-modal {
+  background: #4f46e5;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 9px 28px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-save-modal:hover {
+  background: #4338ca;
+}

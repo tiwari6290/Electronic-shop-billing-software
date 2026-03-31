@@ -1,0 +1,134 @@
+.itemwise-container {
+  margin-top: 20px;
+  font-family: "Inter", sans-serif;
+}
+
+/* ── Top Bar ──────────────────────────── */
+.report-wrapper { margin-top: 20px; }
+
+.report-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 18px;
+  gap: 16px;
+}
+
+.left-controls  { display: flex; align-items: center; gap: 10px; position: relative; }
+.right-controls { display: flex; align-items: center; gap: 10px; }
+
+/* Date button */
+.report-date-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #374151;
+  cursor: pointer;
+  transition: border-color 0.15s;
+  min-width: 170px;
+  justify-content: space-between;
+}
+.report-date-btn:hover { border-color: #4f46e5; }
+
+/* Dropdown */
+.report-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  min-width: 200px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+  z-index: 100;
+  overflow: hidden;
+}
+.report-dropdown.right-align { left: auto; right: 0; }
+.report-dropdown div {
+  padding: 10px 14px;
+  cursor: pointer;
+  font-size: 14px;
+  color: #374151;
+  transition: background 0.12s;
+}
+.report-dropdown div:hover { background: #f3f4f6; }
+.report-dropdown div.selected { background: #f0eeff; color: #4f46e5; font-weight: 600; }
+
+/* Action buttons */
+.report-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: #ffffff;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.report-action-btn:hover { background: #f3f4f6; }
+
+.report-action-btn.download {
+  background: #4f46e5;
+  color: #ffffff;
+  border-color: #4f46e5;
+}
+.report-action-btn.download:hover { background: #4338ca; }
+
+/* Custom date range */
+.custom-date-range {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.custom-date-range input {
+  padding: 7px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #374151;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.custom-date-range input:focus { border-color: #4f46e5; }
+.custom-date-range span { font-size: 13px; color: #9ca3af; }
+
+/* ── Table Card ───────────────────────── */
+.report-card {
+  background: #ffffff;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+}
+
+.report-card table { width: 100%; border-collapse: collapse; }
+
+.report-card th {
+  background: #f3f4f6;
+  padding: 13px 14px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 14px;
+  color: #344054;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.report-card td {
+  padding: 13px 14px;
+  font-size: 14px;
+  color: #374151;
+  border-top: 1px solid #e5e7eb;
+}
+
+.totals-row { background: #f9fafb; }
+.totals-row td { font-weight: 600; color: #111827; }
+
+.no-data { text-align: center; padding: 40px; color: #6b7280; font-size: 14px; }

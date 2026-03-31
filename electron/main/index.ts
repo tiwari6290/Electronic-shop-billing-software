@@ -1,10 +1,10 @@
 import { app } from "electron"
 import dotenv from "dotenv"
-import { createMainWindow } from "./windows/mainWindow"
+import { createMainWindow } from "./windows/mainWindow.js"
 
-dotenv.config();
+dotenv.config()
 
-console.log(process.env.API_URL);
+console.log(process.env.API_URL)
 
 app.whenReady().then(() => {
   createMainWindow()

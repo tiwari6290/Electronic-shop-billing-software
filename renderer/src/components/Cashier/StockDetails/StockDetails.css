@@ -1,0 +1,169 @@
+/* ── INPUTS ── */
+.input {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  color: #111827;
+  background: #fff;
+  outline: none;
+  font-family: Inter, sans-serif;
+}
+.input:focus { border-color: #6366f1; }
+
+label {
+  display: block;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 6px;
+}
+
+/* ── LINK STYLE ── */
+.sd-link {
+  color: #1677ff;
+  font-size: 13px;
+  cursor: pointer;
+  margin-top: 6px;
+  display: inline-block;
+  background: none;
+  border: none;
+  padding: 0;
+  font-weight: 500;
+}
+.sd-link:hover { text-decoration: underline; }
+
+/* ── GENERATE BARCODE BUTTON ── */
+.sd-barcode-btn {
+  border: 1px solid #d1d5db;
+  border-left: none;
+  background: #e6f4ff;
+  color: #1677ff;
+  padding: 0 14px;
+  cursor: pointer;
+  border-top-right-radius: 6px;
+  border-bottom-right-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.sd-barcode-btn:hover { background: #dbeafe; }
+
+/* ── UNIT SUFFIX ── */
+.sd-unit-suffix {
+  padding: 9px 14px;
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+  border-left: none;
+  border-top-right-radius: 6px;
+  border-bottom-right-radius: 6px;
+  font-size: 13px;
+  color: #6b7280;
+  white-space: nowrap;
+}
+
+/* ── STOCK GREY BOX ── */
+.sd-stock-box {
+  background: #f7f8fa;
+  padding: 20px 24px;
+  border-radius: 10px;
+  margin-bottom: 20px;
+}
+
+/* ── ALT UNIT BOX ── */
+.sd-alt-box {
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 16px;
+  background: #fafafa;
+  margin-top: 12px;
+  margin-bottom: 16px;
+}
+
+/* ── LOW STOCK BOX ── */
+.sd-lowstock-box {
+  background: #fff;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  border: 1px solid #e5e7eb;
+}
+
+/* ── FILE UPLOAD ── */
+.sd-upload {
+  border: 2px dashed #d1d5db;
+  padding: 18px 20px;
+  border-radius: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.sd-upload-text strong {
+  font-size: 14px;
+  color: #374151;
+}
+
+.sd-upload-text p {
+  font-size: 13px;
+  color: #6b7280;
+  margin-top: 3px;
+}
+
+.sd-select-file-label {
+  background: #e6f4ff;
+  color: #1677ff;
+  padding: 9px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.sd-select-file-label:hover { background: #dbeafe; }
+
+/* ── REMOVE LINK ── */
+.sd-remove-link {
+  color: #1677ff;
+  font-size: 13px;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  margin-top: 10px;
+  display: inline-block;
+  font-weight: 500;
+}
+.sd-remove-link:hover { text-decoration: underline; }
+
+/* ── ADD LINK ── */
+.sd-add-link {
+  color: #1677ff;
+  font-size: 14px;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.sd-add-link:hover { text-decoration: underline; }
+
+/* ── TEXTAREA ── */
+.sd-textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  resize: vertical;
+  outline: none;
+  font-family: Inter, sans-serif;
+  min-height: 90px;
+}
+.sd-textarea:focus { border-color: #6366f1; }

@@ -1,0 +1,245 @@
+/* ════════════════════════════════════════
+   PartyLedger.css — matches screenshots
+   No icons from lucide-react used.
+════════════════════════════════════════ */
+
+.pl-wrap {
+  padding: 20px 24px;
+  background: #f8f9fb;
+  min-height: 100%;
+  font-family: "Inter", sans-serif;
+  font-size: 14px;
+  color: #374151;
+}
+
+/* ── Controls Row ─────────────────────── */
+.pl-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  gap: 12px;
+}
+
+/* Date button */
+.pl-date-wrap {
+  position: relative;
+}
+
+.pl-date-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  background: #ffffff;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #344054;
+  cursor: pointer;
+  min-width: 170px;
+  justify-content: space-between;
+}
+.pl-date-btn:hover { border-color: #98a2b3; }
+
+.pl-cal-icon { display: flex; align-items: center; }
+.pl-arrow    { font-size: 16px; color: #667085; line-height: 1; }
+
+/* Action buttons group */
+.pl-action-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pl-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
+  background: #ffffff;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #344054;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.pl-btn:hover { background: #f2f4f7; }
+
+.pl-btn-share {
+  /* Share has a chevron inside */
+}
+
+.pl-share-wrap {
+  position: relative;
+}
+
+/* Shared dropdown */
+.pl-dropdown {
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 0;
+  min-width: 190px;
+  background: #ffffff;
+  border: 1px solid #e4e7ec;
+  border-radius: 8px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.10);
+  z-index: 400;
+  overflow: hidden;
+}
+.pl-share-dd {
+  left: auto;
+  right: 0;
+}
+
+.pl-dd-row {
+  padding: 10px 14px;
+  font-size: 14px;
+  color: #344054;
+  cursor: pointer;
+}
+.pl-dd-row:hover  { background: #f2f4f7; }
+.pl-dd-row.active { background: #f0eeff; color: #4f46e5; font-weight: 600; }
+
+/* ── Document Card ────────────────────── */
+.pl-doc {
+  background: #ffffff;
+  border: 1px solid #e4e7ec;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+/* Header: biz info left + "Party Ledger" right */
+.pl-doc-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.pl-biz-name  { font-size: 17px; font-weight: 700; color: #111827; margin: 0 0 3px 0; }
+.pl-biz-phone { font-size: 13px; color: #667085; margin: 0; }
+
+.pl-doc-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #374151;
+  border: 1px solid #e4e7ec;
+  border-radius: 6px;
+  padding: 7px 18px;
+  background: #fff;
+  white-space: nowrap;
+}
+
+/* Party info + summary box row */
+.pl-party-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 16px 24px 20px;
+  border-bottom: 1px solid #e4e7ec;
+}
+
+.pl-to {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.pl-to-prefix { font-size: 13px; color: #9ca3af; }
+.pl-to-name   { font-size: 16px; font-weight: 700; color: #111827; margin: 3px 0 0; }
+.pl-to-phone  { font-size: 13px; color: #667085; margin: 2px 0 0; }
+
+/* Summary box */
+.pl-sum-box {
+  border: 1px solid #e4e7ec;
+  border-radius: 8px;
+  padding: 12px 18px;
+  min-width: 230px;
+}
+
+.pl-sum-date {
+  font-size: 13px;
+  color: #667085;
+  text-align: right;
+  margin: 0 0 8px;
+}
+
+.pl-sum-sep {
+  border-top: 1px solid #e4e7ec;
+  margin: 6px 0 8px;
+}
+
+.pl-sum-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+}
+
+.pl-sum-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  white-space: nowrap;
+}
+
+.pl-sum-value {
+  font-size: 15px;
+  font-weight: 700;
+  color: #4f46e5;
+}
+
+/* ── Table ────────────────────────────── */
+.pl-table-outer {
+  overflow-x: auto;
+}
+
+.pl-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.pl-table thead tr {
+  background: #f9fafb;
+}
+
+.pl-table th {
+  padding: 11px 14px;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 600;
+  color: #344054;
+  border-bottom: 1px solid #eaecf0;
+  white-space: nowrap;
+}
+
+.pl-table td {
+  padding: 13px 14px;
+  font-size: 13.5px;
+  color: #374151;
+  border-bottom: 1px solid #eaecf0;
+}
+
+.pl-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Opening / Closing rows */
+.pl-table tr.pl-special td {
+  background: #f9fafb;
+}
+
+.pl-special-label {
+  font-weight: 600;
+  color: #111827;
+}
+
+/* Print */
+@media print {
+  .pl-controls { display: none; }
+  .pl-wrap     { padding: 0; background: #fff; }
+  .pl-doc      { border: none; border-radius: 0; }
+}

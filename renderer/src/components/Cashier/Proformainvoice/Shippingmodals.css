@@ -1,0 +1,53 @@
+/* ── Shipping Modals ─────────────────────────────────────────────────────── */
+.aa-sm-overlay { position:fixed;inset:0;background:rgba(15,23,42,0.4);z-index:600;display:flex;align-items:center;justify-content:center; }
+.aa-sm-modal { background:#fff;border-radius:10px;width:540px;max-height:90vh;overflow-y:auto;box-shadow:0 16px 48px rgba(0,0,0,0.15);animation:sm-slide 0.18s ease; }
+@keyframes aa-sm-slide { from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);} }
+.aa-sm-add-modal { width:500px; }
+
+.aa-sm-header { display:flex;align-items:center;justify-content:space-between;padding:16px 20px 12px;border-bottom:1px solid #f1f5f9; }
+.aa-sm-header h2 { margin:0;font-size:15px;font-weight:600;color:#1e293b; }
+.aa-sm-close { width:26px;height:26px;border:none;background:transparent;cursor:pointer;color:#94a3b8;border-radius:5px;display:flex;align-items:center;justify-content:center; }
+.aa-sm-close:hover { background:#f1f5f9; }
+
+.aa-sm-body { padding:14px 20px; }
+
+/* Table header for address list */
+.aa-sm-table-header { display:grid;grid-template-columns:1fr 56px 56px;padding:6px 0 6px;font-size:11.5px;font-weight:600;color:#94a3b8;border-bottom:1px solid #f1f5f9;margin-bottom:4px;letter-spacing:0.3px; }
+.aa-sm-addr-row { display:grid;grid-template-columns:1fr 48px 48px;align-items:center;padding:12px 0;border-bottom:1px solid #f1f5f9; }
+.aa-sm-addr-name { font-size:13px;font-weight:600;color:#1e293b;margin-bottom:3px; }
+.aa-sm-addr-detail { font-size:11.5px;color:#64748b;line-height:1.45; }
+.aa-sm-edit-btn { background:transparent;border:none;cursor:pointer;color:#94a3b8;display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:5px;transition:background 0.1s; }
+.aa-sm-edit-btn:hover { background:#f1f5f9;color:#64748b; }
+.aa-sm-radio { width:17px;height:17px;border-radius:50%;border:2px solid #e2e8f0;cursor:pointer;flex-shrink:0;justify-self:center;transition:border-color 0.15s; }
+.aa-sm-radio.checked { border-color:#3b82f6;background:#3b82f6;box-shadow:inset 0 0 0 4px #fff; }
+
+.aa-sm-add-new { background:transparent;border:none;color:#3b82f6;font-size:12.5px;font-weight:500;cursor:pointer;padding:8px 0;display:block; }
+.aa-sm-add-new:hover { text-decoration:underline; }
+
+.aa-sm-footer { display:flex;gap:10px;justify-content:flex-end;padding:12px 20px;border-top:1px solid #f1f5f9; }
+.aa-sm-cancel { height:38px;padding:0 24px;background:#fff;border:1px solid #e2e8f0;border-radius:7px;font-size:13px;font-weight:500;color:#374151;cursor:pointer; }
+.aa-sm-cancel:hover { border-color:#94a3b8; }
+.aa-sm-done { height:38px;padding:0 32px;background:#3b82f6;color:#fff;border:none;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer; }
+.aa-sm-done:hover { background:#2563eb; }
+.aa-sm-save.disabled { background:#bfdbfe;cursor:not-allowed; }
+
+/* Add/Edit form */
+.aa-sm-form-body { display:flex;flex-direction:column;gap:14px; }
+.aa-sm-field { display:flex;flex-direction:column;gap:4px; }
+.aa-sm-full { width:100%; }
+.aa-sm-field label { font-size:12px;font-weight:600;color:#3b82f6; }
+.aa-sm-req { color:#ef4444; }
+.aa-sm-field input,.aa-sm-field textarea {
+  padding:9px 12px;border:1px solid #e2e8f0;border-radius:7px;
+  font-size:13px;color:#374151;outline:none;transition:border-color 0.15s;
+  font-family:inherit; resize:none;
+}
+.aa-sm-field input:focus,.aa-sm-field textarea:focus { border-color:#3b82f6;box-shadow:0 0 0 2px rgba(59,130,246,0.1); }
+.aa-sm-field-row { display:grid;grid-template-columns:1fr 1fr;gap:12px; }
+
+.aa-sm-state-wrap { position:relative;display:flex;align-items:center;gap:6px;padding:0 10px;border:1px solid #e2e8f0;border-radius:7px;height:40px; }
+.aa-sm-state-wrap:focus-within { border-color:#3b82f6;box-shadow:0 0 0 2px rgba(59,130,246,0.1); }
+.aa-sm-state-wrap input { border:none;outline:none;font-size:13px;color:#374151;background:transparent;flex:1; }
+.aa-sm-state-dropdown { position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:100;background:#fff;border:1px solid #e2e8f0;border-radius:7px;box-shadow:0 8px 24px rgba(0,0,0,0.1);max-height:180px;overflow-y:auto; }
+.aa-sm-state-option { padding:8px 10px;font-size:13px;color:#374151;cursor:pointer; }
+.aa-sm-state-option:hover { background:#eff6ff; }

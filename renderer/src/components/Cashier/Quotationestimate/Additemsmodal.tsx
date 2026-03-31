@@ -1,0 +1,339 @@
+import { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
+import { Item, BillItem, calcBillItemAmount, apiGetItems } from "./Quotationtypes";
+import "./AddItemsModal.css";
+
+const SAMPLE_ITEMS: Item[] = [
+  { id: 1, name: "BILLING SOFTWARE MOBILE APP",  itemCode: "-",     stock: "-",   salesPrice: 256,    baseSalesPrice: 256,    purchasePrice: 0,     unit: "PCS", hsn: "", category: "",            gstRate: 0,  taxLabel: "None",    salesDiscountPercent: 0 },
+  { id: 2, name: "BILLING SOFTWARE WITH GST",    itemCode: "-",     stock: "-",   salesPrice: 369875, baseSalesPrice: 313453, purchasePrice: 0,     unit: "PCS", hsn: "", category: "",            gstRate: 18, taxLabel: "GST 18%", salesDiscountPercent: 0 },
+  { id: 3, name: "BILLING SOFTWARE WITHOUT GST", itemCode: "-",     stock: "-",   salesPrice: 3556,   baseSalesPrice: 3556,   purchasePrice: 0,     unit: "PCS", hsn: "", category: "",            gstRate: 0,  taxLabel: "None",    salesDiscountPercent: 0 },
+  { id: 4, name: "GODREJ FRIDGE",                itemCode: "34567", stock: "143", salesPrice: 42000,  baseSalesPrice: 35593,  purchasePrice: 0,     unit: "ACS", hsn: "", category: "Electronics", gstRate: 18, taxLabel: "GST 18%", salesDiscountPercent: 0 },
+  { id: 5, name: "HERIER AC",                    itemCode: "1234",  stock: "93",  salesPrice: 45000,  baseSalesPrice: 38136,  purchasePrice: 38000, unit: "PCS", hsn: "", category: "Electronics", gstRate: 18, taxLabel: "GST 18%", salesDiscountPercent: 0 },
+  { id: 6, name: "HISENSE 32 INCH",              itemCode: "-",     stock: "39",  salesPrice: 21000,  baseSalesPrice: 17797,  purchasePrice: 18000, unit: "PCS", hsn: "", category: "Electronics", gstRate: 18, taxLabel: "GST 18%", salesDiscountPercent: 0 },
+];
+
+interface AddItemsModalProps {
+  onClose: () => void;
+  onAddToBill: (items: BillItem[]) => void;
+}
+
+export default function AddItemsModal({ onClose, onAddToBill }: AddItemsModalProps) {
+  const [search,           setSearch]           = useState("");
+  const [category,         setCategory]         = useState("");
+  const [selections,       setSelections]       = useState<Record<number, number>>({});
+  const [showBarcodeModal, setShowBarcodeModal] = useState(false);
+  const [barcodeInput,     setBarcodeInput]     = useState("");
+  const [allItems,         setAllItems]         = useState<Item[]>(SAMPLE_ITEMS);
+  const [loading,          setLoading]          = useState(true);
+  const navigate   = useNavigate();
+  const searchRef  = useRef<HTMLInputElement>(null);
+  const barcodeRef = useRef<HTMLInputElement>(null);
+
+  // ── Load items from backend ────────────────────────────────────────────────
+  useEffect(() => {
+    apiGetItems()
+      .then((items) => { if (items.length > 0) setAllItems(items); })
+      .catch(() => { /* keep SAMPLE_ITEMS as fallback */ })
+      .finally(() => setLoading(false));
+  }, []);
+
+  const categories: string[] = Array.from(
+    new Set(allItems.map((i: Item) => i.category || "").filter(Boolean))
+  );
+
+  const filtered = allItems.filter((item: Item) => {
+    const matchesSearch =
+      !search ||
+      item.name.toLowerCase().includes(search.toLowerCase()) ||
+      (item.itemCode && item.itemCode.toLowerCase().includes(search.toLowerCase())) ||
+      (item.hsn      && item.hsn.toLowerCase().includes(search.toLowerCase())) ||
+      (item.category && item.category.toLowerCase().includes(search.toLowerCase()));
+    const matchesCategory = !category || item.category === category;
+    return matchesSearch && matchesCategory;
+  });
+
+  const selectedCount = Object.values(selections).filter((q) => q > 0).length;
+
+  function setQty(id: number, qty: number) {
+    setSelections((prev) => ({ ...prev, [id]: Math.max(0, qty) }));
+  }
+
+  function handleAddToBill() {
+    const billItems: BillItem[] = [];
+
+    Object.entries(selections).forEach(([id, qty]) => {
+      if (qty <= 0) return;
+      const item = allItems.find((i: Item) => i.id === Number(id));
+      if (!item) return;
+
+      // ── Base (pre-tax) price ───────────────────────────────────────────────────
+      // apiGetItems back-calculates baseSalesPrice so it is never 0.
+      // Safety fallback: strip GST from salesPrice if somehow still 0.
+      const basePrice =
+        item.baseSalesPrice > 0
+          ? item.baseSalesPrice
+          : item.gstRate > 0
+            ? parseFloat((item.salesPrice / (1 + item.gstRate / 100)).toFixed(2))
+            : item.salesPrice;
+
+      // ── Default discount % from product master (DB: salesDiscountPercent) ───
+      const discountPct = item.salesDiscountPercent || 0;
+
+      // ── Canonical GST formula ──────────────────────────────────────────────
+      //   lineGross = qty x basePrice
+      //   discount  = lineGross x discountPct / 100
+      //   taxable   = lineGross - discount
+      //   GST       = taxable x gstRate / 100
+      //   amount    = taxable + GST
+      const { amount } = calcBillItemAmount({
+        qty,
+        price:       basePrice,
+        discountPct,
+        discountAmt: 0,
+        taxRate:     item.gstRate || 0,
+      });
+
+      billItems.push({
+        rowId:       `row-${Date.now()}-${id}`,
+        itemId:      item.id,
+        name:        item.name,
+        description: "",
+        hsn:         item.hsn || "",
+        qty,
+        unit:        item.unit || "PCS",
+        price:       basePrice,   // ✅ always pre-tax base price
+        discountPct,              // ✅ pre-filled from DB salesDiscountPercent
+        discountAmt: 0,
+        taxLabel:    item.taxLabel,
+        taxRate:     item.gstRate || 0,
+        amount,
+      });
+    });
+
+    onAddToBill(billItems);
+    onClose();
+  }
+
+  // ── Barcode: match by itemCode ─────────────────────────────────────────────
+  function handleBarcodeSearch() {
+    const val = barcodeInput.trim();
+    if (!val) return;
+    const match = allItems.find(
+      (i: Item) => i.itemCode.toLowerCase() === val.toLowerCase()
+    );
+    if (match) {
+      setQty(match.id, (selections[match.id] || 0) + 1);
+      setBarcodeInput("");
+      setShowBarcodeModal(false);
+    } else {
+      setBarcodeInput("");
+      alert(`No item found with barcode: ${val}`);
+    }
+  }
+
+  useEffect(() => {
+    if (showBarcodeModal) setTimeout(() => barcodeRef.current?.focus(), 50);
+  }, [showBarcodeModal]);
+
+  useEffect(() => {
+    function handler(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        if (showBarcodeModal) { setShowBarcodeModal(false); return; }
+        onClose();
+      }
+      if (e.key === "F7" && selectedCount > 0) handleAddToBill();
+    }
+    document.addEventListener("keydown", handler);
+    return () => document.removeEventListener("keydown", handler);
+  }, [selectedCount, selections, showBarcodeModal]);
+
+  return (
+    <>
+      <div className="aim-overlay" onClick={onClose}>
+        <div className="aim-modal" onClick={(e) => e.stopPropagation()}>
+
+          {/* Header */}
+          <div className="aim-header">
+            <h2 className="aim-title">Add Items to Bill</h2>
+            <button className="aim-close" onClick={onClose}>✕</button>
+          </div>
+
+          {/* Toolbar */}
+          <div className="aim-toolbar">
+            <div className="aim-search-wrap">
+              <svg className="aim-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" />
+              </svg>
+              <input
+                ref={searchRef}
+                className="aim-search"
+                autoFocus
+                placeholder="Search by Item / Serial no. / HSN code / SKU / Category"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+              <button className="aim-barcode-btn" title="Scan barcode" onClick={() => setShowBarcodeModal(true)}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <path d="M3 9V5a2 2 0 0 1 2-2h4M3 15v4a2 2 0 0 0 2 2h4M21 9V5a2 2 0 0 0-2-2h-4M21 15v4a2 2 0 0 1-2 2h-4" />
+                  <line x1="7"  y1="8" x2="7"  y2="16" />
+                  <line x1="10" y1="8" x2="10" y2="16" />
+                  <line x1="14" y1="8" x2="14" y2="16" />
+                  <line x1="17" y1="8" x2="17" y2="16" />
+                </svg>
+              </button>
+            </div>
+
+            <select className="aim-cat-select" value={category} onChange={(e) => setCategory(e.target.value)}>
+              <option value="">Select Category</option>
+              {categories.map((cat) => <option key={cat} value={cat}>{cat}</option>)}
+            </select>
+
+            <button
+              className="aim-create-btn"
+              onClick={() => { onClose(); navigate("/cashier/create-item"); }}
+            >
+              Create New Item
+            </button>
+          </div>
+
+          {/* Table */}
+          <div className="aim-table-wrap">
+            {loading ? (
+              <div className="aim-empty" style={{ padding: "2rem", textAlign: "center" }}>
+                Loading items...
+              </div>
+            ) : (
+              <table className="aim-table">
+                <thead>
+                  <tr>
+                    <th className="aim-th">Item Name</th>
+                    <th className="aim-th aim-th--center">Item Code</th>
+                    <th className="aim-th aim-th--center">Stock</th>
+                    <th className="aim-th aim-th--right">Base Price (₹)</th>
+                    <th className="aim-th aim-th--center">GST Rate</th>
+                    <th className="aim-th aim-th--center">Default Disc%</th>
+                    <th className="aim-th aim-th--center">Quantity</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="aim-empty">No items found</td>
+                    </tr>
+                  ) : (
+                    filtered.map((item: Item) => {
+                      const qty        = selections[item.id] || 0;
+                      const isSelected = qty > 0;
+                      // Always show the pre-tax base price in the modal.
+                      // Same formula used in apiGetItems and handleAddToBill.
+                      const displayPrice =
+                        item.baseSalesPrice > 0
+                          ? item.baseSalesPrice
+                          : item.gstRate > 0
+                            ? parseFloat((item.salesPrice / (1 + item.gstRate / 100)).toFixed(2))
+                            : item.salesPrice;
+                      return (
+                        <tr key={item.id} className={`aim-tr ${isSelected ? "aim-tr--selected" : ""}`}>
+                          <td className="aim-td">{item.name}</td>
+                          <td className="aim-td aim-td--center">{item.itemCode || "-"}</td>
+                          <td className="aim-td aim-td--center">{item.stock || "-"}</td>
+                          <td className="aim-td aim-td--right">
+                            ₹{displayPrice.toLocaleString("en-IN")}
+                          </td>
+                          <td className="aim-td aim-td--center">
+                            {item.gstRate > 0 ? `${item.gstRate}%` : "—"}
+                          </td>
+                          <td className="aim-td aim-td--center">
+                            {item.salesDiscountPercent > 0
+                              ? `${item.salesDiscountPercent}%`
+                              : "—"}
+                          </td>
+                          <td className="aim-td aim-td--center">
+                            {!isSelected ? (
+                              <button className="aim-add-btn" onClick={() => setQty(item.id, 1)}>
+                                + Add
+                              </button>
+                            ) : (
+                              <div className="aim-qty-row">
+                                <button className="aim-qty-btn" onClick={() => setQty(item.id, qty - 1)}>−</button>
+                                <input
+                                  className="aim-qty-input"
+                                  type="number"
+                                  value={qty}
+                                  onChange={(e) => setQty(item.id, Number(e.target.value))}
+                                />
+                                <button className="aim-qty-btn" onClick={() => setQty(item.id, qty + 1)}>+</button>
+                                <span className="aim-qty-unit">{item.unit}</span>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="aim-footer">
+            <div className="aim-shortcuts">
+              <span className="aim-shortcut-label">Keyboard Shortcuts :</span>
+              <span>Change Quantity</span><kbd className="aim-kbd">Enter</kbd>
+              <span>Move between items</span><kbd className="aim-kbd">↑</kbd><kbd className="aim-kbd">↓</kbd>
+            </div>
+            <div className="aim-footer-right">
+              <span className="aim-selected-count">Show {selectedCount} Item(s) Selected</span>
+              <button className="aim-cancel-btn" onClick={onClose}>Cancel [ESC]</button>
+              <button
+                className={`aim-confirm-btn ${selectedCount === 0 ? "aim-confirm-btn--disabled" : ""}`}
+                onClick={handleAddToBill}
+                disabled={selectedCount === 0}
+              >
+                Add to Bill [F7]
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Barcode Scanner Modal */}
+      {showBarcodeModal && (
+        <div className="aim-overlay aim-barcode-overlay" onClick={() => setShowBarcodeModal(false)}>
+          <div className="aim-barcode-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="aim-header">
+              <h2 className="aim-title">Scan Barcode</h2>
+              <button className="aim-close" onClick={() => setShowBarcodeModal(false)}>✕</button>
+            </div>
+            <div className="aim-barcode-body">
+              <div className="aim-barcode-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#4338ca" strokeWidth="1.5" width="48" height="48">
+                  <path d="M3 9V5a2 2 0 0 1 2-2h4M3 15v4a2 2 0 0 0 2 2h4M21 9V5a2 2 0 0 0-2-2h-4M21 15v4a2 2 0 0 1-2 2h-4" />
+                  <line x1="7"  y1="8" x2="7"  y2="16" />
+                  <line x1="10" y1="8" x2="10" y2="16" />
+                  <line x1="14" y1="8" x2="14" y2="16" />
+                  <line x1="17" y1="8" x2="17" y2="16" />
+                </svg>
+              </div>
+              <p className="aim-barcode-hint">Scan or type the barcode / item code below</p>
+              <input
+                ref={barcodeRef}
+                className="aim-barcode-input"
+                type="text"
+                placeholder="Barcode / Item Code"
+                value={barcodeInput}
+                onChange={(e) => setBarcodeInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") handleBarcodeSearch(); }}
+              />
+            </div>
+            <div className="aim-footer" style={{ justifyContent: "flex-end" }}>
+              <button className="aim-cancel-btn" onClick={() => setShowBarcodeModal(false)}>Cancel</button>
+              <button className="aim-confirm-btn" onClick={handleBarcodeSearch}>Add Item</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}

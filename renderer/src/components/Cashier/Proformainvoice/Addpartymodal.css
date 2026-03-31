@@ -1,0 +1,35 @@
+/* ── Add Party Modal / Dropdown ──────────────────────────────────────────── */
+.aa-apm-overlay { position:fixed;inset:0;background:rgba(15,23,42,0.4);z-index:600;display:flex;align-items:flex-start;justify-content:flex-start; }
+.aa-apm-modal {
+  background:#fff; border-radius:8px; width:320px; max-height:500px;
+  display:flex; flex-direction:column;
+  box-shadow:0 10px 36px rgba(0,0,0,0.14); animation:apm-slide 0.16s ease;
+  position: relative;
+  top: 19%;
+  left: 18%;
+}
+@keyframes aa-apm-slide { from{opacity:0;transform:translateY(-8px);}to{opacity:1;transform:translateY(0);} }
+
+.aa-apm-header { display:flex;align-items:center;justify-content:space-between;padding:12px 14px 9px;border-bottom:1px solid #f1f5f9; }
+.aa-apm-header h2 { margin:0;font-size:14px;font-weight:600;color:#1e293b; }
+.aa-apm-close { width:24px;height:24px;border:none;background:transparent;cursor:pointer;color:#94a3b8;border-radius:4px;display:flex;align-items:center;justify-content:center; }
+.aa-apm-close:hover { background:#f1f5f9;color:#374151; }
+
+.aa-apm-search-wrap { display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid #f1f5f9; }
+.aa-apm-search-wrap svg { color:#94a3b8;flex-shrink:0; }
+.aa-apm-search { flex:1;border:none;outline:none;font-size:13px;color:#374151;background:transparent; }
+.aa-apm-search::placeholder { color:#cbd5e1; }
+
+.aa-apm-list-header { display:flex;justify-content:space-between;padding:6px 12px;background:#f8fafc;font-size:11.5px;font-weight:600;color:#94a3b8;border-bottom:1px solid #f1f5f9; }
+.aa-apm-list { flex:1;overflow-y:auto;max-height:280px; }
+.aa-apm-item { display:flex;align-items:center;justify-content:space-between;padding:10px 12px;cursor:pointer;border-bottom:1px solid #f1f5f9;transition:background 0.1s; }
+.aa-apm-item:hover { background:#eff6ff; }
+.aa-apm-item-name { font-size:13px;font-weight:500;color:#1e293b; }
+.aa-apm-item-balance { display:flex;align-items:center;gap:3px;font-size:12.5px;color:#374151; }
+.aa-apm-bal-up { color:#ef4444; }
+.aa-apm-bal-down { color:#16a34a; }
+.aa-apm-empty { text-align:center;padding:28px;color:#94a3b8;font-size:13px; }
+
+.aa-apm-footer { padding:9px 12px;border-top:1px solid #f1f5f9; }
+.aa-apm-create-btn { background:transparent;border:1.5px dashed #93c5fd;color:#3b82f6;padding:8px 14px;border-radius:7px;cursor:pointer;font-size:12.5px;font-weight:600;width:100%;text-align:center;transition:background 0.1s; }
+.aa-apm-create-btn:hover { background:#eff6ff; }

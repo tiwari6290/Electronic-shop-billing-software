@@ -1,0 +1,81 @@
+.si-footer { padding: 16px; }
+.si-footer-link { background: none; border: none; color: #3b82f6; font-size: 13.5px; font-weight: 500; cursor: pointer; padding: 0; font-family: inherit; display: block; margin-bottom: 12px; }
+.si-footer-link:hover { text-decoration: underline; }
+.si-notes-section, .si-terms-section, .si-bank-section { margin-bottom: 16px; }
+.si-notes-hdr, .si-terms-hdr { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 14px; font-weight: 600; color: #374151; }
+.si-section-close { background: none; border: none; cursor: pointer; color: #9ca3af; font-size: 16px; padding: 2px; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; }
+.si-section-close:hover { background: #fee2e2; color: #ef4444; }
+.si-notes-ta, .si-terms-ta { width: 100%; padding: 10px 12px; border: 1.5px solid #e5e7eb; border-radius: 7px; font-size: 13.5px; color: #374151; outline: none; resize: vertical; font-family: inherit; box-sizing: border-box; background: #f9fafb; }
+.si-notes-ta:focus, .si-terms-ta:focus { border-color: #a5b4fc; background: #fff; }
+.si-bank-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.si-bank-grid label { display: block; font-size: 12px; color: #6b7280; margin-bottom: 3px; }
+.si-bank-input { width: 100%; padding: 7px 10px; border: 1.5px solid #e5e7eb; border-radius: 6px; font-size: 13px; outline: none; font-family: inherit; box-sizing: border-box; }
+.si-bank-input:focus { border-color: #a5b4fc; }
+
+/* ── Bank Account Add Form ── */
+.si-bank-form-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+}
+.si-bank-form-field { display: flex; flex-direction: column; }
+.si-bank-form-field label { font-size: 12px; color: #6b7280; font-weight: 500; margin-bottom: 4px; }
+.si-bank-form-field--full { grid-column: 1 / -1; }
+.si-req { color: #ef4444; }
+.si-errmsg { font-size: 11.5px; color: #ef4444; margin-top: 3px; }
+.si-inp { width: 100%; padding: 8px 10px; border: 1.5px solid #e5e7eb; border-radius: 6px; font-size: 13.5px; outline: none; box-sizing: border-box; font-family: inherit; }
+.si-inp:focus { border-color: #6366f1; }
+.si-inp--full { width: 100%; }
+.si-inp--err { border-color: #ef4444; }
+
+/* ── Bank Account List ── */
+.si-bank-list { max-height: 300px; overflow-y: auto; }
+.si-bank-list-empty { padding: 24px; text-align: center; color: #9ca3af; font-size: 13px; }
+.si-bank-list-row {
+  display: flex; align-items: center; justify-content: space-between;
+  width: 100%; padding: 14px 22px; border: none; background: none;
+  border-bottom: 1px solid #f3f4f6; cursor: pointer; font-family: inherit;
+  text-align: left; transition: background .1s;
+}
+.si-bank-list-row:hover { background: #f9fafb; }
+.si-bank-list-row--sel { background: #f5f3ff; }
+.si-bank-list-info { flex: 1; }
+.si-bank-list-name { font-size: 14px; font-weight: 700; color: #111827; margin-bottom: 2px; }
+.si-bank-list-meta { font-size: 12px; color: #6b7280; }
+
+/* ── Selected bank card ── */
+.si-bank-card {
+  display: flex; align-items: center; justify-content: space-between;
+  background: #f9fafb; border: 1.5px solid #e5e7eb; border-radius: 8px; padding: 12px 14px;
+}
+.si-bank-card-info { flex: 1; }
+.si-bank-card-name { font-size: 14px; font-weight: 700; color: #111827; margin-bottom: 3px; }
+.si-bank-card-meta { font-size: 12px; color: #6b7280; }
+.si-bank-change-btn {
+  background: none; border: 1px solid #d1d5db; border-radius: 5px;
+  padding: 5px 14px; font-size: 12.5px; color: #374151; cursor: pointer;
+  font-family: inherit; white-space: nowrap; margin-left: 16px;
+}
+.si-bank-change-btn:hover { background: #f3f4f6; }
+
+/* ── Bank section placeholder ── */
+.si-bank-add-placeholder {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  padding: 14px; background: #f9fafb; border: 1.5px dashed #d1d5db;
+  border-radius: 8px; color: #6b7280; font-size: 13px; cursor: pointer;
+  font-family: inherit; justify-content: center;
+}
+.si-bank-add-placeholder:hover { background: #f3f4f6; border-color: #9ca3af; }
+
+/* Reuse overlay + modal from SIPartySelector if not already present */
+.si-overlay { position: fixed; inset: 0; background: rgba(17,24,39,.5); z-index: 500; display: flex; align-items: center; justify-content: center; }
+.si-cmodal { background: #fff; border-radius: 10px; width: 580px; max-width: 96vw; max-height: 90vh; overflow-y: auto; font-family: inherit; }
+.si-cmodal--sm { width: 500px; }
+.si-cmodal-hdr { display: flex; justify-content: space-between; align-items: center; padding: 18px 22px; border-bottom: 1px solid #f3f4f6; font-size: 16px; font-weight: 700; color: #111827; }
+.si-cmodal-hdr button { background: none; border: none; cursor: pointer; color: #9ca3af; font-size: 18px; }
+.si-cmodal-body { padding: 20px 22px; }
+.si-cmodal-ftr { display: flex; justify-content: flex-end; gap: 10px; padding: 14px 22px; border-top: 1px solid #f3f4f6; }
+.si-btn-cancel { padding: 8px 20px; border: 1.5px solid #e5e7eb; border-radius: 7px; background: #fff; font-size: 14px; color: #374151; cursor: pointer; font-family: inherit; }
+.si-btn-primary { padding: 8px 24px; border: none; border-radius: 7px; background: #6366f1; color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; font-family: inherit; }
+.si-btn-primary:hover { background: #4f46e5; }
+.si-ship-add-link { padding: 12px 22px; }
+.si-ship-add-link button { background: none; border: none; color: #3b82f6; font-size: 13.5px; font-weight: 500; cursor: pointer; font-family: inherit; }
+.si-ship-add-link button:hover { text-decoration: underline; }
