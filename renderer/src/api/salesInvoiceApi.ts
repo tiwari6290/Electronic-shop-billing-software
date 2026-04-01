@@ -256,7 +256,7 @@ export function fromSaleInvoice(inv: SaleInvoice): FeSalesInvoice {
         // whether a real product is linked (see toCreatePayload below).
         itemId:      item.productId ?? undefined,
         name:        item.product?.name ?? item.productName ?? "",
-        description: "",
+        description: (item as any).description ?? "",
         hsn:         item.product?.hsnCode ?? "",
         qty:         item.quantity,
         unit:        item.product?.unit ?? "PCS",
@@ -315,13 +315,14 @@ export interface CreateInvoicePayload {
   applyTcs: boolean;
   autoRoundOff: boolean;
   items: Array<{
-    productId?:  number;        // optional — omitted for free-text items
-    productName?: string;       // always sent so backend can display the name
-    quantity:    number;
-    price:       number;
-    taxRate:     number;
-    discountPct: number;
-    discount:    number;
+    productId?:   number;        // optional — omitted for free-text items
+    productName?: string;        // always sent so backend can display the name
+    description?: string;        // item description / notes
+    quantity:     number;
+    price:        number;
+    taxRate:      number;
+    discountPct:  number;
+    discount:     number;
   }>;
   // ── additionalCharges now includes taxLabel ──────────────────────────────
   additionalCharges: Array<{ name: string; amount: number; taxLabel?: string }>;
@@ -382,6 +383,7 @@ export function toCreatePayload(form: FeSalesInvoice): CreateInvoicePayload {
       ...(i.itemId != null ? { productId: Number(i.itemId) } : {}),
       // Always send productName so free-text items are preserved on the backend
       productName: i.name || "Item",
+      description: i.description || undefined,
       quantity:    Number(i.qty)         || 0,
       price:       Number(i.price)       || 0,
       taxRate:     Number(i.taxRate)     || 0,
@@ -636,6 +638,8 @@ export interface BackendItem {
   category?: string | null;
   /** GST rate string: "18", "5", "28+cess5", "Exempted", or null */
   gstRate?: string | null;
+  /** Item description / short notes set on the item master */
+  description?: string | null;
   itemType: string;
   ProductStock?: Array<{
     openingStock: number;

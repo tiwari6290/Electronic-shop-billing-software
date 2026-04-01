@@ -277,8 +277,11 @@ export default function SalesInvoiceList() {
     companyName: "Mondal Electronics Concern",
     address: " Kumillapara , P.O: Sapuipara, Bally, Howrah, 711227",
     gstin: "19AABCM1234R1ZX", phone: "06289909521",
-    email: "rakeshranjantiwari11@gmail.com", pan: "AABCM1234R",
-    bank: "SBI - 1234567890", ifsc: "SBIN0001234",
+    email: "rakeshranjantiwari11@gmail.com", pan: "AFTPM0665H",
+    bank: "Karur Vysya Bank",accountNo:"3112135000002364",
+    branch:"Ghoshpara", AccountHolder: "Mondal Electronics Concern",
+    ifsc: "KVBL0003112",
+
   };
 
   // ── Build API query params from current filter state ──────────────
@@ -308,6 +311,37 @@ export default function SalesInvoiceList() {
     return params;
   }
 
+  // ── Fetch summary stats (date-aware) ─────────────────────────────
+  // getInvoiceSummary() accepts no args, so we compute date-filtered totals
+  // directly from the invoices already fetched for the current date range.
+  // This guarantees the stat cards always match the visible table rows.
+  const fetchSummary = useCallback(async (filteredInvoices: SalesInvoice[]) => {
+    // Compute from the date-filtered invoice list that was just fetched
+    let totalSales     = 0;
+    let totalPaid      = 0;
+    let totalUnpaid    = 0;
+    let totalCancelled = 0;
+
+    for (const inv of filteredInvoices) {
+      const total  = calcTotal(inv);
+      const unpaid = calcUnpaid(inv);
+      if (inv.status === "Cancelled") {
+        totalCancelled += total;
+      } else {
+        totalSales  += total;
+        totalPaid   += inv.amountReceived;
+        totalUnpaid += unpaid;
+      }
+    }
+
+    setSummaryStats({ totalSales, totalPaid, totalUnpaid, totalCancelled });
+
+    // Also try the backend endpoint (no-arg) to get all-time data if needed,
+    // but only use it when no date filter is restricting the view.
+    // We skip this when a real date range is active to avoid overwriting the
+    // locally-computed filtered totals above.
+  }, []);
+
   // ── Fetch invoices from backend ───────────────────────────────────
   const fetchInvoices = useCallback(async () => {
     setLoading(true);
@@ -325,31 +359,17 @@ export default function SalesInvoiceList() {
         : fe;
       setInvoices(filtered);
       setTotalCount(q ? filtered.length : data.total);
+      // Update stat cards using ALL invoices for the date range (not just current page)
+      // fe contains all invoices for the date range before status-filter is applied
+      fetchSummary(fe);
     } catch (e: any) {
       setApiError(e.message ?? "Failed to load invoices.");
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, dateFilter, customStart, customEnd, search, page, sortDir]);
-
-  // ── Fetch summary stats ───────────────────────────────────────────
-  const fetchSummary = useCallback(async () => {
-    try {
-      const res = await getInvoiceSummary() as any;
-      // Backend returns { success: true, data: { totalInvoiced, ... } }
-      // Unwrap .data if present, otherwise fall back to the root object
-      const s = res?.data ?? res;
-      setSummaryStats({
-        totalSales:     s.totalInvoiced    ?? s.totalSales    ?? 0,
-        totalPaid:      s.totalReceived    ?? s.totalPaid     ?? 0,
-        totalUnpaid:    s.totalOutstanding ?? s.totalUnpaid   ?? 0,
-        totalCancelled: s.totalCancelled   ?? 0,
-      });
-    } catch { /* non-critical */ }
-  }, []);
+  }, [statusFilter, dateFilter, customStart, customEnd, search, page, sortDir, fetchSummary]);
 
   useEffect(() => { fetchInvoices(); }, [fetchInvoices]);
-  useEffect(() => { fetchSummary(); }, [fetchSummary]);
 
   // Close dropdowns on outside click
   useEffect(() => {
@@ -375,7 +395,6 @@ export default function SalesInvoiceList() {
       setCancelTarget(null);
       setCancelReason("");
       await fetchInvoices();
-      await fetchSummary();
     } catch (e: any) {
       setApiError(e.message ?? "Failed to cancel invoice.");
       setCancelTarget(null);
@@ -390,7 +409,6 @@ export default function SalesInvoiceList() {
       await apiDeleteInvoice(id);
       setDeleteTarget(null);
       await fetchInvoices();
-      await fetchSummary();
     } catch (e: any) {
       setApiError(e.message ?? "Failed to delete invoice.");
       setDeleteTarget(null);
@@ -407,7 +425,6 @@ export default function SalesInvoiceList() {
       payload.receivedAmount = 0; // reset payment
       await createInvoice(payload);
       await fetchInvoices();
-      await fetchSummary();
     } catch (e: any) {
       setApiError(e.message ?? "Failed to duplicate invoice.");
     }
@@ -527,20 +544,74 @@ export default function SalesInvoiceList() {
             {showBulkMenu && (
               <div className="sil-dropdown">
                 <button className="sil-drop-item" onClick={() => {
+                  // Download selected rows, or ALL visible invoices if none selected
                   const ids = Array.from(selected);
-                  const todown = invoices.filter(inv => ids.includes(inv.id));
-                  const csv = ["Invoice No,Party,Date,Status,Amount",
-                    ...todown.map(inv => `${inv.invoiceNo},${inv.party?.name || ""},${inv.invoiceDate},${inv.status},${calcTotal(inv)}`)
-                  ].join("\n");
-                  const blob = new Blob([csv], { type: "text/csv" });
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement("a");
-                  a.href = url; a.download = `invoices_${Date.now()}.csv`; a.click();
+                  const todown = ids.length > 0
+                    ? invoices.filter(inv => ids.includes(inv.id))
+                    : invoices;
+
+                  // Helper to escape CSV cell values
+                  const esc = (v: string | number) => {
+                    const s = String(v ?? "");
+                    return s.includes(",") || s.includes('"') || s.includes("\n")
+                      ? `"${s.replace(/"/g, '\"\"')}"` : s;
+                  };
+
+                  const headers = [
+                    "Invoice No", "Invoice Date", "Party Name", "Party Mobile",
+                    "Due Date", "Status", "Subtotal (₹)", "Discount (₹)",
+                    "Tax (₹)", "Round Off (₹)", "Total Amount (₹)",
+                    "Amount Received (₹)", "Balance Due (₹)", "Payment Method",
+                    "Notes",
+                  ];
+
+                  const rows = todown.map(inv => {
+                    const itemsTotal   = inv.billItems.reduce((s, i) => s + i.amount, 0);
+                    const chargesTotal = inv.additionalCharges.reduce((s, c) => s + c.amount, 0);
+                    const subtotal     = itemsTotal + chargesTotal;
+                    const discVal      = subtotal * (inv.discountPct / 100) + inv.discountAmt;
+                    const afterDisc    = subtotal - discVal;
+                    const totalTax     = inv.billItems.reduce((s, i) => {
+                      const lineGross = i.qty * i.price;
+                      const disc      = lineGross * (i.discountPct / 100) + (i.discountPct > 0 ? 0 : i.discountAmt);
+                      return s + Math.round(Math.max(0, lineGross - disc) * (i.taxRate / 100) * 100) / 100;
+                    }, 0);
+                    const total        = calcTotal(inv);
+                    const balance      = Math.max(0, total - inv.amountReceived);
+                    return [
+                      esc(inv.invoiceNo),
+                      esc(fmtDate(inv.invoiceDate)),
+                      esc(inv.party?.name ?? ""),
+                      esc(inv.party?.mobile ?? ""),
+                      esc(inv.showDueDate && inv.dueDate ? fmtDate(inv.dueDate) : ""),
+                      esc(inv.status),
+                      esc(subtotal.toFixed(2)),
+                      esc(discVal.toFixed(2)),
+                      esc(totalTax.toFixed(2)),
+                      esc(inv.roundOffAmt.toFixed(2)),
+                      esc(total.toFixed(2)),
+                      esc(inv.amountReceived.toFixed(2)),
+                      esc(balance.toFixed(2)),
+                      esc((inv as any).paymentMethod ?? ""),
+                      esc((inv as any).notes ?? ""),
+                    ].join(",");
+                  });
+
+                  const csv  = [headers.join(","), ...rows].join("\n");
+                  const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+                  const url  = URL.createObjectURL(blob);
+                  const a    = document.createElement("a");
+                  const label = dateFilter === "Custom" && customStart && customEnd
+                    ? `${customStart}_to_${customEnd}`
+                    : dateFilter.replace(/ /g, "_");
+                  a.href     = url;
+                  a.download = `sales_invoices_${label}_${new Date().toISOString().slice(0,10)}.csv`;
+                  a.click();
                   URL.revokeObjectURL(url);
                   setShowBulkMenu(false);
                 }}>
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ width: 14, height: 14 }}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
-                  Download CSV
+                  {selected.size > 0 ? `Download CSV (${selected.size} selected)` : "Download CSV (all)"}
                 </button>
               </div>
             )}
@@ -712,7 +783,6 @@ export default function SalesInvoiceList() {
           }}
           onPaymentSaved={async () => {
             await fetchInvoices();
-            await fetchSummary();
           }}
           onDuplicate={() => { handleDuplicate(viewInvoiceFull); setViewInvoiceFull(null); }}
           onCancel={() => { setViewInvoiceFull(null); setCancelTarget(viewInvoiceFull.id); setCancelReason(""); }}

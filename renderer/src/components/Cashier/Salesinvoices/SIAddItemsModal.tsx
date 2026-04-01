@@ -118,7 +118,7 @@ export default function SIAddItemsModal({ onClose, onAddToBill }: Props) {
         rowId:       `row-${Date.now()}-${itemId}`,
         itemId,
         name:        item.name,
-        description: "",
+        description: item.description?.trim() || "",
         hsn:         item.hsnCode ?? "",
         qty,
         unit:        item.unit ?? "PCS",
