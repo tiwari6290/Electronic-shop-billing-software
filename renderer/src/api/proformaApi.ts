@@ -1,8 +1,8 @@
 // ── proformaApi.ts ────────────────────────────────────────────────────────────
 // Centralised API calls for Proforma Invoice module.
 // Import this wherever you need to talk to the backend.
-
-const BASE = "http://localhost:4000/api/proforma-invoices";// adjust if your router is mounted differently
+const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:4000";
+const BASE = `${BASE_URL}/proforma-invoices`;// adjust if your router is mounted differently
 
 function getAuthHeader(): Record<string, string> {
   const token = localStorage.getItem("authToken") || sessionStorage.getItem("authToken") || "";

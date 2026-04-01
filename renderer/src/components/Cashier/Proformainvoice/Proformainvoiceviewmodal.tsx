@@ -145,6 +145,7 @@ const DEFAULT_BUSINESS = {
   gstin: "19AABCM1234R1ZX",
   terms: "1. Goods once sold will not be taken back or exchanged\n2. All disputes are subject to [ENTER_YOUR_CITY_NAME] jurisdiction only",
 };
+const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:4000";
 
 // ─── SVG Icons ────────────────────────────────────────────────────────────────
 
@@ -366,7 +367,7 @@ const ProformaInvoiceViewModal: React.FC<Props> = ({
     setLocalConverting(true);
     try {
       // Fetch fresh data from the backend (data-only endpoint, no status change)
-      const BASE_PROFORMA = "http://localhost:4000/api/proforma-invoices";
+      const BASE_PROFORMA = `${BASE_URL}/proforma-invoices`;
       const token = localStorage.getItem("authToken") || sessionStorage.getItem("authToken") || "";
       const res = await fetch(`${BASE_PROFORMA}/${invoice.id}/convert`, {
         method: "POST",

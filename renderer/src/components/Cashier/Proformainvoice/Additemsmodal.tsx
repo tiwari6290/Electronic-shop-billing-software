@@ -21,7 +21,7 @@ const IconBarcode = () => (
 
 interface SelectedItem { item: ItemProduct; qty: number; }
 interface Props { onAdd: (items: SelectedItem[]) => void; onClose: () => void; }
-
+const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:4000";
 const AddItemsModal: React.FC<Props> = ({ onAdd, onClose }) => {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
@@ -30,7 +30,7 @@ const AddItemsModal: React.FC<Props> = ({ onAdd, onClose }) => {
   const [quantities, setQuantities] = useState<Record<number, number>>({});
 const [items, setItems] = useState<ItemProduct[]>([]);
 useEffect(() => {
-  fetch("http://localhost:4000/api/product-stocks")
+fetch(`${BASE_URL}/product-stocks`)
     .then(res => res.json())
     .then(data => {
       const mapped = (data?.data || []).map((s: any) => ({

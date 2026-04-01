@@ -1,7 +1,7 @@
 import api from "../../../lib/axios";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+// import { useNavigate } from "react-router-dom";
 import "./Inventory.css";
 
 
@@ -871,7 +871,7 @@ const ItemsListPage = ({ items, onItemClick, onDelete, search, setSearch,
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-  const navigate = useNavigate();
+  // const navigate = useNavigate();
   useEffect(()=>{
     const h=(e:MouseEvent)=>{if(menuRef.current&&!menuRef.current.contains(e.target as Node))setMenuOpen(false);};
     document.addEventListener("mousedown",h); return()=>document.removeEventListener("mousedown",h);

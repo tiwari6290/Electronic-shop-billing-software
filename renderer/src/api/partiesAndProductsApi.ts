@@ -14,7 +14,7 @@ function getAuthHeaders(): HeadersInit {
     ...(token ? { Authorization: `Bearer ${token}` } : {}),
   };
 }
-const BASE_URL = "http://localhost:4000";
+const BASE_URL =import.meta.env.VITE_API_URL || "http://localhost:4000";
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
   const res = await fetch(url, {
     ...options,
@@ -57,9 +57,9 @@ export async function fetchParties(search?: string): Promise<PartyRecord[]> {
   if (search) qs.set("search", search);
 
   const endpoints = [
-    `${BASE_URL}/api/parties?${qs}`,
-    `${BASE_URL}/api/party?${qs}`,
-    `${BASE_URL}/api/cashier/parties?${qs}`,
+    `${BASE_URL}/parties?${qs}`,
+    `${BASE_URL}/party?${qs}`,
+    `${BASE_URL}/cashier/parties?${qs}`,
   ];
 
   for (const url of endpoints) {
@@ -87,7 +87,7 @@ export async function createParty(payload: {
   billingAddress?: string;
   partyType?: string;
 }): Promise<PartyRecord> {
-  return request<PartyRecord>(`${BASE_URL}/api/parties`, {
+  return request<PartyRecord>(`${BASE_URL}/parties`, {
     method: "POST",
     body: JSON.stringify({
       partyType: "Customer",
@@ -139,9 +139,9 @@ export async function fetchProducts(search?: string): Promise<ProductRecord[]> {
   if (search) qs.set("search", search);
 
   const endpoints = [
-    `${BASE_URL}/api/products?${qs}`,
-    `${BASE_URL}/api/items?${qs}`,
-    `${BASE_URL}/api/cashier/products?${qs}`,
+    `${BASE_URL}/products?${qs}`,
+    `${BASE_URL}/items?${qs}`,
+    `${BASE_URL}/cashier/products?${qs}`,
   ];
 
   for (const url of endpoints) {

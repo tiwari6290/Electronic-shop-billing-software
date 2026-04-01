@@ -164,6 +164,23 @@ const AccountantLayout = () => (
   </div>
 );
 
+if (!localStorage.getItem("businessInfo")) {
+  localStorage.setItem("businessInfo", JSON.stringify({
+    companyName: "Mondal Electronics Concern",
+    address: "Kumillapara, P.O: Sauipara,Bally,Howrah - 711227",
+    gstin: "19AFTPM0665H1ZY",
+    phone: "9831789022",
+    email: "",
+    pan: "AFTPM0665H",
+    bank: "Karur Vysya Bank",
+    ifsc: "KVBL0003112",
+    bankName: "",
+    accountNo: "3112135000002364",
+    branch: "Ghoshpara Branch, Howrah",
+  }));
+}
+
+
 function App() {
   return (
     <HashRouter>

@@ -1605,8 +1605,8 @@
 //   const bgImageUrl  = activeTheme.bgImageUrl;
 //   const bgOpacity   = activeTheme.bgOpacity;
 
-//   const font     = template?.style.font     ?? "Arial";
-//   const fontSize = template?.style.textSize ?? "11px";
+//   const font     = template?.style?.font     ?? "Arial";
+//   const fontSize = template?.style?.textSize ?? "11px";
 
 //   function buildInvoiceHtml(content: string) {
 //     const fontName = font.replace(/ /g, "+");
@@ -2353,16 +2353,16 @@ interface InvoicePaperProps {
 }
 
 function useInvoiceData(invoice: SalesInvoice, business: Business, template: SavedTemplate | null) {
-  const companyName = template?.inv.companyName || business.companyName;
-  const address     = template?.inv.address     || business.address;
-  const gstin       = template?.inv.gstin       || business.gstin;
+  const companyName = template?.inv?.companyName || business.companyName;
+  const address     = template?.inv?.address     || business.address;
+  const gstin       = template?.inv?.gstin       || business.gstin;
   const phone       = business.phone;
-  const email       = template?.inv.email       || business.email || "";
-  const bank        = template?.inv.bank        || business.bank || "";
-  const ifsc        = template?.inv.ifsc        || business.ifsc || "";
-  const bankName    = template?.inv.bankName    || business.bankName || "";
-  const accountNo   = template?.inv.accountNo   || business.accountNo || "";
-  const branch      = template?.inv.branch      || business.branch || "";
+  const email       = template?.inv?.email       || business.email || "";
+  const bank        = template?.inv?.bank        || business.bank || "";
+  const ifsc        = template?.inv?.ifsc        || business.ifsc || "";
+  const bankName    = template?.inv?.bankName    || business.bankName || "";
+  const accountNo   = template?.inv?.accountNo   || business.accountNo || "";
+  const branch      = template?.inv?.branch      || business.branch || "";
   const logoUrl     = template?.style?.logoUrl  || BILL_LOGO;
   const showLogo    = true;
   const sigUrl      = template?.misc?.signatureUrl || invoice.signatureUrl || BILL_SIGNATURE;
@@ -3069,8 +3069,8 @@ export default function InvoiceViewModal({
   const bgImageUrl  = activeTheme.bgImageUrl;
   const bgOpacity   = activeTheme.bgOpacity;
 
-  const font     = template?.style.font     ?? "Times New Roman";
-  const fontSize = template?.style.textSize ?? "10px";
+  const font     = template?.style?.font     ?? "Times New Roman";
+  const fontSize = template?.style?.textSize ?? "10px";
 
   const pdfFileName = invoice.party?.name
     ? `${invoice.party.name.replace(/[^a-zA-Z0-9\s]/g, "").trim()}-Invoice-${invoice.invoiceNo}`

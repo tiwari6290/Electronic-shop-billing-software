@@ -3,7 +3,7 @@
 // All Sales Return API calls.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const BASE_URL = "http://localhost:4000";
+const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:4000";
 
 function getAuthHeaders(): HeadersInit {
   const token =
@@ -138,7 +138,7 @@ export async function getSalesReturns(params?: {
   if (params?.page)      qs.set("page",      String(params.page));
   if (params?.limit)     qs.set("limit",     String(params.limit));
 
-  return apiFetch<any>(`/api/sales-return/sales-return?${qs}`);
+  return apiFetch<any>(`/sales-return/sales-return?${qs}`);
 }
 
 /**
@@ -146,7 +146,7 @@ export async function getSalesReturns(params?: {
  */
 export async function getSalesReturnById(id: number): Promise<SalesReturnRecord> {
   const res = await apiFetch<{ success: boolean; data: SalesReturnRecord }>(
-    `/api/sales-return/sales-return/${id}`
+    `/sales-return/sales-return/${id}`
   );
   return res.data;
 }
@@ -163,7 +163,7 @@ export async function getAvailableInvoicesForReturn(
   partyId: number
 ): Promise<AvailableInvoice[]> {
   const res = await apiFetch<{ success: boolean; data: AvailableInvoice[] }>(
-    `/api/sales-return/available-invoices?partyId=${partyId}`
+    `/sales-return/available-invoices?partyId=${partyId}`
   );
   return res.data ?? [];
 }
@@ -176,7 +176,7 @@ export async function createSalesReturn(
   payload: CreateSalesReturnPayload
 ): Promise<{ id: number; returnStatus: SalesReturnStatus; invoiceNo: string }> {
   const res = await apiFetch<{ success: boolean; data: any }>(
-    "/api/sales-return/sales-return",
+    "/sales-return/sales-return",
     { method: "POST", body: JSON.stringify(payload) }
   );
   return res.data;
@@ -187,5 +187,5 @@ export async function createSalesReturn(
  * Stock is automatically reversed on the backend.
  */
 export async function deleteSalesReturn(id: number): Promise<void> {
-  await apiFetch(`/api/sales-return/sales-return/${id}`, { method: "DELETE" });
+  await apiFetch(`/sales-return/sales-return/${id}`, { method: "DELETE" });
 }

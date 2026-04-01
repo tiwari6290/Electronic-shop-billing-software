@@ -3,7 +3,7 @@
 // All HTTP calls for the Delivery Challan module.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const BASE_URL = "http://localhost:4000/api/delivery-challan";
+const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:4000";
 
 function getAuthHeaders(): HeadersInit {
   const token = localStorage.getItem("token") || sessionStorage.getItem("token") || "";

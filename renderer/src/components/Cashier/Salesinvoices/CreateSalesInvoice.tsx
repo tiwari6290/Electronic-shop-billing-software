@@ -27,9 +27,10 @@ import { updateChallanStatus } from "../../../api/deliverychallanapi";
 
 // FIX: proformaApi may not exist. Use a direct fetch to the dedicated
 // PATCH /api/proforma-invoices/:id/status endpoint added in proforma_routes.ts.
+const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:4000";
 async function updateProformaStatus(id: number, status: string): Promise<void> {
   const token = localStorage.getItem("token") || sessionStorage.getItem("token") || "";
-  const res = await fetch(`http://localhost:4000/api/proforma-invoices/${id}/status`, {
+  const res = await fetch(`${BASE_URL}/proforma-invoices/${id}/status`, {
     method: "PATCH",
     headers: {
       "Content-Type": "application/json",

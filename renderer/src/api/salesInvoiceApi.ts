@@ -559,7 +559,7 @@ const DETAILS_SETTINGS_DEFAULTS: InvoiceDetailsSettings = {
 /** GET /api/invoice-details-settings */
 export async function getInvoiceDetailsSettings(): Promise<InvoiceDetailsSettings> {
   try {
-    const res  = await fetch("/api/invoice-details-settings");
+    const res  = await fetch("/invoice-details-settings");
     const body = await res.json().catch(() => ({}));
     return { ...DETAILS_SETTINGS_DEFAULTS, ...(body.data ?? {}) };
   } catch {
@@ -571,7 +571,7 @@ export async function getInvoiceDetailsSettings(): Promise<InvoiceDetailsSetting
 export async function saveInvoiceDetailsSettings(
   payload: Omit<InvoiceDetailsSettings, "id">
 ): Promise<InvoiceDetailsSettings> {
-  const res  = await fetch("/api/invoice-details-settings", {
+  const res  = await fetch("/invoice-details-settings", {
     method:  "PUT",
     headers: { "Content-Type": "application/json" },
     body:    JSON.stringify(payload),

@@ -274,8 +274,8 @@ export default function SalesInvoiceList() {
   });
 
   const defaultBusiness = {
-    companyName: "Mondal Electronic",
-    address: "West Shantinagar Anandnagar Bally, Howrah Saree House, Howrah, 711227",
+    companyName: "Mondal Electronics Concern",
+    address: " Kumillapara , P.O: Sapuipara, Bally, Howrah, 711227",
     gstin: "19AABCM1234R1ZX", phone: "06289909521",
     email: "rakeshranjantiwari11@gmail.com", pan: "AABCM1234R",
     bank: "SBI - 1234567890", ifsc: "SBIN0001234",

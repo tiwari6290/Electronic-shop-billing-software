@@ -1,6 +1,6 @@
 {
-  "appId": "com.electronic.shop",
-  "productName": "Electronic Shop Billing",
+  "appId": "com.mondal.electronics",
+  "productName": "Mondal Electronics Concern",
   "directories": {
     "output": "release"
   },
@@ -9,11 +9,20 @@
     "package.json"
   ],
   "win": {
-    "target": "nsis"
+    "target": "nsis",
+    "icon": "assets/icon.ico"
   },
   "nsis": {
     "oneClick": false,
     "perMachine": false,
     "allowToChangeInstallationDirectory": true
-  }
+  },
+  "publish": [
+    {
+      "provider": "github",
+      "owner": "tiwari6290",
+      "repo": "Electronic-shop-billing-software",
+      "releaseType": "release"
+    }
+  ]
 }
