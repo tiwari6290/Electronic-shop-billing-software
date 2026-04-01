@@ -995,14 +995,30 @@ export default function ItemsPage() {
       const res = await api.get("/items");
       const backendItems = res.data.data || res.data;
       const formatted = backendItems.map((item: any) => {
-        const totalStock = item.ProductStock
-          ? item.ProductStock.reduce((sum: number, s: any) => sum + (s.openingStock || 0), 0)
-          : 0;
+        // Prefer currentStock (live stock after sales/purchases/adjustments).
+        // Fall back to summing ProductStock entries only as a last resort.
+        let totalStock: number;
+        if (item.currentStock != null) {
+          totalStock = Number(item.currentStock);
+        } else if (item.stockNumber != null) {
+          totalStock = Number(item.stockNumber);
+        } else if (item.ProductStock && item.ProductStock.length > 0) {
+          // Sum closingStock of the latest entry per godown when available,
+          // otherwise fall back to openingStock (initial stock only — may be stale).
+          totalStock = item.ProductStock.reduce((sum: number, s: any) => {
+            const closing = s.closingStock ?? s.currentStock ?? s.openingStock ?? 0;
+            return sum + Number(closing);
+          }, 0);
+        } else {
+          totalStock = 0;
+        }
+
+        const stockQtyStr = totalStock === 0 ? "0 PCS" : `${totalStock} PCS`;
         return {
           id: String(item.id),
           itemName: item.name || "",
           itemCode: item.itemCode || "",
-          stockQty: `${totalStock} PCS`,
+          stockQty: stockQtyStr,
           stockNumber: totalStock,
           sellingPrice: item.salesPrice ?? null,
           purchasePrice: item.purchasePrice ?? null,
@@ -1111,7 +1127,7 @@ const purchaseMap: Record<number, string> = {};
     setView("detail");
     await fetchItemById(id);
   };
-  const goList     = ()              => { setView("list"); setSelectedId(null); };
+  const goList     = ()              => { setView("list"); setSelectedId(null); fetchItems(setItems); };
   const goReport   = (r: ReportView) => { setActiveReport(r); setView("report"); };
   const backReport = ()              => { setView("list"); setActiveReport(null); };
 

@@ -2049,7 +2049,7 @@ interface SavedTemplate {
 interface Business {
   companyName: string; address: string; gstin: string;
   phone: string; email: string; pan: string; bank: string; ifsc: string;
-  bankName?: string; accountNo?: string; branch?: string;
+  bankName?: string; accountNo?: string; branch?: string; AccountHolder?: string;
 }
 interface Props {
   invoice: SalesInvoice;
@@ -2361,6 +2361,7 @@ function useInvoiceData(invoice: SalesInvoice, business: Business, template: Sav
   const bank        = template?.inv?.bank        || business.bank || "";
   const ifsc        = template?.inv?.ifsc        || business.ifsc || "";
   const bankName    = template?.inv?.bankName    || business.bankName || "";
+  const accountHolder = business.AccountHolder || "";
   const accountNo   = template?.inv?.accountNo   || business.accountNo || "";
   const branch      = template?.inv?.branch      || business.branch || "";
   const logoUrl     = template?.style?.logoUrl  || BILL_LOGO;
@@ -2395,7 +2396,7 @@ function useInvoiceData(invoice: SalesInvoice, business: Business, template: Sav
   });
   const hsnRows = Object.entries(hsnMap).map(([key, v]) => ({ hsn: key.split("__")[0], ...v }));
 
-  return { companyName, address, gstin, phone, email, bank, ifsc, bankName, accountNo, branch,
+  return { companyName, address, gstin, phone, email, bank, ifsc, bankName, accountNo, branch,accountHolder,
     logoUrl, showLogo, sigUrl, defaultTerms,
     itemsSubtotal, chargesTotal, discountAmt, roundOff, grandTotal, alreadyReceived, hsnRows };
 }
@@ -2431,7 +2432,7 @@ function getSnapshotMeta(invoice: SalesInvoice) {
 function GreatEasternLayout({ invoice, business, template, printRef, themeColor, bgImageUrl, bgOpacity }: Omit<InvoicePaperProps,"themeLayout">) {
   const {
     companyName, address, gstin, phone, email,
-    bank, ifsc, bankName, accountNo, branch,
+    bank, ifsc, bankName, accountNo, branch,accountHolder,
     logoUrl, showLogo, sigUrl, defaultTerms,
     grandTotal, alreadyReceived, hsnRows,
   } = useInvoiceData(invoice, business, template);
@@ -2756,7 +2757,7 @@ function GreatEasternLayout({ invoice, business, template, printRef, themeColor,
                 <td style={TD}>
                   <div style={{ fontWeight: 600 }}>{item.name || "Item"}</div>
                   {item.description && (
-                    <div style={{ fontSize: 8.5, color: "#555", marginTop: 1 }}>{item.description}</div>
+                    <div style={{ fontSize: 8.5, color: "#555", marginTop: 1,whiteSpace: "pre-line" }}>{item.description}</div>
                   )}
                 </td>
                 <td style={{ ...TD, textAlign: "center" as const }}>{item.hsn || "-"}</td>
@@ -2998,6 +2999,7 @@ function GreatEasternLayout({ invoice, business, template, printRef, themeColor,
           <div style={{ fontSize: 10, fontWeight: 700, color: "#222", marginBottom: 3 }}>Banking Details:</div>
           <div style={{ fontSize: 9.5, color: "#333", lineHeight: 1.8 }}>
             {bank && <span>Account Name: <strong>{bank}</strong>{"  "}</span>}
+             {accountHolder && <span>Account Holder: <strong>{accountHolder}</strong>{"  "}</span>}
             {bankName && <span>Bank: <strong>{bankName}</strong>{"  "}</span>}
             {accountNo && <span>A/c No.: <strong>{accountNo}</strong>{"  "}</span>}
             {ifsc && <span>IFSC: <strong>{ifsc}</strong>{"  "}</span>}
