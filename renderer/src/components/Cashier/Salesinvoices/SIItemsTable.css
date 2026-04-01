@@ -16,18 +16,18 @@
 .si-item-name { font-size: 13.5px; font-weight: 600; color: #111827; margin-bottom: 4px; }
 .si-desc-input { width: 100%; border: 1px solid #e5e7eb; border-radius: 5px; padding: 5px 8px; font-size: 12.5px; color: #6b7280; outline: none; background: #f9fafb; font-family: inherit; }
 .si-desc-input:focus { border-color: #a5b4fc; background: #fff; }
-.si-cell-input { width: 80px; border: 1.5px solid #e5e7eb; border-radius: 5px; padding: 5px 8px; font-size: 13px; outline: none; background: #f9fafb; font-family: inherit; }
+.si-cell-input { width: 80px; border: 1.5px solid #e5e7eb; border-radius: 5px; padding: 5px 8px; font-size: 13px; outline: none; background: #f9fafb; font-family: inherit; color: #111827; }
 .si-cell-input:focus { border-color: #a5b4fc; background: #fff; }
 .si-qty-wrap { display: flex; align-items: center; gap: 4px; }
-.si-qty-input { width: 50px; border: 1.5px solid #e5e7eb; border-radius: 5px; padding: 5px 6px; font-size: 13px; outline: none; background: #f9fafb; font-family: inherit; text-align: center; }
+.si-qty-input { width: 50px; border: 1.5px solid #e5e7eb; border-radius: 5px; padding: 5px 6px; font-size: 13px; outline: none; background: #f9fafb; font-family: inherit; text-align: center; color: #111827; }
 .si-qty-input:focus { border-color: #a5b4fc; background: #fff; }
 .si-unit { font-size: 12px; color: #6b7280; }
-.si-price-input { width: 80px; border: 1.5px solid #e5e7eb; border-radius: 5px; padding: 5px 8px; font-size: 13px; outline: none; background: #f9fafb; font-family: inherit; text-align: right; }
+.si-price-input { width: 80px; border: 1.5px solid #e5e7eb; border-radius: 5px; padding: 5px 8px; font-size: 13px; outline: none; background: #f9fafb; font-family: inherit; text-align: right; color: #111827; }
 .si-price-input:focus { border-color: #a5b4fc; background: #fff; }
 .si-disc-wrap { display: flex; flex-direction: column; gap: 4px; }
 .si-disc-row { display: flex; align-items: center; gap: 4px; }
 .si-disc-pct-label, .si-disc-rs-label { font-size: 12px; color: #6b7280; width: 14px; }
-.si-disc-input { width: 55px; border: 1.5px solid #e5e7eb; border-radius: 5px; padding: 4px 6px; font-size: 13px; outline: none; background: #f9fafb; font-family: inherit; text-align: right; }
+.si-disc-input { width: 55px; border: 1.5px solid #e5e7eb; border-radius: 5px; padding: 4px 6px; font-size: 13px; outline: none; background: #f9fafb; font-family: inherit; text-align: right; color: #111827; }
 .si-disc-input:focus { border-color: #a5b4fc; background: #fff; }
 .si-tax-select { width: 110px; border: 1.5px solid #e5e7eb; border-radius: 5px; padding: 5px 6px; font-size: 12.5px; outline: none; background: #f9fafb; font-family: inherit; }
 .si-tax-select:focus { border-color: #a5b4fc; }

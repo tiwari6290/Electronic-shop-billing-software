@@ -82,7 +82,7 @@ export default function SIItemsTable({ items, showColumns, onChange, onAddItem }
 
                   <td className="si-td si-td--item">
                     <div className="si-item-name">{item.name}</div>
-                    <input
+                    <textarea
                       className="si-desc-input"
                       value={item.description}
                       onChange={e => update(item.rowId, { description: e.target.value })}

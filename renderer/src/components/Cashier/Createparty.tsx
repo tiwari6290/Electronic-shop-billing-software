@@ -3,38 +3,48 @@ import Navbar from './Navbar';
 import { X, MessageSquare, FileText, Building2, Trash2, Edit2 } from 'lucide-react';
 import { useNavigate } from "react-router-dom";
 import { useParams } from "react-router-dom";
-import api from "@/lib/axios";
+import axios from "axios";
 import { createParty } from "../../services/partyService";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface BankAccount {
   id: number;
   accountNumber: string;
-  reEnterAccountNumber: string;  // form-only field, not sent to backend
-  accountHolder: string;         // backend: accountHolder
-  bankName: string;              // backend: bankName — stores "Bank & Branch Name" combined
+  reEnterAccountNumber: string;
+  accountHolder: string;
+  bankName: string;
   ifscCode: string;
-  branchName: string;            // backend: branchName (optional, parsed from bankName if needed)
-  accountType: string;           // backend: Savings | Current | OD
+  branchName: string;
+  accountType: string;
   isPrimary?: boolean;
-  upiId?: string;                // form-only, for display/reference
+  upiId?: string;
 }
 
 interface CustomField {
   id: number;
   fieldName: string;
-  fieldValue: string;  // backend field name (was 'value')
+  fieldValue: string;
 }
+
+// ── API base ─────────────────────────────────────────────────────────────────
+const API = 'http://localhost:4000/api';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 const maskAccount = (acc: string) => acc.length > 4 ? `x${acc.slice(-4)}` : acc;
-const INP_STYLE: React.CSSProperties = { width: '100%', padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '14px', color: '#111827', outline: 'none', boxSizing: 'border-box', background: '#fff' };
-const LBL_STYLE: React.CSSProperties = { display: 'block', fontSize: '13px', fontWeight: 400, color: '#6b7280', marginBottom: '6px' };
+const INP_STYLE: React.CSSProperties = {
+  width: '100%', padding: '8px 12px', border: '1px solid #d1d5db',
+  borderRadius: '6px', fontSize: '14px', color: '#111827',
+  outline: 'none', boxSizing: 'border-box', background: '#fff',
+};
+const LBL_STYLE: React.CSSProperties = {
+  display: 'block', fontSize: '13px', fontWeight: 400,
+  color: '#6b7280', marginBottom: '6px',
+};
 
 // ── Component ────────────────────────────────────────────────────────────────
 const CreateParty: React.FC = () => {
-  const navigate  = useNavigate();
-  const { id }    = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { id }   = useParams<{ id: string }>();
 
   // ── category
   const [showAddCategoryInput, setShowAddCategoryInput] = useState(false);
@@ -53,24 +63,28 @@ const CreateParty: React.FC = () => {
     contactPersonName: '', dateOfBirth: '',
   });
 
+  // ── GST lookup state
+  const [gstLoading, setGstLoading] = useState(false);
+  const [gstError,   setGstError]   = useState('');
+
   // ── bank accounts
-  const [bankAccounts, setBankAccounts]     = useState<BankAccount[]>([]);
-  const [showBankModal, setShowBankModal]   = useState(false);
-  const [editingBank, setEditingBank]       = useState<BankAccount | null>(null);
-  const [bankForm, setBankForm]             = useState<BankAccount>({
+  const [bankAccounts, setBankAccounts]   = useState<BankAccount[]>([]);
+  const [showBankModal, setShowBankModal] = useState(false);
+  const [editingBank, setEditingBank]     = useState<BankAccount | null>(null);
+  const [bankForm, setBankForm]           = useState<BankAccount>({
     id: 0, accountNumber: '', reEnterAccountNumber: '',
     accountHolder: '', bankName: '', ifscCode: '', branchName: '',
     accountType: 'Savings', isPrimary: false, upiId: '',
   });
 
   // ── custom fields
-  const [customFields, setCustomFields]                   = useState<CustomField[]>([]);
+  const [customFields, setCustomFields]                     = useState<CustomField[]>([]);
   const [showPartySettingsModal, setShowPartySettingsModal] = useState(false);
-  const [showCustomFieldsView, setShowCustomFieldsView]   = useState(false);
-  const [showCreateCfModal, setShowCreateCfModal]         = useState(false);
-  const [cfName, setCfName]   = useState('');
-  const [cfType, setCfType]   = useState('Text');
-  const [cfReq,  setCfReq]    = useState(false);
+  const [showCustomFieldsView, setShowCustomFieldsView]     = useState(false);
+  const [showCreateCfModal, setShowCreateCfModal]           = useState(false);
+  const [cfName, setCfName] = useState('');
+  const [cfType, setCfType] = useState('Text');
+  const [cfReq,  setCfReq]  = useState(false);
 
   // ── smart greetings
   const [invoiceMilestone, setInvoiceMilestone] = useState(true);
@@ -89,52 +103,105 @@ const CreateParty: React.FC = () => {
     if (!id) return;
     const fetchParty = async () => {
       try {
-        const res = await api.get(`/parties/${id}`);
+        const res = await axios.get(`http://localhost:4000/api/parties/${id}`);
         const p   = res.data.data;
         setFormData(prev => ({
           ...prev,
-          partyName: p.partyName || '',
-          mobileNumber: p.mobileNumber || '',
-          email: p.email || '',
-          gstin: p.gstin || '',
-          panNumber: p.panNumber || '',
-          partyType: p.partyType || 'Customer',
-          partyCategory: p.partyCategory || '',
-          billingAddress: p.billingAddress || '',
-          shippingAddress: p.shippingAddress || '',
-          openingBalance: p.openingBalance?.toString() || '0',
+          partyName:          p.partyName          || '',
+          mobileNumber:       p.mobileNumber       || '',
+          email:              p.email              || '',
+          gstin:              p.gstin              || '',
+          panNumber:          p.panNumber          || '',
+          partyType:          p.partyType          || 'Customer',
+          partyCategory:      p.partyCategory      || '',
+          billingAddress:     p.billingAddress     || '',
+          shippingAddress:    p.shippingAddress    || '',
+          openingBalance:     p.openingBalance?.toString() || '0',
           openingBalanceType: p.openingBalanceType || 'To_Collect',
-          creditPeriod: p.creditPeriod?.toString() || '0',
-          creditLimit: p.creditLimit?.toString() || '0',
-          contactPersonName: p.contactPersonName || '',
-          dateOfBirth: p.dateOfBirth || '',
+          creditPeriod:       p.creditPeriod?.toString()  || '0',
+          creditLimit:        p.creditLimit?.toString()   || '0',
+          contactPersonName:  p.contactPersonName  || '',
+          dateOfBirth:        p.dateOfBirth        || '',
         }));
       } catch (err) { console.error('Error fetching party:', err); }
     };
     fetchParty();
-    // Load bank accounts and custom fields from backend
-    api.get(`/parties/${id}/bank-accounts`).then(r => {
+
+    axios.get(`${API}/parties/${id}/bank-accounts`).then(r => {
       setBankAccounts((r.data.data || []).map((b: any) => ({
-        id: b.id, accountNumber: b.accountNumber, reEnterAccountNumber: b.accountNumber,
-        accountHolder: b.accountHolder, bankName: b.bankName, ifscCode: b.ifscCode,
-        branchName: b.branchName || '', accountType: b.accountType, isPrimary: b.isPrimary,
+        id: b.id, accountNumber: b.accountNumber,
+        reEnterAccountNumber: b.accountNumber,
+        accountHolder: b.accountHolder, bankName: b.bankName,
+        ifscCode: b.ifscCode, branchName: b.branchName || '',
+        accountType: b.accountType, isPrimary: b.isPrimary,
       })));
     }).catch(() => setBankAccounts([]));
-    api.get(`/parties/${id}/custom-fields`).then(r => {
+
+    axios.get(`${API}/parties/${id}/custom-fields`).then(r => {
       setCustomFields((r.data.data || []).map((f: any) => ({
         id: f.id, fieldName: f.fieldName, fieldValue: f.fieldValue || '',
       })));
     }).catch(() => setCustomFields([]));
   }, [id]);
 
-  // ── Helpers
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+  // ── Generic input handler
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+  ) => {
     const { name, value, type } = e.target;
     if (type === 'checkbox') {
       const checked = (e.target as HTMLInputElement).checked;
-      setFormData(prev => ({ ...prev, [name]: checked, ...(name === 'sameAsBilling' && checked ? { shippingAddress: prev.billingAddress } : {}) }));
+      setFormData(prev => ({
+        ...prev,
+        [name]: checked,
+        ...(name === 'sameAsBilling' && checked ? { shippingAddress: prev.billingAddress } : {}),
+      }));
     } else {
-      setFormData(prev => ({ ...prev, [name]: value }));
+      // FIX: Auto-uppercase GSTIN and PAN as the user types ✅
+      const finalValue =
+        name === 'gstin' || name === 'panNumber'
+          ? value.toUpperCase().replace(/\s/g, '')
+          : value;
+      setFormData(prev => ({ ...prev, [name]: finalValue }));
+    }
+  };
+
+  // ── FIX: "Get Details" button — calls GST portal separately from Save ──────
+  // Only this button calls the GST lookup API.
+  // The Save button never calls fetchGSTDetails — it only validates format.
+  const handleGetGstDetails = async () => {
+    const gstin = formData.gstin.trim().toUpperCase();
+
+    if (!gstin) {
+      setGstError('Please enter a GSTIN first.');
+      return;
+    }
+    if (gstin.length !== 15) {
+      setGstError('GSTIN must be exactly 15 characters.');
+      return;
+    }
+
+    setGstLoading(true);
+    setGstError('');
+
+    try {
+      const res = await axios.post(`${API}/parties/gst-details`, { gstin });
+      const data = res.data.data;
+
+      // Auto-fill form fields from GST portal response
+      setFormData(prev => ({
+        ...prev,
+        partyName:      data.legalName  || prev.partyName,
+        billingAddress: data.address    || prev.billingAddress,
+      }));
+    } catch (err: any) {
+      // Show error only on the Get Details button — Save is not affected ✅
+      setGstError(
+        err.response?.data?.message ||
+        'GSTIN not found or GST portal unreachable. You can still save the party.'
+      );
+    } finally {
+      setGstLoading(false);
     }
   };
 
@@ -142,21 +209,29 @@ const CreateParty: React.FC = () => {
   const handleSave = async () => {
     if (!formData.partyName.trim()) { alert('Party Name is required'); return; }
 
-    // Core party payload — no banks/CF here to avoid backend validation blocking creation
+    // FIX: Sanitize GST/PAN before sending — trim + uppercase ✅
     const payload: any = {
-      partyName: formData.partyName, mobileNumber: formData.mobileNumber,
-      email: formData.email, gstin: formData.gstin, panNumber: formData.panNumber,
-      partyType: formData.partyType, partyCategory: formData.partyCategory,
-      billingAddress: formData.billingAddress, shippingAddress: formData.shippingAddress,
-      creditPeriod: Number(formData.creditPeriod), creditLimit: Number(formData.creditLimit),
-      openingBalance: Number(formData.openingBalance), openingBalanceType: formData.openingBalanceType,
-      contactPersonName: formData.contactPersonName, dateOfBirth: formData.dateOfBirth,
+      partyName:          formData.partyName,
+      mobileNumber:       formData.mobileNumber,
+      email:              formData.email,
+      gstin:              formData.gstin.trim().toUpperCase() || undefined,
+      panNumber:          formData.panNumber.trim().toUpperCase() || undefined,
+      partyType:          formData.partyType,
+      partyCategory:      formData.partyCategory,
+      billingAddress:     formData.billingAddress,
+      shippingAddress:    formData.shippingAddress,
+      creditPeriod:       Number(formData.creditPeriod),
+      creditLimit:        Number(formData.creditLimit),
+      openingBalance:     Number(formData.openingBalance),
+      openingBalanceType: formData.openingBalanceType,
+      contactPersonName:  formData.contactPersonName,
+      dateOfBirth:        formData.dateOfBirth,
     };
 
     try {
       if (id) {
         // ── UPDATE existing party ───────────────────────────────
-        await api.put(`/parties/${id}`, payload);
+        await axios.put(`${API}/parties/${id}`, payload);
         alert('Party updated successfully');
       } else {
         // ── CREATE new party ────────────────────────────────────
@@ -164,10 +239,9 @@ const CreateParty: React.FC = () => {
         const newId = res?.data?.id || res?.id;
 
         if (newId) {
-          // Save bank accounts one by one (skip invalid ones silently)
           for (const b of bankAccounts) {
             try {
-              await api.post(`/parties/${newId}/bank-accounts`, {
+              await axios.post(`${API}/parties/${newId}/bank-accounts`, {
                 accountHolder: b.accountHolder || 'N/A',
                 accountNumber: b.accountNumber,
                 bankName:      b.bankName      || 'N/A',
@@ -178,10 +252,9 @@ const CreateParty: React.FC = () => {
               });
             } catch {}
           }
-          // Save custom fields one by one
           for (const f of customFields) {
             try {
-              await api.post(`/parties/${newId}/custom-fields`, {
+              await axios.post(`${API}/parties/${newId}/custom-fields`, {
                 fieldName:  f.fieldName,
                 fieldValue: f.fieldValue || '',
               });
@@ -199,7 +272,11 @@ const CreateParty: React.FC = () => {
   // ── Bank account handlers
   const openAddBank = () => {
     setEditingBank(null);
-    setBankForm({ id: 0, accountNumber: '', reEnterAccountNumber: '', accountHolder: '', bankName: '', ifscCode: '', branchName: '', accountType: 'Savings', isPrimary: false, upiId: '' });
+    setBankForm({
+      id: 0, accountNumber: '', reEnterAccountNumber: '',
+      accountHolder: '', bankName: '', ifscCode: '', branchName: '',
+      accountType: 'Savings', isPrimary: false, upiId: '',
+    });
     setShowBankModal(true);
   };
 
@@ -211,30 +288,33 @@ const CreateParty: React.FC = () => {
 
   const handleSaveBank = async () => {
     if (!bankForm.accountNumber.trim()) { alert('Account number is required'); return; }
-    if (!editingBank && bankForm.accountNumber !== bankForm.reEnterAccountNumber) { alert('Account numbers do not match'); return; }
+    if (!editingBank && bankForm.accountNumber !== bankForm.reEnterAccountNumber) {
+      alert('Account numbers do not match'); return;
+    }
     if (!bankForm.accountHolder.trim()) { alert('Account holder name is required'); return; }
 
     const payload = {
       accountHolder: bankForm.accountHolder,
       accountNumber: bankForm.accountNumber,
-      bankName: bankForm.bankName,
-      ifscCode: bankForm.ifscCode,
-      branchName: bankForm.branchName,
-      accountType: bankForm.accountType,
-      isPrimary: bankForm.isPrimary || false,
+      bankName:      bankForm.bankName,
+      ifscCode:      bankForm.ifscCode,
+      branchName:    bankForm.branchName,
+      accountType:   bankForm.accountType,
+      isPrimary:     bankForm.isPrimary || false,
     };
 
     try {
       if (editingBank && id) {
-        // Update existing
-        const res = await api.put(`/parties/${id}/bank-accounts/${editingBank.id}`, payload);
+        const res = await axios.put(`${API}/parties/${id}/bank-accounts/${editingBank.id}`, payload);
         setBankAccounts(prev => prev.map(b => b.id === editingBank.id ? { ...b, ...res.data.data } : b));
       } else if (id) {
-        // Add to existing party
-        const res = await api.post(`/parties/${id}/bank-accounts`, payload);
-        setBankAccounts(prev => [...prev, { ...res.data.data, reEnterAccountNumber: res.data.data.accountNumber, branchName: res.data.data.branchName || '' }]);
+        const res = await axios.post(`${API}/parties/${id}/bank-accounts`, payload);
+        setBankAccounts(prev => [...prev, {
+          ...res.data.data,
+          reEnterAccountNumber: res.data.data.accountNumber,
+          branchName: res.data.data.branchName || '',
+        }]);
       } else {
-        // New party — keep in state, will be sent on Save
         if (editingBank) {
           setBankAccounts(prev => prev.map(b => b.id === editingBank.id ? { ...bankForm, id: editingBank.id } : b));
         } else {
@@ -250,7 +330,7 @@ const CreateParty: React.FC = () => {
   const handleDeleteBank = async (bankId: number) => {
     if (!window.confirm('Delete this bank account?')) return;
     try {
-      if (id) await api.delete(`/parties/${id}/bank-accounts/${bankId}`);
+      if (id) await axios.delete(`${API}/parties/${id}/bank-accounts/${bankId}`);
     } catch {}
     setBankAccounts(prev => prev.filter(b => b.id !== bankId));
   };
@@ -261,11 +341,12 @@ const CreateParty: React.FC = () => {
     const payload = { fieldName: cfName, fieldValue: '' };
     try {
       if (id) {
-        const res = await api.post(`/parties/${id}/custom-fields`, payload);
+        const res = await axios.post(`${API}/parties/${id}/custom-fields`, payload);
         const created = Array.isArray(res.data.data) ? res.data.data[0] : res.data.data;
-        setCustomFields(prev => [...prev, { id: created.id, fieldName: created.fieldName, fieldValue: created.fieldValue || '' }]);
+        setCustomFields(prev => [...prev, {
+          id: created.id, fieldName: created.fieldName, fieldValue: created.fieldValue || '',
+        }]);
       } else {
-        // New party — keep in local state, sent on Save
         setCustomFields(prev => [...prev, { id: Date.now(), fieldName: cfName, fieldValue: '' }]);
       }
     } catch (err: any) {
@@ -279,7 +360,7 @@ const CreateParty: React.FC = () => {
   const handleDeleteCf = async (cfId: number) => {
     if (!window.confirm('Delete this custom field?')) return;
     try {
-      if (id) await api.delete(`/parties/${id}/custom-fields/${cfId}`);
+      if (id) await axios.delete(`${API}/parties/${id}/custom-fields/${cfId}`);
     } catch {}
     setCustomFields(prev => prev.filter(f => f.id !== cfId));
   };
@@ -320,8 +401,11 @@ const CreateParty: React.FC = () => {
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <div style={{ position: 'relative', flex: 1 }}>
                     <span style={{ position: 'absolute', left: '12px', top: '9px', fontSize: '14px', color: '#6b7280' }}>&#8377;</span>
-                    <input className="aab" type="number" name="openingBalance" value={formData.openingBalance} onChange={handleInputChange}
-                      style={{ width: '100px', paddingLeft: '28px', paddingRight: '12px', paddingTop: '8px', paddingBottom: '8px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '14px', color: '#111827', outline: 'none', boxSizing: 'border-box' }} />
+                    <input
+                      className="aab" type="number" name="openingBalance"
+                      value={formData.openingBalance} onChange={handleInputChange}
+                      style={{ width: '100px', paddingLeft: '28px', paddingRight: '12px', paddingTop: '8px', paddingBottom: '8px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '14px', color: '#111827', outline: 'none', boxSizing: 'border-box' }}
+                    />
                   </div>
                   <select name="openingBalanceType" value={formData.openingBalanceType} onChange={handleInputChange}
                     style={{ padding: '8px 12px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '14px', color: '#111827', outline: 'none', backgroundColor: '#ffffff', minWidth: '120px' }}>
@@ -332,18 +416,58 @@ const CreateParty: React.FC = () => {
               </div>
             </div>
 
+            {/* ── GSTIN + PAN row ──────────────────────────── */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 2fr', gap: '16px', marginBottom: '16px' }}>
               <div>
                 <label style={LBL_STYLE}>GSTIN</label>
                 <div style={{ display: 'flex', gap: '8px' }}>
-                  <input style={{ ...INP_STYLE, flex: 1 }} type="text" name="gstin" value={formData.gstin} onChange={handleInputChange} placeholder="ex: 29XXXXX9438X1XX" />
-                  <button onClick={() => {}} style={{ padding: '8px 20px', background: '#c4b5fd', border: 'none', borderRadius: '6px', cursor: 'pointer', color: '#fff', fontSize: '14px', fontWeight: 500, whiteSpace: 'nowrap' }}>Get Details</button>
+                  {/* FIX: input auto-uppercases via handleInputChange ✅ */}
+                  <input
+                    style={{ ...INP_STYLE, flex: 1, letterSpacing: '0.05em' }}
+                    type="text"
+                    name="gstin"
+                    value={formData.gstin}
+                    onChange={handleInputChange}
+                    placeholder="ex: 22AAAAA0000A1Z5"
+                    maxLength={15}
+                  />
+                  {/* FIX: Get Details calls GST portal separately — never blocks Save ✅ */}
+                  <button
+                    onClick={handleGetGstDetails}
+                    disabled={gstLoading}
+                    style={{
+                      padding: '8px 20px', background: gstLoading ? '#e0d9fc' : '#c4b5fd',
+                      border: 'none', borderRadius: '6px', cursor: gstLoading ? 'not-allowed' : 'pointer',
+                      color: '#fff', fontSize: '14px', fontWeight: 500, whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {gstLoading ? 'Loading...' : 'Get Details'}
+                  </button>
                 </div>
-                <p style={{ fontSize: '12px', color: '#9ca3af', marginTop: '4px', marginBottom: 0 }}>Note: You can auto populate party details from GSTIN</p>
+                {/* GST error shown only under Get Details — not on Save ✅ */}
+                {gstError && (
+                  <p style={{ fontSize: '12px', color: '#ef4444', marginTop: '4px', marginBottom: 0 }}>
+                    {gstError}
+                  </p>
+                )}
+                {!gstError && (
+                  <p style={{ fontSize: '12px', color: '#9ca3af', marginTop: '4px', marginBottom: 0 }}>
+                    Note: You can auto populate party details from GSTIN
+                  </p>
+                )}
               </div>
               <div>
                 <label style={LBL_STYLE}>PAN Number</label>
-                <input style={INP_STYLE} type="text" name="panNumber" value={formData.panNumber} onChange={handleInputChange} placeholder="Enter party PAN Number" />
+                {/* FIX: input auto-uppercases via handleInputChange ✅ */}
+                <input
+                  style={INP_STYLE}
+                  type="text"
+                  name="panNumber"
+                  value={formData.panNumber}
+                  onChange={handleInputChange}
+                  placeholder="Enter party PAN Number"
+                  maxLength={10}
+                />
               </div>
               <div />
             </div>
@@ -351,33 +475,43 @@ const CreateParty: React.FC = () => {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 2fr', gap: '16px' }}>
               <div>
                 <label style={LBL_STYLE}>Party Type<span style={{ color: '#ef4444' }}>*</span></label>
-                <select name="partyType" value={formData.partyType} onChange={handleInputChange} style={{ ...INP_STYLE, backgroundColor: '#fff' }}>
+                <select name="partyType" value={formData.partyType} onChange={handleInputChange}
+                  style={{ ...INP_STYLE, backgroundColor: '#fff' }}>
                   <option>Customer</option><option>Supplier</option><option>Both</option>
                 </select>
               </div>
               <div>
                 <label style={LBL_STYLE}>Party Category</label>
-                <select value={formData.partyCategory}
-                  onChange={e => { if (e.target.value === '__add_new__') { setShowAddCategoryInput(true); return; } setFormData(p => ({ ...p, partyCategory: e.target.value })); }}
-                  style={{ ...INP_STYLE, backgroundColor: '#fff' }}>
+                <select
+                  value={formData.partyCategory}
+                  onChange={e => {
+                    if (e.target.value === '__add_new__') { setShowAddCategoryInput(true); return; }
+                    setFormData(p => ({ ...p, partyCategory: e.target.value }));
+                  }}
+                  style={{ ...INP_STYLE, backgroundColor: '#fff' }}
+                >
                   <option value="">Select Category</option>
                   {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                   <option value="__add_new__">+ Add New Category</option>
                 </select>
                 {showAddCategoryInput && (
-                  <div style={{ marginTop: '8px', display: 'flex', gap: '8px' }}>
-                    <input type="text" placeholder="Enter new category" value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)}
-                      style={{ flex: 1, padding: '6px 10px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '14px', outline: 'none' }} />
-                    <button type="button" style={{ padding: '6px 12px', background: '#6366f1', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                    <input
+                      type="text" placeholder="New category name"
+                      value={newCategoryName} onChange={e => setNewCategoryName(e.target.value)}
+                      style={{ ...INP_STYLE, flex: 1 }}
+                    />
+                    <button
                       onClick={() => {
                         if (!newCategoryName.trim()) return;
-                        const existing = JSON.parse(localStorage.getItem('categories') || '[]');
-                        const updated  = existing.includes(newCategoryName) ? existing : [...existing, newCategoryName];
+                        const updated = [...categories, newCategoryName.trim()];
                         localStorage.setItem('categories', JSON.stringify(updated));
                         setCategories(updated);
                         setFormData(p => ({ ...p, partyCategory: newCategoryName }));
                         setNewCategoryName(''); setShowAddCategoryInput(false);
-                      }}>Add</button>
+                      }}
+                      style={{ padding: '8px 16px', background: '#6366f1', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '14px' }}
+                    >Add</button>
                   </div>
                 )}
               </div>
@@ -391,7 +525,8 @@ const CreateParty: React.FC = () => {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
               <div>
                 <label style={LBL_STYLE}>Billing Address</label>
-                <textarea name="billingAddress" value={formData.billingAddress} onChange={handleInputChange} placeholder="Enter billing address" rows={5}
+                <textarea name="billingAddress" value={formData.billingAddress} onChange={handleInputChange}
+                  placeholder="Enter billing address" rows={5}
                   style={{ width: '100%', padding: '10px 12px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '14px', color: '#111827', outline: 'none', resize: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }} />
               </div>
               <div>
@@ -402,7 +537,8 @@ const CreateParty: React.FC = () => {
                     <span style={{ fontSize: '13px', color: '#6b7280' }}>Same as Billing address</span>
                   </label>
                 </div>
-                <textarea name="shippingAddress" value={formData.shippingAddress} onChange={handleInputChange} placeholder="Enter shipping address" rows={5} disabled={formData.sameAsBilling}
+                <textarea name="shippingAddress" value={formData.shippingAddress} onChange={handleInputChange}
+                  placeholder="Enter shipping address" rows={5} disabled={formData.sameAsBilling}
                   style={{ width: '100%', padding: '10px 12px', border: '1px solid #d1d5db', borderRadius: '6px', fontSize: '14px', color: '#111827', outline: 'none', resize: 'none', fontFamily: 'inherit', backgroundColor: formData.sameAsBilling ? '#e5e7eb' : '#fff', boxSizing: 'border-box' }} />
               </div>
             </div>
@@ -449,7 +585,6 @@ const CreateParty: React.FC = () => {
           {/* ── Party Bank Account ───────────────────────── */}
           <div style={{ marginTop: '40px', marginBottom: '24px' }}>
             <h3 style={{ fontSize: '16px', fontWeight: 600, color: '#374151', marginBottom: '12px' }}>Party Bank Account</h3>
-
             {bankAccounts.length === 0 ? (
               <div style={{ border: '1px dashed #d1d5db', borderRadius: '8px', padding: '40px', textAlign: 'center' }}>
                 <p style={{ color: '#6b7280', marginBottom: '10px', marginTop: 0 }}>Add party bank information to manage transactions</p>
@@ -467,7 +602,7 @@ const CreateParty: React.FC = () => {
                       </div>
                       <div>
                         <div style={{ fontSize: '13px', fontWeight: 600, color: '#374151' }}>{maskAccount(bank.accountNumber)}</div>
-                        <div style={{ fontSize: '12px', color: '#9ca3af' }}>{bank.accountNumber}</div>
+                        <div style={{ fontSize: '12px', color: '#9ca3af' }}>{bank.bankName}</div>
                       </div>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -493,7 +628,6 @@ const CreateParty: React.FC = () => {
           {/* ── Custom Fields ────────────────────────────── */}
           <div style={{ marginTop: '40px', marginBottom: '40px' }}>
             <h3 style={{ fontSize: '16px', fontWeight: 600, color: '#374151', marginBottom: '12px' }}>Custom Field</h3>
-
             {customFields.length === 0 ? (
               <div style={{ textAlign: 'center', border: '1px dashed #d1d5db', borderRadius: '8px', padding: '32px' }}>
                 <p style={{ color: '#6b7280', marginTop: 0, marginBottom: '12px' }}>Store more information about your parties by adding custom fields</p>
@@ -514,15 +648,12 @@ const CreateParty: React.FC = () => {
                           <Trash2 size={13} />
                         </button>
                       </div>
-                      <input
-                        type="text"
-                        placeholder="Enter value"
-                        value={cf.fieldValue}
+                      <input type="text" placeholder="Enter value" value={cf.fieldValue}
                         onChange={async e => {
                           const newVal = e.target.value;
                           setCustomFields(prev => prev.map(f => f.id === cf.id ? { ...f, fieldValue: newVal } : f));
                           if (id) {
-                            try { await api.put(`/parties/${id}/custom-fields/${cf.id}`, { fieldName: cf.fieldName, fieldValue: newVal }); } catch {}
+                            try { await axios.put(`${API}/parties/${id}/custom-fields/${cf.id}`, { fieldName: cf.fieldName, fieldValue: newVal }); } catch {}
                           }
                         }}
                         style={INP_STYLE}
@@ -600,7 +731,6 @@ const CreateParty: React.FC = () => {
               <button onClick={() => setShowPartySettingsModal(false)} style={{ color: '#6b7280', background: 'none', border: 'none', cursor: 'pointer' }}><X size={20} /></button>
             </div>
             <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-              {/* Sidebar */}
               <div style={{ width: '200px', borderRight: '1px solid #e5e7eb', padding: '16px' }}>
                 <button onClick={() => setShowCustomFieldsView(false)}
                   style={{ width: '100%', padding: '10px 12px', textAlign: 'left', backgroundColor: !showCustomFieldsView ? '#eef2ff' : 'transparent', border: 'none', borderRadius: '6px', cursor: 'pointer', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '8px', color: !showCustomFieldsView ? '#6366f1' : '#374151', fontSize: '14px' }}>
@@ -611,12 +741,10 @@ const CreateParty: React.FC = () => {
                   <FileText size={18} /> Custom Fields
                 </button>
               </div>
-              {/* Content */}
               <div style={{ flex: 1, padding: '24px', overflowY: 'auto' }}>
                 {!showCustomFieldsView ? (
                   <>
                     <h4 style={{ fontSize: '14px', fontWeight: 600, color: '#111827', marginBottom: '16px', marginTop: 0 }}>Select Templates to Share Automated Smart Greetings with Parties on WhatsApp</h4>
-                    {/* Invoice Milestones */}
                     <div style={{ marginBottom: '24px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                         <div>
@@ -632,7 +760,6 @@ const CreateParty: React.FC = () => {
                         <p style={{ fontSize: '12px', color: '#6b7280', margin: 0 }}>Hey, Half-century! 50 invoices with Aashika Traders — thank you, Shubhi Trading! <span style={{ color: '#6366f1' }}>&lt;View Invoice&gt;</span></p>
                       </div>
                     </div>
-                    {/* Birthday Wishes */}
                     <div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                         <div>
@@ -650,7 +777,6 @@ const CreateParty: React.FC = () => {
                     </div>
                   </>
                 ) : (
-                  /* ── Custom Fields panel ─────────────── */
                   <>
                     {customFields.length === 0 ? (
                       <div style={{ textAlign: 'center', padding: '40px 20px' }}>
