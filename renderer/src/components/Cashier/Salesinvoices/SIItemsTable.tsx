@@ -1,4 +1,5 @@
-import { BillItem, TAX_OPTIONS, calcBillItemAmount, calcBillItemTax } from "./SalesInvoiceTypes";
+import { useState } from "react";
+import { BillItem, TAX_OPTIONS, calcBillItemAmount, calcBillItemTax, reversePriceFromAmount } from "./SalesInvoiceTypes";
 import "./SIItemsTable.css";
 
 interface Props {
@@ -11,6 +12,14 @@ interface Props {
 export default function SIItemsTable({ items, showColumns, onChange, onAddItem }: Props) {
 
   /**
+   * Local draft strings for discount inputs — keyed by rowId.
+   * We let the user type freely (e.g. "1", "10", "10.5") without React
+   * clamping the controlled value mid-keystroke, then commit on blur.
+   */
+  const [discPctDraft, setDiscPctDraft] = useState<Record<string, string>>({});
+  const [discAmtDraft, setDiscAmtDraft] = useState<Record<string, string>>({});
+
+  /**
    * Update a single field on a row and recompute the line amount.
    *
    * GST Invoice Calculation Order (mandatory per GST Act):
@@ -20,14 +29,35 @@ export default function SIItemsTable({ items, showColumns, onChange, onAddItem }
    *   Step 4 — taxAmt     = taxable × taxRate%
    *   Step 5 — lineTotal  = taxable + taxAmt
    *
+   * MANUAL MODE (priceMode === "manual", item had no base price):
+   *   When the user edits `amount` or `taxRate`, the price is back-calculated
+   *   via reversePriceFromAmount() so the row stays internally consistent.
+   *   Discounts are locked to 0 in manual mode (amount is the source of truth).
+   *
    * The invoice-level "Add Discount" (in SISummary) is SEPARATE — it only
    * reduces the final total AFTER all per-line taxes have been computed.
-   * It does NOT affect per-line taxable or tax values.
    */
   function update(rowId: string, field: Partial<BillItem>) {
     const updated = items.map(i => {
       if (i.rowId !== rowId) return i;
       const next = { ...i, ...field };
+
+      // ── Manual mode: user edits amount or taxRate → back-calculate price ──
+      if (next.priceMode === "manual") {
+        // If the user has typed a new amount OR changed the tax rate, re-derive price.
+        if ("amount" in field || "taxRate" in field) {
+          next.price = reversePriceFromAmount(next.amount, next.taxRate, next.qty);
+          // amount is already set by the user; don't let calcBillItemAmount overwrite it
+          return next;
+        }
+        // If qty changes in manual mode, keep the current amount and re-derive price.
+        if ("qty" in field) {
+          next.price = reversePriceFromAmount(next.amount, next.taxRate, next.qty);
+          return next;
+        }
+      }
+
+      // ── Normal (auto) mode: price drives amount ───────────────────────────
       next.amount = calcBillItemAmount(next);
       return next;
     });
@@ -115,7 +145,8 @@ export default function SIItemsTable({ items, showColumns, onChange, onAddItem }
 
                   {/*
                    * Price per item — ALWAYS the PRE-TAX base price.
-                   * Tax is computed on top of this value (after any per-line discount).
+                   * AUTO mode  : user edits price → amount is computed.
+                   * MANUAL mode: price is back-calculated from amount; field is read-only.
                    */}
                   {showColumns.pricePerItem && (
                     <td className="si-td">
@@ -124,95 +155,114 @@ export default function SIItemsTable({ items, showColumns, onChange, onAddItem }
                         className="si-price-input"
                         value={item.price}
                         min={0}
-                        onChange={e => update(item.rowId, { price: Number(e.target.value) })}
+                        readOnly={item.priceMode === "manual"}
+                        title={item.priceMode === "manual" ? "Auto-calculated from Amount ÷ (1 + Tax%)" : undefined}
+                        style={item.priceMode === "manual" ? { background: "#f3f4f6", color: "#6b7280", cursor: "not-allowed" } : {}}
+                        onChange={e => {
+                          if (item.priceMode === "manual") return;
+                          update(item.rowId, { price: Number(e.target.value) });
+                        }}
                       />
+                      {item.priceMode === "manual" && (
+                        <div className="si-tax-amt" style={{ color: "#6366f1" }} title="Price is back-calculated from the amount you enter">
+                          auto
+                        </div>
+                      )}
                     </td>
                   )}
 
                   {/*
                    * Per-line discount — % and ₹ are bidirectionally linked.
                    *
-                   * When user types %  → ₹ field auto-computes and shows as read-only.
-                   * When user types ₹  → % field auto-computes and shows as read-only.
-                   *
                    * Only one mode is "active" at a time:
-                   *   discountPct > 0  → % is the active mode, ₹ is computed display
-                   *   discountAmt > 0  → ₹ is the active mode, % is computed display
+                   *   discountPct > 0  → % is the active mode, ₹ shows the computed equivalent
+                   *   discountAmt > 0  → ₹ is the active mode, % shows the computed equivalent (LIVE)
+                   *   Both 0           → both fields editable, first one typed activates its mode
                    *
-                   * Clearing the active field (setting it to 0) resets both fields.
+                   * KEY FIX: The ₹ input calls update() on EVERY onChange keystroke so the
+                   * computed % mirror above it refreshes in real-time without requiring a
+                   * click/blur. The draft still prevents cursor-jump issues.
                    */}
                   <td className="si-td">
                     <div className="si-disc-wrap">
 
-                      {/*
-                       * % input:
-                       *   - Editable when discountPct is the active mode (discountAmt === 0)
-                       *   - Read-only (computed) when discountAmt is the active mode
-                       */}
+                      {/* ── % input ── */}
                       <div className="si-disc-row">
                         <span className="si-disc-pct-label">%</span>
-                        <input
-                          type="number"
-                          className="si-disc-input"
-                          placeholder="0"
-                          min={0}
-                          max={100}
-                          // When ₹ is active: show computed % equivalent
-                          // When % is active: show the actual % value
-                          value={
-                            item.discountPct > 0
-                              ? item.discountPct
-                              : item.discountAmt > 0 && lineGross > 0
-                                ? Math.round(item.discountAmt / lineGross * 100 * 100) / 100
-                                : ""
-                          }
-                          // Read-only when ₹ is the active mode
-                          readOnly={item.discountPct === 0 && item.discountAmt > 0}
-                          style={
-                            item.discountPct === 0 && item.discountAmt > 0
-                              ? { background: "#f3f4f6", color: "#6b7280" }
-                              : {}
-                          }
-                          onChange={e => {
-                            const pct = Math.min(100, Math.max(0, Number(e.target.value) || 0));
-                            // Typing % activates % mode — clears any flat ₹ discount
-                            update(item.rowId, { discountPct: pct, discountAmt: 0 });
-                          }}
-                        />
+                        {/* Read-only mirror: shown when ₹ mode is active — updates live as ₹ is typed */}
+                        {item.discountPct === 0 && item.discountAmt > 0 ? (
+                          <input
+                            type="number"
+                            className="si-disc-input"
+                            value={lineGross > 0
+                              ? Math.round(item.discountAmt / lineGross * 100 * 100) / 100
+                              : 0}
+                            readOnly
+                            style={{ background: "#f3f4f6", color: "#6b7280" }}
+                            title="Computed from ₹ discount"
+                          />
+                        ) : (
+                          /* Editable: % is active or both are zero */
+                          <input
+                            type="number"
+                            className="si-disc-input"
+                            placeholder="0"
+                            min={0}
+                            max={100}
+                            // Show draft while typing, fall back to committed value
+                            value={discPctDraft[item.rowId] ?? (item.discountPct > 0 ? String(item.discountPct) : "")}
+                            onChange={e => {
+                              // Only update local draft — no parent call yet
+                              setDiscPctDraft(prev => ({ ...prev, [item.rowId]: e.target.value }));
+                            }}
+                            onBlur={e => {
+                              const pct = Math.min(100, Math.max(0, Number(e.target.value) || 0));
+                              // Clear draft and commit to parent
+                              setDiscPctDraft(prev => { const n = { ...prev }; delete n[item.rowId]; return n; });
+                              update(item.rowId, { discountPct: pct, discountAmt: 0 });
+                            }}
+                          />
+                        )}
                       </div>
 
-                      {/*
-                       * ₹ input:
-                       *   - Editable when discountAmt is the active mode (discountPct === 0)
-                       *   - Read-only (computed) when discountPct is the active mode
-                       */}
+                      {/* ── ₹ input ── */}
                       <div className="si-disc-row">
                         <span className="si-disc-rs-label">&#8377;</span>
-                        <input
-                          type="number"
-                          className="si-disc-input"
-                          placeholder="0"
-                          min={0}
-                          // When % is active: show computed ₹ equivalent (read-only)
-                          // When ₹ is active: show the actual ₹ value
-                          value={
-                            item.discountPct > 0
-                              ? Math.round(lineGross * item.discountPct / 100 * 100) / 100
-                              : (item.discountAmt || "")
-                          }
-                          // Read-only when % is the active mode
-                          readOnly={item.discountPct > 0}
-                          style={
-                            item.discountPct > 0
-                              ? { background: "#f3f4f6", color: "#6b7280" }
-                              : {}
-                          }
-                          onChange={e => {
-                            const amt = Math.max(0, Number(e.target.value) || 0);
-                            // Typing ₹ activates ₹ mode — clears any % discount
-                            update(item.rowId, { discountAmt: amt, discountPct: 0 });
-                          }}
-                        />
+                        {/* Read-only mirror: shown when % mode is active */}
+                        {item.discountPct > 0 ? (
+                          <input
+                            type="number"
+                            className="si-disc-input"
+                            value={Math.round(lineGross * item.discountPct / 100 * 100) / 100}
+                            readOnly
+                            style={{ background: "#f3f4f6", color: "#6b7280" }}
+                            title="Computed from % discount"
+                          />
+                        ) : (
+                          /* Editable: ₹ is active or both are zero */
+                          <input
+                            type="number"
+                            className="si-disc-input"
+                            placeholder="0"
+                            min={0}
+                            value={discAmtDraft[item.rowId] ?? (item.discountAmt > 0 ? String(item.discountAmt) : "")}
+                            onChange={e => {
+                              const raw = e.target.value;
+                              // Update draft so the user can type freely without cursor-jump
+                              setDiscAmtDraft(prev => ({ ...prev, [item.rowId]: raw }));
+                              // Also commit to parent immediately so the % mirror above
+                              // refreshes live on every keystroke (no click/blur needed)
+                              const amt = Math.max(0, Number(raw) || 0);
+                              update(item.rowId, { discountAmt: amt, discountPct: 0 });
+                            }}
+                            onBlur={e => {
+                              const amt = Math.max(0, Number(e.target.value) || 0);
+                              // Clear draft and do a final commit to parent
+                              setDiscAmtDraft(prev => { const n = { ...prev }; delete n[item.rowId]; return n; });
+                              update(item.rowId, { discountAmt: amt, discountPct: 0 });
+                            }}
+                          />
+                        )}
                       </div>
                     </div>
                   </td>
@@ -243,10 +293,29 @@ export default function SIItemsTable({ items, showColumns, onChange, onAddItem }
                     </div>
                   </td>
 
-                  {/* Line total = taxable + tax */}
+                  {/* Line total = taxable + tax
+                   * AUTO mode  : computed, read-only display.
+                   * MANUAL mode: user types the GST-inclusive total directly;
+                   *              price is auto back-calculated via reversePriceFromAmount.
+                   */}
                   <td className="si-td si-td--amt">
-                    <span className="si-rs">₹</span>
-                    <span>{item.amount.toLocaleString("en-IN", { maximumFractionDigits: 2 })}</span>
+                    {item.priceMode === "manual" ? (
+                      <input
+                        type="number"
+                        className="si-price-input"
+                        style={{ width: 90, textAlign: "right" }}
+                        value={item.amount || ""}
+                        min={0}
+                        placeholder="Enter amt"
+                        title="Enter GST-inclusive total; base price will be auto-calculated"
+                        onChange={e => update(item.rowId, { amount: Math.max(0, Number(e.target.value) || 0) })}
+                      />
+                    ) : (
+                      <>
+                        <span className="si-rs">₹</span>
+                        <span>{item.amount.toLocaleString("en-IN", { maximumFractionDigits: 2 })}</span>
+                      </>
+                    )}
                   </td>
 
                   <td className="si-td si-td--del">
@@ -280,7 +349,7 @@ export default function SIItemsTable({ items, showColumns, onChange, onAddItem }
             <rect x="2"  y="6" width="4" height="12"/>
             <rect x="7"  y="6" width="2" height="12"/>
             <rect x="10" y="6" width="3" height="12"/>
-            <rect x="14" y="6" width="2" height="12"/>
+            <rect x="14" y="2" width="2" height="12"/>
             <rect x="17" y="6" width="4" height="12"/>
           </svg>
           Scan Barcode

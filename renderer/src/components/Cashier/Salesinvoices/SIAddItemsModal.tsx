@@ -97,11 +97,15 @@ export default function SIAddItemsModal({ onClose, onAddToBill }: Props) {
       // ── 1. Base price — ALWAYS pre-tax ─────────────────────────────────────
       // baseSalesPrice is the correct field (set by backend when item was created
       // with a tax rate). Fall back to salesPrice for legacy items.
-      const price = Number(
-        item.baseSalesPrice != null && Number(item.baseSalesPrice) > 0
-          ? item.baseSalesPrice
-          : item.salesPrice ?? 0
-      );
+      const rawBase = item.baseSalesPrice != null && Number(item.baseSalesPrice) > 0
+        ? item.baseSalesPrice
+        : item.salesPrice ?? 0;
+      const price = Number(rawBase);
+
+      // ── priceMode ───────────────────────────────────────────────────────────
+      // "auto"   → item has a known base price → normal price-drives-amount flow.
+      // "manual" → no price available → user will enter amount; price is back-calculated.
+      const priceMode: "auto" | "manual" = price > 0 ? "auto" : "manual";
 
       // ── 2. Default discount % from item master ──────────────────────────────
       // This pre-fills the discount column in the invoice table.
@@ -128,6 +132,7 @@ export default function SIAddItemsModal({ onClose, onAddToBill }: Props) {
         taxLabel,
         taxRate,
         amount:      0,          // will be recalculated below using shared formula
+        priceMode,               // "auto" when price > 0, "manual" when no price known
       };
 
       // Calculate amount using the shared utility so the formula is identical
