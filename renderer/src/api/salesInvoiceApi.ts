@@ -77,6 +77,12 @@ export interface SaleInvoice {
     taxRate?: number | null;
     taxAmount?: number | null;
     total: number;
+    /** HSN/SAC code stored flat on the line item (populated by backend from product or custom entry) */
+    hsnCode?: string | null;
+    /** Unit stored flat on the line item */
+    unit?: string | null;
+    /** Description stored flat on the line item */
+    description?: string | null;
     product?: {                    // optional — absent for free-text items
       id: number;
       name: string;
@@ -256,10 +262,15 @@ export function fromSaleInvoice(inv: SaleInvoice): FeSalesInvoice {
         // whether a real product is linked (see toCreatePayload below).
         itemId:      item.productId ?? undefined,
         name:        item.product?.name ?? item.productName ?? "",
-        description: (item as any).description ?? "",
-        hsn:         item.product?.hsnCode ?? "",
+        description: item.description ?? (item as any).desc ?? "",
+        // HSN FIX: The backend stores hsnCode both flat on the line item AND nested
+        // under item.product. We check the flat field first (most reliable for all
+        // item types — linked products AND free-text items), then fall back to the
+        // nested product.hsnCode, then empty string.
+        hsn:         item.hsnCode ?? item.product?.hsnCode ?? "",
         qty:         item.quantity,
-        unit:        item.product?.unit ?? "PCS",
+        // Unit FIX: same priority — flat item.unit first, then product.unit
+        unit:        item.unit ?? item.product?.unit ?? "PCS",
         price:       Number(item.price),
         discountPct: Number(item.discountPct ?? 0),
         discountAmt: Number(item.discount ?? 0),
@@ -318,6 +329,7 @@ export interface CreateInvoicePayload {
     productId?:   number;        // optional — omitted for free-text items
     productName?: string;        // always sent so backend can display the name
     description?: string;        // item description / notes
+    hsnCode?:     string;        // HSN/SAC code — stored flat on the line item
     quantity:     number;
     price:        number;
     taxRate:      number;
@@ -384,6 +396,8 @@ export function toCreatePayload(form: FeSalesInvoice): CreateInvoicePayload {
       // Always send productName so free-text items are preserved on the backend
       productName: i.name || "Item",
       description: i.description || undefined,
+      // HSN/SAC code — send whatever is on the row (from product lookup or manual entry)
+      hsnCode:     i.hsn || undefined,
       quantity:    Number(i.qty)         || 0,
       price:       Number(i.price)       || 0,
       taxRate:     Number(i.taxRate)     || 0,

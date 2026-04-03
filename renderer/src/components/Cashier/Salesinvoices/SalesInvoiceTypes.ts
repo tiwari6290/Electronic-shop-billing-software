@@ -56,6 +56,11 @@ export interface BillItem {
    *        tax     = taxable × taxRate%
    */
   amount: number;
+  /**
+   * "auto"   → item had a known base price; price drives amount (normal flow).
+   * "manual" → item had no price; user enters amount + tax, price is back-calculated.
+   */
+  priceMode: "auto" | "manual";
 }
 
 export interface AdditionalCharge {
@@ -268,6 +273,36 @@ export function parseGstRate(gstRate?: string | null): number {
 export function buildTaxLabel(rate: number): string {
   if (rate <= 0) return "None";
   return `GST ${rate}%`;
+}
+
+/**
+ * ════════════════════════════════════════════════════════════════
+ * REVERSE PRICE CALCULATION (Case 2 — no base price on item)
+ * ════════════════════════════════════════════════════════════════
+ *
+ * When a bill item has no base price (priceMode === "manual"), the user
+ * enters the GST-inclusive line total (amount) and selects a tax rate.
+ * This function back-calculates the pre-tax base price per unit.
+ *
+ * Formula (no per-line discount in manual mode):
+ *   taxable = amount / (1 + taxRate / 100)
+ *   price   = taxable / qty
+ *
+ * @param amount  - GST-inclusive line total entered by the user
+ * @param taxRate - Tax rate in % (e.g. 18 for 18%)
+ * @param qty     - Quantity of the item (must be > 0)
+ * @returns Pre-tax base price per unit (rounded to 2 dp)
+ */
+export function reversePriceFromAmount(
+  amount: number,
+  taxRate: number,
+  qty: number,
+): number {
+  if (qty <= 0) return 0;
+  const divisor = 1 + taxRate / 100;
+  const taxable = amount / divisor;
+  const price   = taxable / qty;
+  return Math.round(price * 100) / 100;
 }
 
 /**
