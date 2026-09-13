@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import "./PaymentInView.css";
+import "./Paymentinview.css";
 import { getPaymentInById, deletePaymentIn, type PaymentInRecord } from "@/api/paymentInApi";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import "./QuotationFooter.css";
+import "./Quotationfooter.css";
 
 interface AddBankAccountData {
   accountName: string;

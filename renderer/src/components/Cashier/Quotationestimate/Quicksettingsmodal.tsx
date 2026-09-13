@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { apiGetQuotationSettings, apiSaveQuotationSettings } from "./Quotationtypes";
-import "./QuickSettingsModal.css";
+import "./Quicksettingsmodal.css";
 
 interface Settings {
   prefixEnabled: boolean;

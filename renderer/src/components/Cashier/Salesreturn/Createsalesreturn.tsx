@@ -9,12 +9,12 @@ import {
   getSalesReturnById,
   CreateSalesReturnPayload,
 } from "../../../api/salesreturnapi";
+import "./Createsalesreturn.css";
 import SRPartySelector from "./Srpartyselector";
 import SRMetaFields from "./Srmetafields";
 import SRItemsTable from "./Sritemstable";
 import SRAddItemsModal from "./Sradditemsmodal";
 import { SRSummary, SRFooter, SRQuickSettings } from "./Srsummaryandfooter";
-import "./CreateSalesReturn.css";
 
 interface Props {
   editId?: string;

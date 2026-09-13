@@ -9,7 +9,7 @@ import CNMetaFields from "./Cnmetafields";
 import CNItemsTable from "./Cnitemstable";
 import CNAddItemsModal from "./Cnadditemsmodal";
 import { CNSummary, CNFooter, CNQuickSettings } from "./Cnsummaryfooter";
-import "./CreateCreditNote.css";
+import "./Createcreditnote.css";
 
 interface Props {
   editId?: string;

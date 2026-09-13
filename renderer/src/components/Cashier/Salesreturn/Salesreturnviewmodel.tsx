@@ -6,7 +6,7 @@ import {
   saveSalesReturn,
   calcItemAmount,
 } from "./Salesreturntypes";
-import "./SalesReturnViewModel.css";
+import "./Salesreturnviewmodel.css";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 

@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Search, Calendar, ChevronDown, Settings, MessageSquare, Edit, Clock, Copy, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import "./Deliverychallanmodel.css";
+import "./DeliveryChallanmodel.css";
 import CreateDeliveryChallan from "./Createdeliverychallan";
 import ChallanViewPage from "./Challanviewpage";
 import {

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { BillItem, TAX_OPTIONS, calcBillItemAmount } from "./Quotationtypes";
-import "./ItemsTable.css";
+import "./Itemstable.css";
 
 // ─── Single source of truth for per-line recalculation ────────────────────────
 // Uses the canonical GST-standard formula:

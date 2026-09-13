@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { AdditionalCharge, CHARGE_TAX_OPTIONS, BillItem, calcBillItemAmount } from "./Quotationtypes";
-import "./QuotationSummary.css";
+import "./Quotationsummary.css";
 
 // ─── Formatting helper ────────────────────────────────────────────────────────
 function fmt(n: number, dec = 2): string {

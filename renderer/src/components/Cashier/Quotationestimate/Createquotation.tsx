@@ -13,7 +13,7 @@ import AddItemsModal       from "./Additemsmodal";
 import QuotationSummary    from "./Quotationsummary";
 import QuotationFooter     from "./Quotationfooter";
 import QuickSettingsModal  from "./Quicksettingsmodal";
-import "./CreateQuotation.css";
+import "./Createquotation.css";
 
 const DEFAULT_TERMS = `1. Goods once sold will not be taken back or exchanged
 2. All disputes are subject to [ENTER_YOUR_CITY_NAME] jurisdiction only`;

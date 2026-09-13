@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { QuotationData, fmtDate, apiDuplicateQuotation, apiDeleteQuotation, apiToFormData, calcBillItemAmount } from "./Quotationtypes";
-import "./QuotationViewModal.css";
+import "./Quotationviewmodal.css";
 
 // ─── Exact SavedTemplate shape from InvoiceBuilder ───────────────────────────
 interface StyleState   { font:string; textSize:string; themeColor:string; borderColor:string; borderWidth:string; showLogo:boolean; logoUrl:string; }

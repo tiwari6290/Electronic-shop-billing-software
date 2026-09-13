@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Item, BillItem, calcBillItemAmount, apiGetItems } from "./Quotationtypes";
-import "./AddItemsModal.css";
+import "./Additemsmodal.css";
 
 const SAMPLE_ITEMS: Item[] = [
   { id: 1, name: "BILLING SOFTWARE MOBILE APP",  itemCode: "-",     stock: "-",   salesPrice: 256,    baseSalesPrice: 256,    purchasePrice: 0,     unit: "PCS", hsn: "", category: "",            gstRate: 0,  taxLabel: "None",    salesDiscountPercent: 0 },

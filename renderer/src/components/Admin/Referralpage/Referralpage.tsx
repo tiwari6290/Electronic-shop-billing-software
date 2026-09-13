@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import "./ReferralPage.css";
+import "./Referralpage.css";
 
 interface ReferredUser {
   phone: string;

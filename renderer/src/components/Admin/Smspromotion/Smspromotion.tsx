@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import "./SMSPromotion.css";
+import "./Smspromotion.css";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

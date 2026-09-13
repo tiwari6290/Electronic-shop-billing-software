@@ -1,5 +1,5 @@
 // import { useEffect, useRef, useState } from "react";
-// import "./InvoiceViewModal.css";
+// import "./Invoiceviewmodal.css";
 
 // // ─── Static assets — always shown on every invoice ────────────────────────────
 // import BILL_LOGO      from "../../../assets/bill_logo.jpeg";
@@ -1868,7 +1868,7 @@
 
 
 import { useEffect, useRef, useState } from "react";
-import "./InvoiceViewModal.css";
+import "./Invoiceviewmodal.css";
 import api from "@/lib/axios";
 
 // ─── Static assets — always shown on every invoice ────────────────────────────
