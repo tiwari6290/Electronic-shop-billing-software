@@ -8,7 +8,7 @@ import {
 } from "./Creditnotetypes";
 import CreateCreditNote from "./Createcreditnote";
 import CreditNoteViewModel from "./Creditnoteviewmodel";
-import "./CreditNote.css";
+import "./Creditnote.css";
 
 // ── Icons ──────────────────────────────────────────────────────────────────
 const SearchIcon = () => (

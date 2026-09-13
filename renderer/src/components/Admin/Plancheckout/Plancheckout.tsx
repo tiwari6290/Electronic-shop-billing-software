@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import "./PlanCheckout.css";
+import "./Plancheckout.css";
 
 interface PlanCheckoutProps {
   plan: {

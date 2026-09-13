@@ -1,6 +1,6 @@
 import React from "react";
 import { Info, RefreshCcw, BellRing, Send } from "lucide-react";
-import "./AutomatedBills.css";
+import "./automatedbills.css";
 
 const AutomatedBills = () => {
   return (

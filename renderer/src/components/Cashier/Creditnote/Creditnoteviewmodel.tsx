@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { CreditNote, calcTotal, calcItemAmount } from "./Creditnotetypes";
-import "./CreditNoteViewModel.css";
+import "./Creditnoteviewmodel.css";
 
 // ─── Read active theme color from InvoiceBuilder localStorage ─────────────────
 function getThemeColor(): string {

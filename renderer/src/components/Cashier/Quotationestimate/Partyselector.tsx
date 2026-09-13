@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Party, apiGetParties } from "./Quotationtypes";
-import "./PartySelector.css";
+import "./Partyselector.css";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface ShippingAddress {

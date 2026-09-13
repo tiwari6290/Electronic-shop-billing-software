@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import "./QuotationEstimate.css";
+import "./Quotationestimate.css";
 import { useNavigate } from "react-router-dom";
 import QuotationViewModal from "./Quotationviewmodal";
 import CreateSalesInvoice from "../Salesinvoices/CreateSalesInvoice";
